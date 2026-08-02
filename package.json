@@ -2,10 +2,11 @@
   "name": "event-compass-frontend",
   "version": "1.0.0",
   "description": "Event Compass - Cross-platform event rental and management marketplace",
-  "main": "node_modules/expo/AppEntry.js",
+  "main": "scripts/start-web.js",
   "private": true,
   "scripts": {
     "start": "node scripts/start-web.js",
+    "render:start": "node scripts/start-web.js",
     "android": "expo start --android --port 3000",
     "ios": "expo start --ios --port 3000",
     "web": "node scripts/start-web.js",

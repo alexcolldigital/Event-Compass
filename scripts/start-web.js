@@ -6,7 +6,7 @@ const port = Number(process.env.PORT || process.env.WEB_PORT || 3000);
 const isWindows = process.platform === 'win32';
 
 const expoCommand = path.join(projectRoot, 'node_modules', '.bin', isWindows ? 'expo.cmd' : 'expo');
-const args = ['start', '--web', '--host', 'lan', '--port', String(port)];
+const args = ['start', '--web', '--host', '0.0.0.0', '--port', String(port)];
 
 console.log(`Starting Expo web server on port ${port}`);
 console.log(`Running command: ${expoCommand} ${args.join(' ')}`);
