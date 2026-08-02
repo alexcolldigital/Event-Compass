@@ -6,11 +6,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-<<<<<<< HEAD
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://event-backend-kb9s.onrender.com/api';
-=======
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://event-backend-kb9s.onrender.com';
->>>>>>> 8f51c6fbf0329277b83824a4dc53f1b1a1891012
 
 // Create axios instance
 const apiClient = axios.create({
