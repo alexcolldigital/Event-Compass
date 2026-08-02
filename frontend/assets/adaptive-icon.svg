@@ -1,0 +1,12 @@
+﻿<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024'>
+  <defs>
+    <linearGradient id='adaptGrad' x1='0%' y1='0%' x2='100%' y2='100%'>
+      <stop offset='0%' style='stop-color:#16a34a;stop-opacity:1' />
+      <stop offset='100%' style='stop-color:#15803d;stop-opacity:1' />
+    </linearGradient>
+  </defs>
+  <circle cx='512' cy='512' r='432' fill='url(#adaptGrad)'/>
+  <path d='M512 280c-128 0-232 104-232 232s104 232 232 232 232-104 232-232-104-232-232-232zm0 400c-93 0-168-75-168-168s75-168 168-168 168 75 168 168-75 168-168 168z' fill='white'/>
+  <circle cx='512' cy='512' r='56' fill='#16a34a'/>
+  <circle cx='512' cy='512' r='24' fill='white'/>
+</svg>
