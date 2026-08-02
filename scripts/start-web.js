@@ -10,7 +10,7 @@ const args = [
   'start',
   '--web',
   '--host',
-  'lan',
+  '0.0.0.0',
   '--port',
   String(port),
 ];
