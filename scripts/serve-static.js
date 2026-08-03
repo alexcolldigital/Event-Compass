@@ -19,40 +19,91 @@ const mimeTypes = {
   '.ico': 'image/x-icon',
 };
 
-const server = http.createServer((req, res) => {
-  const requestedPath = decodeURIComponent((req.url || '/').split('?')[0]);
-  const safePath = requestedPath === '/' ? '/index.html' : requestedPath;
-  const ext = path.extname(safePath).toLowerCase();
+function startServer() {
+  const server = http.createServer((req, res) => {
+    const requestedPath = decodeURIComponent((req.url || '/').split('?')[0]);
+    const safePath = requestedPath === '/' ? '/index.html' : requestedPath;
+    const ext = path.extname(safePath).toLowerCase();
 
-  const candidatePaths = [];
-  if (ext) {
-    candidatePaths.push(path.normalize(path.join(rootDir, safePath)));
-  } else {
-    candidatePaths.push(path.normalize(path.join(rootDir, safePath, 'index.html')));
-    candidatePaths.push(path.normalize(path.join(rootDir, safePath + '.html')));
-    candidatePaths.push(path.normalize(path.join(rootDir, 'index.html')));
-  }
+    const candidatePaths = [];
+    if (ext) {
+      candidatePaths.push(path.normalize(path.join(rootDir, safePath)));
+    } else {
+      candidatePaths.push(path.normalize(path.join(rootDir, safePath, 'index.html')));
+      candidatePaths.push(path.normalize(path.join(rootDir, safePath + '.html')));
+      candidatePaths.push(path.normalize(path.join(rootDir, 'index.html')));
+    }
 
-  const filePath = candidatePaths.find((candidate) => candidate.startsWith(rootDir) && fs.existsSync(candidate));
+    const filePath = candidatePaths.find((candidate) => candidate.startsWith(rootDir) && fs.existsSync(candidate));
 
-  if (!filePath) {
-    res.writeHead(404);
-    res.end('Not found');
-    return;
-  }
-
-  fs.readFile(filePath, (error, content) => {
-    if (error) {
-      res.writeHead(500);
-      res.end('Server error');
+    if (!filePath) {
+      res.writeHead(404);
+      res.end('Not found');
       return;
     }
 
-    res.writeHead(200, { 'Content-Type': mimeTypes[ext] || 'text/html; charset=utf-8' });
-    res.end(content);
-  });
-});
+    fs.readFile(filePath, (error, content) => {
+      if (error) {
+        res.writeHead(500);
+        res.end('Server error');
+        return;
+      }
 
-server.listen(port, host, () => {
-  console.log(`Static server listening on http://${host}:${port}`);
-});
+      res.writeHead(200, { 'Content-Type': mimeTypes[ext] || 'text/html; charset=utf-8' });
+      res.end(content);
+    });
+  });
+
+  server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+      console.warn(`Port ${port} is busy, trying ${port + 1}...`);
+      const fallbackPort = port + 1;
+      server.close(() => {
+        const fallbackServer = http.createServer((req, res) => {
+          const requestedPath = decodeURIComponent((req.url || '/').split('?')[0]);
+          const safePath = requestedPath === '/' ? '/index.html' : requestedPath;
+          const ext = path.extname(safePath).toLowerCase();
+          const fallbackCandidatePaths = [];
+          if (ext) {
+            fallbackCandidatePaths.push(path.normalize(path.join(rootDir, safePath)));
+          } else {
+            fallbackCandidatePaths.push(path.normalize(path.join(rootDir, safePath, 'index.html')));
+            fallbackCandidatePaths.push(path.normalize(path.join(rootDir, safePath + '.html')));
+            fallbackCandidatePaths.push(path.normalize(path.join(rootDir, 'index.html')));
+          }
+
+          const fallbackFilePath = fallbackCandidatePaths.find((candidate) => candidate.startsWith(rootDir) && fs.existsSync(candidate));
+          if (!fallbackFilePath) {
+            res.writeHead(404);
+            res.end('Not found');
+            return;
+          }
+
+          fs.readFile(fallbackFilePath, (readError, content) => {
+            if (readError) {
+              res.writeHead(500);
+              res.end('Server error');
+              return;
+            }
+
+            res.writeHead(200, { 'Content-Type': mimeTypes[ext] || 'text/html; charset=utf-8' });
+            res.end(content);
+          });
+        });
+
+        fallbackServer.listen(fallbackPort, host, () => {
+          console.log(`Static server listening on http://${host}:${fallbackPort}`);
+        });
+      });
+      return;
+    }
+
+    throw error;
+  });
+
+  server.listen(port, host, () => {
+    console.log(`Static server listening on http://${host}:${port}`);
+  });
+}
+
+startServer();
