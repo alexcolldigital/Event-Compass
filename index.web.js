@@ -3,9 +3,11 @@ import ReactDOM from 'react-dom/client';
 import './src/styles/globals.css';
 import App from './App';
 
-const root = ReactDOM.createRoot(
-  document.getElementById('root') || document.createElement('div')
-);
+const container = document.getElementById('root') || document.createElement('div');
+container.id = 'root';
+document.body.appendChild(container);
+
+const root = ReactDOM.createRoot(container);
 
 root.render(
   <React.StrictMode>

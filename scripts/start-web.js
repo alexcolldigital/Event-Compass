@@ -3,7 +3,8 @@ const { spawn } = require('child_process');
 
 const projectRoot = path.resolve(__dirname, '..');
 const port = Number(process.env.PORT || process.env.WEB_PORT || 3000);
-const host = process.env.EXPO_HOST || 'lan';
+const defaultHost = process.env.RENDER ? 'localhost' : 'lan';
+const host = process.env.EXPO_HOST || defaultHost;
 const isWindows = process.platform === 'win32';
 
 const expoCommand = path.join(projectRoot, 'node_modules', '.bin', isWindows ? 'expo.cmd' : 'expo');
