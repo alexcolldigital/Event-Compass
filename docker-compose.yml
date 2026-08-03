@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    environment:
+      - PORT=3000
+      - EXPO_PUBLIC_API_URL=https://event-backend-kb9s.onrender.com
+    stdin_open: true
+    tty: true
