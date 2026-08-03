@@ -19,7 +19,7 @@ const mimeTypes = {
   '.ico': 'image/x-icon',
 };
 
-function startServer() {
+function startServer(attemptPort) {
   const server = http.createServer((req, res) => {
     const requestedPath = decodeURIComponent((req.url || '/').split('?')[0]);
     const safePath = requestedPath === '/' ? '/index.html' : requestedPath;
@@ -56,54 +56,18 @@ function startServer() {
 
   server.on('error', (error) => {
     if (error.code === 'EADDRINUSE') {
-      console.warn(`Port ${port} is busy, trying ${port + 1}...`);
-      const fallbackPort = port + 1;
-      server.close(() => {
-        const fallbackServer = http.createServer((req, res) => {
-          const requestedPath = decodeURIComponent((req.url || '/').split('?')[0]);
-          const safePath = requestedPath === '/' ? '/index.html' : requestedPath;
-          const ext = path.extname(safePath).toLowerCase();
-          const fallbackCandidatePaths = [];
-          if (ext) {
-            fallbackCandidatePaths.push(path.normalize(path.join(rootDir, safePath)));
-          } else {
-            fallbackCandidatePaths.push(path.normalize(path.join(rootDir, safePath, 'index.html')));
-            fallbackCandidatePaths.push(path.normalize(path.join(rootDir, safePath + '.html')));
-            fallbackCandidatePaths.push(path.normalize(path.join(rootDir, 'index.html')));
-          }
-
-          const fallbackFilePath = fallbackCandidatePaths.find((candidate) => candidate.startsWith(rootDir) && fs.existsSync(candidate));
-          if (!fallbackFilePath) {
-            res.writeHead(404);
-            res.end('Not found');
-            return;
-          }
-
-          fs.readFile(fallbackFilePath, (readError, content) => {
-            if (readError) {
-              res.writeHead(500);
-              res.end('Server error');
-              return;
-            }
-
-            res.writeHead(200, { 'Content-Type': mimeTypes[ext] || 'text/html; charset=utf-8' });
-            res.end(content);
-          });
-        });
-
-        fallbackServer.listen(fallbackPort, host, () => {
-          console.log(`Static server listening on http://${host}:${fallbackPort}`);
-        });
-      });
+      const nextPort = attemptPort + 1;
+      console.warn(`Port ${attemptPort} is busy, trying ${nextPort}...`);
+      server.close(() => startServer(nextPort));
       return;
     }
 
     throw error;
   });
 
-  server.listen(port, host, () => {
-    console.log(`Static server listening on http://${host}:${port}`);
+  server.listen(attemptPort, host, () => {
+    console.log(`Static server listening on http://${host}:${attemptPort}`);
   });
 }
 
-startServer();
+startServer(port);

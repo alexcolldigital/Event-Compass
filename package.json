@@ -5,7 +5,7 @@
   "main": "scripts/render-entry.js",
   "private": true,
   "scripts": {
-    "start": "expo start --port 3000",
+    "start": "node scripts/render-entry.js",
     "android": "expo start --android --port 3000",
     "ios": "expo start --ios --port 3000",
     "web": "node scripts/render-entry.js",
