@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import 'react-native-gesture-handler';
-import './src/styles/globalStyles';
+import './src/styles/globalStyles.js';
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
