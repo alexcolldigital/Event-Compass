@@ -50,10 +50,10 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     ...(user?.role === 'admin' ? [{ icon: 'view-dashboard', label: 'Admin Dashboard', onPress: () => navigation.navigate('AdminDashboard'), color: '#1f7a4d' }] : []),
     { icon: 'account-edit', label: 'Edit Profile', onPress: () => navigation.navigate('EditProfile'), color: '#2563eb' },
     { icon: 'lock', label: 'Change Password', onPress: () => navigation.navigate('ChangePassword'), color: '#8b5cf6' },
-    { icon: 'bell', label: 'Notifications', onPress: () => Alert.alert('Notifications', 'Preferences are being upgraded.'), color: '#ec4899' },
-    { icon: 'help-circle', label: 'Help & Support', onPress: () => Alert.alert('Help & Support', 'Live support is coming soon.'), color: '#f59e0b' },
+    { icon: 'bell', label: 'Notifications', onPress: () => navigation.navigate('Notifications'), color: '#ec4899' },
+    { icon: 'help-circle', label: 'Help & Support', onPress: () => navigation.navigate('HelpSupport'), color: '#f59e0b' },
     ...(user?.role === 'service_provider' ? [{ icon: 'briefcase-plus', label: 'Manage Services', onPress: () => navigation.navigate('ProviderServices'), color: '#16a34a' }] : []),
-    { icon: 'information', label: 'About', onPress: () => Alert.alert('Event Compass', 'Event Compass marketplace v1.0.0'), color: '#0ea5e9' },
+    { icon: 'information', label: 'About', onPress: () => navigation.navigate('About'), color: '#0ea5e9' },
   ];
 
   return (

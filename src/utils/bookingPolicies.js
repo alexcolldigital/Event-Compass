@@ -1,5 +1,11 @@
 export const BOOKING_POLICY_ITEMS = [
   {
+    id: 'rentalTerms',
+    title: 'Rental Terms',
+    text:
+      'By renting this service, you agree to follow the provider\'s rental requirements, return any borrowed equipment or space in good condition, and accept responsibility for damages, cancellations, or additional charges.',
+  },
+  {
     id: 'terms',
     title: 'Terms & Conditions',
     text:

@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   Alert,
   SafeAreaView,
+  StyleSheet,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -18,10 +19,23 @@ import { useAuthStore } from '../../context/authStore.js';
 import Input from '../../components/Input.jsx';
 import Button from '../../components/Button.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
+import { useTheme } from '../../context/ThemeContext';
 
 const ChangePasswordScreen = () => {
   const navigation = useNavigation();
   const { isLoading, error, changePassword } = useAuthStore();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+
+  const colors = {
+    bg: isDark ? '#050816' : '#f5f7f2',
+    surface: isDark ? '#111827' : '#ffffff',
+    surfaceAlt: isDark ? '#172033' : '#f3f6ef',
+    text: isDark ? '#f8fafc' : '#0f172a',
+    muted: isDark ? '#cbd5e1' : '#64748b',
+    border: isDark ? 'rgba(248,250,252,0.14)' : 'rgba(15,23,42,0.08)',
+    primary: '#16a34a',
+  };
 
   const [formData, setFormData] = useState({
     currentPassword: '',
@@ -87,7 +101,7 @@ const ChangePasswordScreen = () => {
 
     let strength = 'Weak';
     let strengthColor = '#ef4444';
-    let strengthPercentage = 33;
+    let strengthPercentage = 30;
 
     if (password.length >= 8) {
       strength = 'Medium';
@@ -107,64 +121,50 @@ const ChangePasswordScreen = () => {
     }
 
     return (
-      <View className="mt-3">
-        <View className="flex-row items-center justify-between mb-2">
-          <Text className="text-gray-600 text-xs font-semibold">Password Strength</Text>
-          <Text className="font-bold text-xs" style={{ color: strengthColor }}>
-            {strength}
-          </Text>
+      <View style={styles.passwordStrength}> 
+        <View style={styles.passwordStrengthRow}>
+          <Text style={[styles.passwordStrengthLabel, { color: colors.muted }]}>Password Strength</Text>
+          <Text style={[styles.passwordStrengthValue, { color: strengthColor }]}>{strength}</Text>
         </View>
-        <View className="h-2 bg-gray-200 rounded-full overflow-hidden">
-          <View
-            className="h-2 rounded-full transition-all"
-            style={{
-              backgroundColor: strengthColor,
-              width: `${strengthPercentage}%`,
-            }}
-          />
+        <View style={[styles.strengthTrack, { backgroundColor: isDark ? '#1f2937' : '#e2e8f0' }]}> 
+          <View style={[styles.strengthFill, { width: `${strengthPercentage}%`, backgroundColor: strengthColor }]} />
         </View>
       </View>
     );
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      {/* Header */}
-      <View className="bg-gradient-to-r from-green-600 via-green-500 to-emerald-600 px-6 pb-8 rounded-b-4xl shadow-2xl">
-        <View className="flex-row items-center mb-6">
+    <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}> 
+      <View style={[styles.header, { backgroundColor: colors.primary }]}> 
+        <View style={styles.headerRow}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            className="p-3 active:bg-white/20 rounded-full"
+            style={styles.iconButton}
+            activeOpacity={0.85}
           >
-            <MaterialCommunityIcons name="arrow-left" size={28} color="white" />
+            <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
           </TouchableOpacity>
-          <Text className="text-white text-3xl font-black ml-4">Change Password</Text>
+          <Text style={styles.headerTitle}>Change Password</Text>
         </View>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
-        <View className="px-6 py-8">
-          {/* Error Message */}
-          {error && <ErrorMessage error={error} />}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: 24 }]}> 
+        {error ? <ErrorMessage error={error} /> : null}
 
-          {/* Security Info Banner */}
-          <View className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-3xl p-6 mb-8 border-l-4 border-blue-500">
-            <View className="flex-row items-start">
-              <View className="bg-blue-500 rounded-full p-3 mr-4 mt-1">
-                <MaterialCommunityIcons name="lock-alert" size={24} color="white" />
+        <View style={styles.section}>
+          <View style={[styles.infoCard, { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' }]}> 
+            <View style={styles.infoRow}>
+              <View style={[styles.infoIcon, { backgroundColor: '#2563eb' }]}> 
+                <MaterialCommunityIcons name="lock-alert" size={22} color="white" />
               </View>
-              <View className="flex-1">
-                <Text className="text-blue-900 font-black text-base mb-2">Keep Your Account Secure</Text>
-                <Text className="text-blue-700 text-sm leading-5 font-medium">
-                  Use a strong password with uppercase, lowercase, numbers, and special characters
-                </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.infoTitle, { color: '#1d4ed8' }]}>Keep Your Account Secure</Text>
+                <Text style={[styles.infoText, { color: '#1e40af' }]}>Use a strong password with uppercase, lowercase, numbers, and special characters</Text>
               </View>
             </View>
           </View>
 
-          {/* Form Section */}
-          <View className="bg-gray-50 rounded-3xl p-7 shadow-lg mb-8">
-            {/* Current Password */}
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
             <Input
               label="Current Password"
               placeholder="Enter your current password"
@@ -178,92 +178,69 @@ const ChangePasswordScreen = () => {
               error={formErrors.currentPassword}
             />
 
-            {/* New Password */}
-            <View className="mt-0">
-              <Input
-                label="New Password"
-                placeholder="Enter your new password"
-                value={formData.newPassword}
-                onChangeText={(text) => {
-                  setFormData({ ...formData, newPassword: text });
-                  if (formErrors.newPassword) setFormErrors({ ...formErrors, newPassword: null });
-                }}
-                secureTextEntry
-                icon="lock-reset"
-                error={formErrors.newPassword}
-                helperText="Must be different from current password"
-              />
-              {renderPasswordStrength(formData.newPassword)}
-            </View>
+            <Input
+              label="New Password"
+              placeholder="Enter your new password"
+              value={formData.newPassword}
+              onChangeText={(text) => {
+                setFormData({ ...formData, newPassword: text });
+                if (formErrors.newPassword) setFormErrors({ ...formErrors, newPassword: null });
+              }}
+              secureTextEntry
+              icon="lock-reset"
+              error={formErrors.newPassword}
+              helperText="Must be different from current password"
+            />
+            {renderPasswordStrength(formData.newPassword)}
 
-            {/* Confirm Password */}
-            <View className="mt-4">
-              <Input
-                label="Confirm New Password"
-                placeholder="Re-enter your new password"
-                value={formData.confirmPassword}
-                onChangeText={(text) => {
-                  setFormData({ ...formData, confirmPassword: text });
-                  if (formErrors.confirmPassword) setFormErrors({ ...formErrors, confirmPassword: null });
-                }}
-                secureTextEntry
-                icon="lock-check"
-                error={formErrors.confirmPassword}
-              />
+            <Input
+              label="Confirm New Password"
+              placeholder="Re-enter your new password"
+              value={formData.confirmPassword}
+              onChangeText={(text) => {
+                setFormData({ ...formData, confirmPassword: text });
+                if (formErrors.confirmPassword) setFormErrors({ ...formErrors, confirmPassword: null });
+              }}
+              secureTextEntry
+              icon="lock-check"
+              error={formErrors.confirmPassword}
+            />
 
-              {/* Match Indicator */}
-              {formData.newPassword && formData.confirmPassword && (
-                <View className="mt-3 flex-row items-center p-3 rounded-2xl bg-white">
-                  {formData.newPassword === formData.confirmPassword ? (
-                    <>
-                      <MaterialCommunityIcons name="check-circle" size={20} color="#10b981" />
-                      <Text className="text-green-600 text-sm font-bold ml-3">Passwords match perfectly</Text>
-                    </>
-                  ) : (
-                    <>
-                      <MaterialCommunityIcons name="close-circle" size={20} color="#ef4444" />
-                      <Text className="text-red-600 text-sm font-bold ml-3">Passwords do not match</Text>
-                    </>
-                  )}
-                </View>
-              )}
-            </View>
+            {formData.newPassword && formData.confirmPassword ? (
+              <View style={[styles.matchBox, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}> 
+                <MaterialCommunityIcons
+                  name={formData.newPassword === formData.confirmPassword ? 'check-circle' : 'close-circle'}
+                  size={20}
+                  color={formData.newPassword === formData.confirmPassword ? '#10b981' : '#ef4444'}
+                />
+                <Text style={[styles.matchText, { color: formData.newPassword === formData.confirmPassword ? '#047857' : '#b91c1c' }]}> 
+                  {formData.newPassword === formData.confirmPassword ? 'Passwords match perfectly' : 'Passwords do not match'}
+                </Text>
+              </View>
+            ) : null}
           </View>
 
-          {/* Password Tips */}
-          <View className="mb-8">
-            <Text className="text-lg font-black text-gray-900 mb-4">Password Requirements</Text>
-            
-            <View className="gap-3">
-              {[
-                { icon: 'numeric-8-plus', text: 'At least 8 characters', check: formData.newPassword.length >= 8 },
-                { icon: 'format-letter-case', text: 'Mix uppercase & lowercase', check: /[a-z]/.test(formData.newPassword) && /[A-Z]/.test(formData.newPassword) },
-                { icon: 'numeric', text: 'Include numbers (0-9)', check: /[0-9]/.test(formData.newPassword) },
-                { icon: 'numeric', text: 'Don\'t use personal info', check: true },
-              ].map((item, index) => (
-                <View key={index} className="flex-row items-center bg-white rounded-2xl p-4 shadow-sm">
-                  <View className={`rounded-full p-3 mr-4 ${item.check ? 'bg-green-50' : 'bg-gray-100'}`}>
-                    <MaterialCommunityIcons
-                      name={item.icon}
-                      size={20}
-                      color={item.check ? '#10b981' : '#9ca3af'}
-                    />
-                  </View>
-                  <Text className={`flex-1 font-medium ${item.check ? 'text-green-700' : 'text-gray-600'}`}>
-                    {item.text}
-                  </Text>
-                  {item.check && (
-                    <MaterialCommunityIcons name="check" size={20} color="#10b981" />
-                  )}
+          <View style={styles.tipsSection}> 
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Password Requirements</Text>
+            {[
+              { icon: 'numeric-8-plus', text: 'At least 8 characters', check: formData.newPassword.length >= 8 },
+              { icon: 'format-letter-case', text: 'Mix uppercase & lowercase', check: /[a-z]/.test(formData.newPassword) && /[A-Z]/.test(formData.newPassword) },
+              { icon: 'numeric', text: 'Include numbers (0-9)', check: /[0-9]/.test(formData.newPassword) },
+              { icon: 'shield-check', text: 'Avoid personal info', check: true },
+            ].map((item, index) => (
+              <View key={index} style={[styles.tipRow, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+                <View style={[styles.tipBadge, { backgroundColor: item.check ? '#dcfce7' : '#e2e8f0' }]}> 
+                  <MaterialCommunityIcons name={item.icon} size={18} color={item.check ? '#16a34a' : '#64748b'} />
                 </View>
-              ))}
-            </View>
+                <Text style={[styles.tipText, { color: colors.text }]}>{item.text}</Text>
+                {item.check ? <MaterialCommunityIcons name="check" size={18} color="#10b981" /> : null}
+              </View>
+            ))}
           </View>
         </View>
       </ScrollView>
 
-      {/* Action Buttons */}
-      <View className="px-6 py-6 gap-3 border-t border-gray-100">
+      <View style={[styles.footer, { borderTopColor: colors.border }]}> 
         <Button
           title={isSaving ? 'Updating...' : 'Change Password'}
           onPress={handleChangePassword}
@@ -271,6 +248,7 @@ const ChangePasswordScreen = () => {
           variant="primary"
           fullWidth
           size="lg"
+          style={styles.footerButton}
         />
 
         <Button
@@ -284,5 +262,35 @@ const ChangePasswordScreen = () => {
     </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  header: { paddingHorizontal: 20, paddingBottom: 22, paddingTop: 16, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
+  headerRow: { flexDirection: 'row', alignItems: 'center' },
+  iconButton: { padding: 10, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 14 },
+  headerTitle: { color: 'white', fontSize: 28, fontWeight: '800', marginLeft: 16 },
+  content: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 32 },
+  section: { marginBottom: 18 },
+  infoCard: { borderRadius: 28, padding: 22, borderWidth: 1, marginBottom: 18 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  infoIcon: { width: 46, height: 46, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  infoTitle: { fontSize: 16, fontWeight: '800', marginBottom: 4 },
+  infoText: { fontSize: 13, lineHeight: 20 },
+  card: { borderRadius: 28, padding: 22, borderWidth: 1, marginBottom: 18, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
+  passwordStrength: { marginTop: 10 },
+  passwordStrengthRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  passwordStrengthLabel: { fontSize: 12, fontWeight: '700' },
+  passwordStrengthValue: { fontSize: 12, fontWeight: '900' },
+  strengthTrack: { height: 6, borderRadius: 999, overflow: 'hidden' },
+  strengthFill: { height: 6, borderRadius: 999 },
+  matchBox: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 22, padding: 14, marginTop: 14 },
+  matchText: { fontSize: 14, fontWeight: '700' },
+  tipsSection: { marginTop: 12, gap: 12 },
+  tipRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 20, borderWidth: 1 },
+  tipBadge: { width: 38, height: 38, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  tipText: { flex: 1, fontSize: 14, fontWeight: '700' },
+  footer: { paddingHorizontal: 16, paddingVertical: 20, borderTopWidth: 1, gap: 12 },
+  footerButton: { shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
+});
 
 export default ChangePasswordScreen;

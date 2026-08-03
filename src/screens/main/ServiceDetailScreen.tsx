@@ -10,6 +10,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { useServiceStore } from '../../context/serviceStore.js';
 import { useBookingStore } from '../../context/bookingStore.js';
 import { useAuthStore } from '../../context/authStore.js';
+import { useCartStore } from '../../context/cartStore.js';
 import Button from '../../components/Button.jsx';
 import Loading from '../../components/Loading.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
@@ -26,6 +27,7 @@ const ServiceDetailScreen = () => {
 
   const { currentService, isLoading, error, getServiceById } = useServiceStore();
   const { createBooking, isLoading: bookingLoading } = useBookingStore();
+  const { addItem, items } = useCartStore();
   const { user } = useAuthStore();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -55,6 +57,11 @@ const ServiceDetailScreen = () => {
   });
   const [isFavorite, setIsFavorite] = useState(false);
   const [policyAccepted, setPolicyAccepted] = useState(false);
+  const [cartConfirmationMessage, setCartConfirmationMessage] = useState('');
+  const [escrowEnabled, setEscrowEnabled] = useState(true);
+  const [escrowReleaseTime, setEscrowReleaseTime] = useState('after_customer_confirmation');
+  const [escrowReleaseHours, setEscrowReleaseHours] = useState(24);
+  const [escrowDisputePolicy, setEscrowDisputePolicy] = useState('standard');
 
   useEffect(() => {
     if (serviceId) {
@@ -80,7 +87,7 @@ const ServiceDetailScreen = () => {
     }
 
     if (!isBookingPolicyAccepted(policyAccepted)) {
-      Alert.alert('Agreement required', 'Please review and accept the booking terms, privacy policy, and disclaimer before continuing.');
+      Alert.alert('Agreement required', 'Please review and accept the rental terms, privacy policy, and disclaimer before continuing.');
       return;
     }
 
@@ -91,6 +98,12 @@ const ServiceDetailScreen = () => {
         numberOfGuests: quantity,
         specialRequirements: '',
         bookingLocation,
+        escrow: {
+          enabled: escrowEnabled,
+          releaseTime: escrowReleaseTime,
+          releaseHours: escrowReleaseHours,
+          disputePolicy: escrowDisputePolicy,
+        },
       });
 
       Alert.alert('Success', 'Booking created successfully!');
@@ -111,11 +124,34 @@ const ServiceDetailScreen = () => {
     Alert.alert('Success', isFavorite ? 'Removed from favorites' : 'Added to favorites');
   };
 
+  const handleAddToCart = () => {
+    if (!currentService?._id) {
+      Alert.alert('Error', 'Unable to add this service at the moment.');
+      return;
+    }
+
+    addItem({
+      serviceId: currentService._id,
+      name: currentService.name,
+      price: currentService.pricing?.basePrice || 0,
+      quantity,
+      specialRequirements: '',
+    });
+
+    setCartConfirmationMessage(`${currentService.name} has been added to your cart.`);
+  };
+
   const setDateOffset = (daysFromNow: number) => {
     const date = new Date();
     date.setDate(date.getDate() + daysFromNow);
     setSelectedDate(date.toISOString());
   };
+
+  useEffect(() => {
+    if (!cartConfirmationMessage) return;
+    const timer = setTimeout(() => setCartConfirmationMessage(''), 3000);
+    return () => clearTimeout(timer);
+  }, [cartConfirmationMessage]);
 
   if (isLoading) {
     return <Loading />;
@@ -148,10 +184,25 @@ const ServiceDetailScreen = () => {
     <View style={[styles.screen, { backgroundColor: colors.bg }]}> 
       <View style={styles.headerButtons}> 
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.circleButton}><MaterialCommunityIcons name="arrow-left" size={22} color={colors.primary} /></TouchableOpacity>
-        <TouchableOpacity onPress={handleAddToFavorites} style={styles.circleButton}><MaterialCommunityIcons name={isFavorite ? 'heart' : 'heart-outline'} size={22} color={isFavorite ? '#ef4444' : colors.primary} /></TouchableOpacity>
+        <View style={styles.headerActionGroup}>
+          <TouchableOpacity onPress={handleAddToFavorites} style={styles.circleButton}><MaterialCommunityIcons name={isFavorite ? 'heart' : 'heart-outline'} size={22} color={isFavorite ? '#ef4444' : colors.primary} /></TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Checkout' as never)} style={styles.circleButton}>
+            <MaterialCommunityIcons name="cart" size={22} color={colors.primary} />
+            {items.length > 0 ? (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{items.length}</Text>
+              </View>
+            ) : null}
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        {cartConfirmationMessage ? (
+          <View style={[styles.confirmationBanner, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}> 
+            <Text style={[styles.confirmationText, { color: colors.text }]}>{cartConfirmationMessage}</Text>
+          </View>
+        ) : null}
         <View style={styles.imageWrap}> 
           {currentService.images && currentService.images.length > 0 ? <Image source={{ uri: currentService.images[0].url }} style={styles.image} resizeMode="cover" /> : <MaterialCommunityIcons name="briefcase" size={78} color="rgba(255,255,255,0.6)" />}
           <View style={styles.imageOverlay} />
@@ -274,7 +325,38 @@ const ServiceDetailScreen = () => {
             </TouchableOpacity>
           </View>
 
-          <Button title={bookingLoading ? 'Processing...' : 'Continue to booking'} onPress={handleBooking} isLoading={bookingLoading} variant="primary" fullWidth size="lg" />
+          <View style={[styles.escrowCard, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}> 
+            <View style={styles.escrowHeaderRow}> 
+              <View style={{ flex: 1 }}> 
+                <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 4 }]}>Escrow protection</Text> 
+                <Text style={[styles.copy, { color: colors.muted }]}>Hold funds safely until the event is complete or a dispute is resolved.</Text> 
+              </View> 
+              <TouchableOpacity onPress={() => setEscrowEnabled((value) => !value)} style={[styles.togglePill, { backgroundColor: escrowEnabled ? colors.primary : '#cbd5e1' }]}> 
+                <Text style={styles.toggleText}>{escrowEnabled ? 'On' : 'Off'}</Text> 
+              </TouchableOpacity> 
+            </View> 
+            {escrowEnabled ? (
+              <View style={styles.escrowOptions}> 
+                <View style={styles.escrowOptionRow}> 
+                  <Text style={[styles.escrowLabel, { color: colors.text }]}>Release time</Text> 
+                  <TouchableOpacity onPress={() => setEscrowReleaseTime(escrowReleaseTime === 'after_customer_confirmation' ? '48_hours' : 'after_customer_confirmation')} style={[styles.optionChip, { borderColor: colors.border }]}> 
+                    <Text style={[styles.optionChipText, { color: colors.text }]}>{escrowReleaseTime === 'after_customer_confirmation' ? 'After confirmation' : '48 Hours'}</Text> 
+                  </TouchableOpacity> 
+                </View> 
+                <View style={styles.escrowOptionRow}> 
+                  <Text style={[styles.escrowLabel, { color: colors.text }]}>Dispute handling</Text> 
+                  <TouchableOpacity onPress={() => setEscrowDisputePolicy(escrowDisputePolicy === 'standard' ? 'mediation' : 'standard')} style={[styles.optionChip, { borderColor: colors.border }]}> 
+                    <Text style={[styles.optionChipText, { color: colors.text }]}>{escrowDisputePolicy === 'standard' ? 'Standard' : 'Mediation'}</Text> 
+                  </TouchableOpacity> 
+                </View> 
+              </View>
+            ) : null} 
+          </View>
+
+          <View style={styles.actionRow}>
+            <Button title="Add to cart" onPress={handleAddToCart} variant="secondary" fullWidth style={{ flex: 1, marginRight: 8 }} />
+            <Button title={bookingLoading ? 'Processing...' : 'Continue to booking'} onPress={handleBooking} isLoading={bookingLoading} variant="primary" fullWidth size="lg" style={{ flex: 1 }} />
+          </View>
         </Card>
       </ScrollView>
     </View>
@@ -286,7 +368,10 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 36 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   headerButtons: { position: 'absolute', top: 18, left: 16, right: 16, zIndex: 2, flexDirection: 'row', justifyContent: 'space-between' },
+  headerActionGroup: { flexDirection: 'row', alignItems: 'center' },
   circleButton: { width: 44, height: 44, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.95)', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10, elevation: 3 },
+  cartBadge: { position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 999, backgroundColor: '#fef3c7', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  cartBadgeText: { color: '#92400e', fontSize: 11, fontWeight: '800' },
   imageWrap: { height: 280, borderRadius: 28, overflow: 'hidden', marginTop: 8, marginBottom: 12, backgroundColor: '#d7e7de' },
   image: { width: '100%', height: '100%' },
   imageOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.2)' },
@@ -330,8 +415,20 @@ const styles = StyleSheet.create({
   policyTitle: { fontSize: 13, fontWeight: '800', marginBottom: 4, fontFamily: appFont },
   policyText: { fontSize: 13, lineHeight: 20, fontFamily: appFont },
   policyCheckboxRow: { flexDirection: 'row', alignItems: 'flex-start', marginTop: 12, gap: 8 },
+  escrowCard: { borderRadius: 16, borderWidth: 1, padding: 12, marginBottom: 14 },
+  escrowHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  escrowOptions: { marginTop: 10, gap: 8 },
+  escrowOptionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  escrowLabel: { fontSize: 13, fontWeight: '700' },
+  optionChip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
+  optionChipText: { fontSize: 12, fontWeight: '700' },
+  togglePill: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
+  toggleText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   checkbox: { width: 20, height: 20, borderRadius: 4, borderWidth: 1.5, borderColor: '#1f7a4d', marginTop: 2, alignItems: 'center', justifyContent: 'center' },
   checkboxActive: { backgroundColor: '#1f7a4d' },
+  confirmationBanner: { borderRadius: 16, padding: 14, marginBottom: 14, borderWidth: 1 },
+  confirmationText: { fontSize: 14, fontWeight: '700' },
   inputGroup: { marginTop: 8 },
   inputLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', fontFamily: appFont },
   inputValue: { fontSize: 14, fontWeight: '700', marginTop: 4 },

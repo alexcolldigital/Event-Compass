@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   Alert,
   SafeAreaView,
+  StyleSheet,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -19,6 +20,7 @@ import Input from '../../components/Input.jsx';
 import Button from '../../components/Button.jsx';
 import Loading from '../../components/Loading.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
+import { useTheme } from '../../context/ThemeContext';
 
 const isValidEmail = (email) => /\S+@\S+\.\S+/.test(email);
 const isValidPhoneNumber = (phone) => /^\+?234\d{10}|0\d{10}$/.test(phone.replace(/[^\d+]/g, ''));
@@ -26,12 +28,24 @@ const isValidPhoneNumber = (phone) => /^\+?234\d{10}|0\d{10}$/.test(phone.replac
 const EditProfileScreen = () => {
   const navigation = useNavigation();
   const { user, isLoading, error, updateProfile } = useAuthStore();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+
+  const colors = {
+    bg: isDark ? '#050816' : '#f5f7f2',
+    surface: isDark ? '#111827' : '#ffffff',
+    surfaceAlt: isDark ? '#161e2c' : '#f3f6ef',
+    text: isDark ? '#f8fafc' : '#0f172a',
+    muted: isDark ? '#94a3b8' : '#64748b',
+    border: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)',
+    primary: '#16a34a',
+  };
 
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
-    phone: '',
+    phoneNumber: '',
     businessName: '',
     businessDescription: '',
   });
@@ -45,7 +59,7 @@ const EditProfileScreen = () => {
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         email: user.email || '',
-        phone: user.phone || '',
+        phoneNumber: user.phoneNumber || '',
         businessName: user.businessName || '',
         businessDescription: user.businessDescription || '',
       });
@@ -69,10 +83,10 @@ const EditProfileScreen = () => {
       errors.email = 'Invalid email format';
     }
 
-    if (!formData.phone.trim()) {
-      errors.phone = 'Phone number is required';
-    } else if (!isValidPhoneNumber(formData.phone)) {
-      errors.phone = 'Invalid Nigerian phone number';
+    if (!formData.phoneNumber.trim()) {
+      errors.phoneNumber = 'Phone number is required';
+    } else if (!isValidPhoneNumber(formData.phoneNumber)) {
+      errors.phoneNumber = 'Invalid Nigerian phone number';
     }
 
     if (user?.role === 'service_provider') {
@@ -103,7 +117,7 @@ const EditProfileScreen = () => {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         email: formData.email.trim(),
-        phone: formData.phone.trim(),
+        phoneNumber: formData.phoneNumber.trim(),
       };
 
       if (user?.role === 'service_provider') {
@@ -128,109 +142,98 @@ const EditProfileScreen = () => {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      {/* Header */}
-      <View className="bg-gradient-to-r from-green-600 via-green-500 to-emerald-600 px-6 pb-8 rounded-b-4xl shadow-2xl">
-        <View className="flex-row items-center mb-4">
+    <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}> 
+      <View style={[styles.header, { backgroundColor: colors.primary }]}> 
+        <View style={styles.headerRow}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            className="p-3 active:bg-white/20 rounded-full"
+            style={styles.iconButton}
+            activeOpacity={0.85}
           >
-            <MaterialCommunityIcons name="arrow-left" size={28} color="white" />
+            <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
           </TouchableOpacity>
-          <Text className="text-white text-3xl font-black ml-4">Edit Profile</Text>
+          <Text style={styles.headerTitle}>Edit Profile</Text>
         </View>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
-        {/* Error Message */}
-        {error && <ErrorMessage error={error} />}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: 24 }]}> 
+        {error ? <ErrorMessage error={error} /> : null}
 
-        <View className="px-6 py-8">
-          {/* Profile Picture Section */}
-          <View className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-3xl p-8 mb-8 items-center border-2 border-green-100">
-            <View className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-full p-6 mb-6 shadow-lg">
-              <MaterialCommunityIcons name="account" size={48} color="white" />
+        <View style={styles.section}>
+          <View style={[styles.profileCard, { backgroundColor: '#ecfdf5', borderColor: '#bbf7d0' }]}> 
+            <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}> 
+              <MaterialCommunityIcons name="account" size={44} color="white" />
             </View>
-            <TouchableOpacity className="bg-gradient-to-r from-green-600 to-green-500 rounded-full px-6 py-3 shadow-lg mb-3">
-              <Text className="text-white font-black">Change Photo</Text>
+            <TouchableOpacity style={[styles.photoButton, { backgroundColor: colors.primary }]} activeOpacity={0.85}>
+              <Text style={styles.photoButtonText}>Change Photo</Text>
             </TouchableOpacity>
-            <Text className="text-gray-500 text-xs font-medium">JPG, PNG up to 5MB</Text>
+            <Text style={[styles.photoHint, { color: colors.muted }]}>JPG, PNG up to 5MB</Text>
           </View>
 
-          {/* Personal Information */}
-          <View className="mb-8">
-            <Text className="text-lg font-black text-gray-900 mb-4">Personal Information</Text>
-
-            <View className="bg-gray-50 rounded-3xl p-7 shadow-lg">
-              {/* Name Row */}
-              <View className="flex-row gap-4 mb-2">
-                <View className="flex-1">
-                  <Input
-                    label="First Name"
-                    placeholder="John"
-                    value={formData.firstName}
-                    onChangeText={(text) => {
-                      setFormData({ ...formData, firstName: text });
-                      if (formErrors.firstName) setFormErrors({ ...formErrors, firstName: null });
-                    }}
-                    icon="account"
-                    error={formErrors.firstName}
-                    containerStyle="mb-0"
-                  />
-                </View>
-                <View className="flex-1">
-                  <Input
-                    label="Last Name"
-                    placeholder="Doe"
-                    value={formData.lastName}
-                    onChangeText={(text) => {
-                      setFormData({ ...formData, lastName: text });
-                      if (formErrors.lastName) setFormErrors({ ...formErrors, lastName: null });
-                    }}
-                    icon="account"
-                    error={formErrors.lastName}
-                    containerStyle="mb-0"
-                  />
-                </View>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Personal Information</Text>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+            <View style={styles.row}>
+              <View style={styles.halfWidth}>
+                <Input
+                  label="First Name"
+                  placeholder="John"
+                  value={formData.firstName}
+                  onChangeText={(text) => {
+                    setFormData({ ...formData, firstName: text });
+                    if (formErrors.firstName) setFormErrors({ ...formErrors, firstName: null });
+                  }}
+                  icon="account"
+                  error={formErrors.firstName}
+                  containerStyle={{ marginBottom: 0 }}
+                />
               </View>
-
-              {/* Email */}
-              <Input
-                label="Email Address"
-                placeholder="your@email.com"
-                value={formData.email}
-                onChangeText={(text) => {
-                  setFormData({ ...formData, email: text });
-                  if (formErrors.email) setFormErrors({ ...formErrors, email: null });
-                }}
-                keyboardType="email-address"
-                icon="email"
-                error={formErrors.email}
-              />
-
-              {/* Phone */}
-              <Input
-                label="Phone Number"
-                placeholder="+234 (0) 123 4567"
-                value={formData.phone}
-                onChangeText={(text) => {
-                  setFormData({ ...formData, phone: text });
-                  if (formErrors.phone) setFormErrors({ ...formErrors, phone: null });
-                }}
-                keyboardType="phone-pad"
-                icon="phone"
-                error={formErrors.phone}
-              />
+              <View style={styles.halfWidth}>
+                <Input
+                  label="Last Name"
+                  placeholder="Doe"
+                  value={formData.lastName}
+                  onChangeText={(text) => {
+                    setFormData({ ...formData, lastName: text });
+                    if (formErrors.lastName) setFormErrors({ ...formErrors, lastName: null });
+                  }}
+                  icon="account"
+                  error={formErrors.lastName}
+                  containerStyle={{ marginBottom: 0 }}
+                />
+              </View>
             </View>
+
+            <Input
+              label="Email Address"
+              placeholder="your@email.com"
+              value={formData.email}
+              onChangeText={(text) => {
+                setFormData({ ...formData, email: text });
+                if (formErrors.email) setFormErrors({ ...formErrors, email: null });
+              }}
+              keyboardType="email-address"
+              icon="email"
+              error={formErrors.email}
+            />
+
+            <Input
+              label="Phone Number"
+              placeholder="+234 (0) 123 4567"
+              value={formData.phoneNumber}
+              onChangeText={(text) => {
+                setFormData({ ...formData, phoneNumber: text });
+                if (formErrors.phoneNumber) setFormErrors({ ...formErrors, phoneNumber: null });
+              }}
+              keyboardType="phone-pad"
+              icon="phone"
+              error={formErrors.phoneNumber}
+            />
           </View>
 
-          {/* Business Information */}
           {isServiceProvider && (
-            <View className="mb-8">
-              <Text className="text-lg font-black text-gray-900 mb-4">Business Information</Text>
-
-              <View className="bg-gray-50 rounded-3xl p-7 shadow-lg">
+            <>
+              <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 20 }]}>Business Information</Text>
+              <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
                 <Input
                   label="Business Name"
                   placeholder="Your business name"
@@ -243,99 +246,63 @@ const EditProfileScreen = () => {
                   error={formErrors.businessName}
                 />
 
-                <View className="mt-0">
-                  <Text className="text-gray-700 font-semibold text-sm mb-3">Business Description</Text>
-                  <View className="bg-white rounded-2xl border-2 border-gray-200 px-5 py-4 focus:border-green-500">
-                    <Text className="text-gray-700 text-base min-h-24">
-                      {formData.businessDescription || 'Describe your services in detail...'}
-                    </Text>
-                  </View>
-                  <View className="flex-row justify-between mt-2">
-                    <Text className="text-gray-500 text-xs font-medium">
-                      {formData.businessDescription.length}/500 characters
-                    </Text>
-                    {formErrors.businessDescription && (
-                      <Text className="text-red-600 text-xs font-semibold">
-                        {formErrors.businessDescription}
-                      </Text>
-                    )}
-                  </View>
+                <Input
+                  label="Business Description"
+                  placeholder="Describe your services in detail..."
+                  value={formData.businessDescription}
+                  onChangeText={(text) => {
+                    setFormData({ ...formData, businessDescription: text });
+                    if (formErrors.businessDescription) setFormErrors({ ...formErrors, businessDescription: null });
+                  }}
+                  multiline
+                  numberOfLines={4}
+                  icon="text-box-outline"
+                  error={formErrors.businessDescription}
+                />
+              </View>
+            </>
+          )}
+
+          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 20 }]}>Account Status</Text>
+          <View style={{ gap: 12 }}>
+            <View style={[styles.statusCard, { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' }]}> 
+              <View style={styles.statusLeft}> 
+                <View style={[styles.statusIcon, { backgroundColor: '#2563eb' }]}> 
+                  <MaterialCommunityIcons name="account-tie" size={20} color="white" />
+                </View>
+                <View>
+                  <Text style={[styles.statusLabel, { color: colors.muted }]}>Account Type</Text>
+                  <Text style={[styles.statusValue, { color: colors.text }]}> 
+                    {user?.role === 'service_provider' ? 'Service Provider' : 'Client'}
+                  </Text>
                 </View>
               </View>
             </View>
-          )}
 
-          {/* Account Status */}
-          <View className="mb-8">
-            <Text className="text-lg font-black text-gray-900 mb-4">Account Status</Text>
-
-            <View className="gap-3">
-              {/* Account Type */}
-              <View className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-5 flex-row items-center justify-between border-l-4 border-blue-500">
-                <View className="flex-row items-center flex-1">
-                  <View className="bg-blue-500 rounded-full p-3 mr-4">
-                    <MaterialCommunityIcons name="account-tie" size={24} color="white" />
-                  </View>
-                  <View>
-                    <Text className="text-gray-600 text-xs font-medium">Account Type</Text>
-                    <Text className="text-gray-900 font-bold text-base capitalize mt-1">
-                      {user?.role === 'service_provider' ? '🏢 Service Provider' : '👤 Client'}
-                    </Text>
-                  </View>
+            <View style={[styles.statusCard, { backgroundColor: user?.isEmailVerified ? '#ecfdf5' : '#fef3c7', borderColor: user?.isEmailVerified ? '#bbf7d0' : '#fde68a' }]}> 
+              <View style={styles.statusLeft}> 
+                <View style={[styles.statusIcon, { backgroundColor: user?.isEmailVerified ? '#16a34a' : '#d97706' }]}> 
+                  <MaterialCommunityIcons name={user?.isEmailVerified ? 'check-circle' : 'email-alert'} size={20} color="white" />
+                </View>
+                <View>
+                  <Text style={[styles.statusLabel, { color: colors.muted }]}>Email Verification</Text>
+                  <Text style={[styles.statusValue, { color: user?.isEmailVerified ? '#166534' : '#92400e' }]}> 
+                    {user?.isEmailVerified ? 'Verified' : 'Not Verified'}
+                  </Text>
                 </View>
               </View>
+            </View>
 
-              {/* Email Verified */}
-              <View className={`rounded-2xl p-5 flex-row items-center justify-between border-l-4 ${
-                user?.emailVerified
-                  ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-500'
-                  : 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-500'
-              }`}>
-                <View className="flex-row items-center flex-1">
-                  <View className={`rounded-full p-3 mr-4 ${
-                    user?.emailVerified ? 'bg-green-500' : 'bg-yellow-500'
-                  }`}>
-                    <MaterialCommunityIcons
-                      name={user?.emailVerified ? 'check-circle' : 'email-alert'}
-                      size={24}
-                      color="white"
-                    />
-                  </View>
-                  <View>
-                    <Text className="text-gray-600 text-xs font-medium">Email Verification</Text>
-                    <Text className={`font-bold text-base mt-1 ${
-                      user?.emailVerified ? 'text-green-700' : 'text-yellow-700'
-                    }`}>
-                      {user?.emailVerified ? '✓ Verified' : '⚠ Not Verified'}
-                    </Text>
-                  </View>
+            <View style={[styles.statusCard, { backgroundColor: user?.isPhoneVerified ? '#ecfdf5' : '#fef3c7', borderColor: user?.isPhoneVerified ? '#bbf7d0' : '#fde68a' }]}> 
+              <View style={styles.statusLeft}> 
+                <View style={[styles.statusIcon, { backgroundColor: user?.isPhoneVerified ? '#16a34a' : '#d97706' }]}> 
+                  <MaterialCommunityIcons name={user?.isPhoneVerified ? 'check-circle' : 'phone-alert'} size={20} color="white" />
                 </View>
-              </View>
-
-              {/* Phone Verified */}
-              <View className={`rounded-2xl p-5 flex-row items-center justify-between border-l-4 ${
-                user?.phoneVerified
-                  ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-500'
-                  : 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-500'
-              }`}>
-                <View className="flex-row items-center flex-1">
-                  <View className={`rounded-full p-3 mr-4 ${
-                    user?.phoneVerified ? 'bg-green-500' : 'bg-yellow-500'
-                  }`}>
-                    <MaterialCommunityIcons
-                      name={user?.phoneVerified ? 'check-circle' : 'phone-alert'}
-                      size={24}
-                      color="white"
-                    />
-                  </View>
-                  <View>
-                    <Text className="text-gray-600 text-xs font-medium">Phone Verification</Text>
-                    <Text className={`font-bold text-base mt-1 ${
-                      user?.phoneVerified ? 'text-green-700' : 'text-yellow-700'
-                    }`}>
-                      {user?.phoneVerified ? '✓ Verified' : '⚠ Not Verified'}
-                    </Text>
-                  </View>
+                <View>
+                  <Text style={[styles.statusLabel, { color: colors.muted }]}>Phone Verification</Text>
+                  <Text style={[styles.statusValue, { color: user?.isPhoneVerified ? '#166534' : '#92400e' }]}> 
+                    {user?.isPhoneVerified ? 'Verified' : 'Not Verified'}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -343,8 +310,7 @@ const EditProfileScreen = () => {
         </View>
       </ScrollView>
 
-      {/* Action Buttons */}
-      <View className="px-6 py-6 gap-3 border-t border-gray-100">
+      <View style={[styles.footer, { borderTopColor: colors.border }]}> 
         <Button
           title={isSaving ? 'Saving...' : 'Save Changes'}
           onPress={handleSaveProfile}
@@ -352,6 +318,7 @@ const EditProfileScreen = () => {
           variant="primary"
           fullWidth
           size="lg"
+          style={styles.footerButton}
         />
 
         <Button
@@ -365,5 +332,31 @@ const EditProfileScreen = () => {
     </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  header: { paddingHorizontal: 20, paddingBottom: 22, paddingTop: 16, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
+  headerRow: { flexDirection: 'row', alignItems: 'center' },
+  iconButton: { padding: 10, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 14 },
+  headerTitle: { color: 'white', fontSize: 28, fontWeight: '800', marginLeft: 16 },
+  content: { paddingHorizontal: 18, paddingTop: 20 },
+  section: { gap: 18 },
+  profileCard: { borderRadius: 30, padding: 24, alignItems: 'center', marginBottom: 12, borderWidth: 1 },
+  avatarCircle: { width: 96, height: 96, borderRadius: 999, alignItems: 'center', justifyContent: 'center', marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 4 },
+  photoButton: { paddingHorizontal: 22, paddingVertical: 12, borderRadius: 999, marginBottom: 8, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 3 },
+  photoButtonText: { color: '#fff', fontSize: 14, fontWeight: '800' },
+  photoHint: { fontSize: 12, textAlign: 'center' },
+  sectionTitle: { fontSize: 18, fontWeight: '800', marginBottom: 12 },
+  card: { borderRadius: 28, padding: 22, borderWidth: 1, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
+  row: { flexDirection: 'row', gap: 14, marginBottom: 14 },
+  halfWidth: { flex: 1 },
+  statusCard: { borderRadius: 24, padding: 18, borderWidth: 1 },
+  statusLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  statusIcon: { width: 44, height: 44, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  statusLabel: { fontSize: 12, fontWeight: '600', marginBottom: 4 },
+  statusValue: { fontSize: 15, fontWeight: '800' },
+  footer: { paddingHorizontal: 18, paddingVertical: 18, borderTopWidth: 1, backgroundColor: 'transparent', gap: 12 },
+  footerButton: { shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
+});
 
 export default EditProfileScreen;

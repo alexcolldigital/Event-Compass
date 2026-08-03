@@ -19,10 +19,25 @@ const apiClient = axios.create({
 });
 
 // Add token to requests
+const getStoredAuthToken = async () => {
+  try {
+    const token = await AsyncStorage.getItem('authToken');
+    if (token) return token;
+  } catch (error) {
+    console.error('Error reading auth token from AsyncStorage:', error);
+  }
+
+  if (typeof window !== 'undefined' && window.localStorage) {
+    return window.localStorage.getItem('authToken');
+  }
+
+  return null;
+};
+
 apiClient.interceptors.request.use(
   async (config) => {
     try {
-      const token = await AsyncStorage.getItem('authToken');
+      const token = await getStoredAuthToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -78,6 +93,11 @@ export const serviceAPI = {
 // Booking API calls
 export const bookingAPI = {
   createBooking: (data) => apiClient.post('/bookings', data),
+  checkoutCart: (data) => apiClient.post('/bookings/checkout', data),
+  createBookingPaymentSession: (bookingId, origin) =>
+    apiClient.post(`/bookings/${bookingId}/payment-session`, { origin }),
+  markBookingPaymentSuccess: (bookingId) =>
+    apiClient.post(`/bookings/${bookingId}/payment-success`),
   getBookingById: (id) => apiClient.get(`/bookings/${id}`),
   getMyClientBookings: (query) =>
     apiClient.get('/bookings/client/my-bookings', { params: query }),
@@ -86,6 +106,8 @@ export const bookingAPI = {
   confirmBooking: (id) => apiClient.patch(`/bookings/${id}/confirm`),
   cancelBooking: (id, data) => apiClient.patch(`/bookings/${id}/cancel`, data),
   completeBooking: (id) => apiClient.patch(`/bookings/${id}/complete`),
+  releaseEscrow: (id) => apiClient.patch(`/bookings/${id}/release-escrow`),
+  disputeEscrow: (id, data) => apiClient.patch(`/bookings/${id}/dispute-escrow`, data),
 };
 
 // Admin API calls

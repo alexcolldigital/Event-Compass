@@ -33,9 +33,9 @@ const formatPrice = (value) => `₦${Number(value || 0).toLocaleString()}`;
 
 const variantStyles = {
   default: { backgroundColor: '#ffffff', borderColor: 'rgba(15, 23, 42, 0.08)' },
-  elevated: { backgroundColor: '#ffffff', borderColor: 'rgba(15, 23, 42, 0.08)', shadowColor: '#0f172a', shadowOpacity: 0.12, shadowRadius: 18, elevation: 4 },
-  outlined: { backgroundColor: '#ffffff', borderColor: 'rgba(15, 23, 42, 0.16)' },
-  filled: { backgroundColor: '#f7f7f2', borderColor: 'rgba(15, 23, 42, 0.06)' },
+  elevated: { backgroundColor: '#ffffff', borderColor: 'rgba(15, 23, 42, 0.08)', shadowColor: '#0f172a', shadowOpacity: 0.08, shadowRadius: 16, elevation: 3 },
+  outlined: { backgroundColor: '#ffffff', borderColor: 'rgba(31, 122, 77, 0.16)' },
+  filled: { backgroundColor: '#f7f9f4', borderColor: 'rgba(31, 122, 77, 0.12)' },
 };
 
 const elevationStyles = {
@@ -119,7 +119,7 @@ export const MarketplaceCard = ({ image, title, subtitle, rating, reviewCount, p
 };
 
 export const FeatureCard = ({ icon, title, description, count, onPress, style, variant = 'default' }) => {
-  const variantBg = { default: '#ffffff', primary: '#f2f8f4', secondary: '#f4f6fe', accent: '#fff8f2', gradient: '#f5f7f2' }[variant];
+  const variantBg = { default: '#ffffff', primary: '#f3fbf6', secondary: '#f7f5ff', accent: '#fffaf2', gradient: '#f8faf7' }[variant];
   const surface = getSurfaceColors(style);
   const titleColor = surface.isDark ? '#f8fafc' : '#111827';
   const descColor = surface.isDark ? '#cbd5e1' : '#64748b';
@@ -201,13 +201,13 @@ const styles = StyleSheet.create({
   priceLabel: { fontSize: 11, color: '#64748b', fontWeight: '600' },
   price: { fontSize: 20, fontWeight: '800', color: '#1f7a4d' },
   unitText: { fontSize: 12, color: '#64748b', fontWeight: '600' },
-  featureCard: { padding: 16, minHeight: 168 },
-  featureIconWrap: { width: 42, height: 42, borderRadius: 12, backgroundColor: '#ecfdf3', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  featureCard: { padding: 16, minHeight: 168, borderRadius: 20 },
+  featureIconWrap: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#ecfdf3', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   featureTitle: { fontSize: 16, fontWeight: '800', color: '#111827', marginBottom: 4 },
   featureDesc: { fontSize: 13, color: '#64748b', lineHeight: 18, marginBottom: 10 },
   featureCount: { fontSize: 12, fontWeight: '700', color: '#1f7a4d' },
-  statCard: { padding: 16, alignItems: 'center' },
-  statIconWrap: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#ecfdf3', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  statCard: { padding: 16, alignItems: 'center', borderRadius: 20 },
+  statIconWrap: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#ecfdf3', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   statValue: { fontSize: 22, fontWeight: '800', color: '#111827' },
   statLabel: { fontSize: 12, color: '#64748b', textAlign: 'center', marginTop: 2 },
   trendRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },

@@ -17,6 +17,7 @@ export default function BookingsScreen({ navigation }) {
   const { bookings, getMyClientBookings, getMyProviderBookings, isLoading } = useBookingStore();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const latestBooking = bookings?.[0] || null;
 
   const colors = {
     bg: isDark ? '#0b120d' : '#f5f7f2',
@@ -89,6 +90,24 @@ export default function BookingsScreen({ navigation }) {
           <Text style={styles.heroSubtitle}>Stay on top of every event plan and client request.</Text>
         </View>
 
+        {latestBooking && selectedTab === 'active' && latestBooking.status !== 'cancelled' && latestBooking.status !== 'completed' ? (
+          <View style={[styles.successBanner, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+            <View style={styles.successBadge}> 
+              <MaterialCommunityIcons name="check-decagram" size={18} color={colors.primary} />
+            </View>
+            <View style={styles.successContent}> 
+              <Text style={[styles.successTitle, { color: colors.text }]}>Booking placed successfully</Text>
+              <Text style={[styles.successCopy, { color: colors.muted }]}> 
+                {latestBooking.bookingNumber || 'Your newest booking'} is ready to review.
+                {latestBooking.payment?.status === 'pending' ? ' Payment is still pending.' : ''}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => navigation.navigate('BookingDetail', { bookingId: latestBooking._id })} style={[styles.successButton, { backgroundColor: colors.primary }]}> 
+              <Text style={styles.successButtonText}>View</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         <View style={styles.tabsRow}>
           {[
             { key: 'active', label: 'Active', icon: 'clock-outline' },
@@ -125,6 +144,13 @@ const styles = StyleSheet.create({
   hero: { borderRadius: 28, padding: 20, marginTop: 8, marginBottom: 16 },
   heroTitle: { color: '#fff', fontSize: 24, fontWeight: '800' },
   heroSubtitle: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 6 },
+  successBanner: { borderRadius: 22, borderWidth: 1, padding: 14, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  successBadge: { width: 38, height: 38, borderRadius: 999, backgroundColor: 'rgba(31,122,77,0.12)', alignItems: 'center', justifyContent: 'center' },
+  successContent: { flex: 1 },
+  successTitle: { fontSize: 14, fontWeight: '800' },
+  successCopy: { fontSize: 12, marginTop: 3, lineHeight: 18 },
+  successButton: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
+  successButtonText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   tabsRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
   tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: 999, borderWidth: 1, paddingVertical: 10, gap: 6 },
   tabText: { fontSize: 13, fontWeight: '700' },

@@ -1,34 +1,41 @@
 const path = require('path');
-const { spawn } = require('child_process');
+
+const { DevServerManager } = require('@expo/cli/build/src/start/server/DevServerManager');
+const { WebSupportProjectPrerequisite } = require('@expo/cli/build/src/start/doctor/web/WebSupportProjectPrerequisite');
+const { setNodeEnv } = require('@expo/cli/build/src/utils/nodeEnv');
 
 const projectRoot = path.resolve(__dirname, '..');
 const port = Number(process.env.PORT || process.env.WEB_PORT || 3000);
-const defaultHost = process.env.RENDER ? 'localhost' : 'lan';
-const host = process.env.EXPO_HOST || defaultHost;
-const isWindows = process.platform === 'win32';
 
-const expoCommand = path.join(projectRoot, 'node_modules', '.bin', isWindows ? 'expo.cmd' : 'expo');
-const args = ['start', '--web', '--host', host, '--port', String(port)];
+async function main() {
+  setNodeEnv('development');
+  require('@expo/env').load(projectRoot);
 
-console.log(`Starting Expo web server on port ${port}`);
-console.log(`Using host ${host}`);
-console.log(`Running command: ${expoCommand} ${args.join(' ')}`);
+  const options = {
+    mode: 'development',
+    devClient: false,
+    forceManifestType: undefined,
+    privateKeyPath: undefined,
+    https: false,
+    maxWorkers: undefined,
+    resetDevServer: false,
+    minify: false,
+    port,
+    location: {
+      hostType: 'localhost',
+      scheme: null,
+    },
+  };
 
-const child = spawn(isWindows ? 'cmd.exe' : expoCommand, isWindows ? ['/c', expoCommand, ...args] : args, {
-  cwd: projectRoot,
-  stdio: 'inherit',
-  env: {
-    ...process.env,
-    PORT: String(port),
-    CI: '1',
-  },
-});
+  const devServerManager = new DevServerManager(projectRoot, options);
+  await devServerManager.ensureProjectPrerequisiteAsync(WebSupportProjectPrerequisite);
+  await devServerManager.startAsync([{ type: 'webpack', options }]);
 
-child.on('exit', (code) => {
-  process.exit(code ?? 0);
-});
+  console.log(`Web frontend running at http://localhost:${port}`);
+  await new Promise(() => {});
+}
 
-child.on('error', (error) => {
-  console.error('Failed to start Expo web server:', error);
+main().catch((error) => {
+  console.error(error);
   process.exit(1);
 });

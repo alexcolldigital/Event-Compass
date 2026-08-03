@@ -8,6 +8,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../context/authStore';
+import { useTheme } from '../context/ThemeContext';
 
 // Import main screens
 import HomeScreen from '../screens/main/HomeScreen';
@@ -19,8 +20,14 @@ import ProfileScreen from '../screens/main/ProfileScreen';
 import ServiceDetailScreen from '../screens/main/ServiceDetailScreen';
 import BookingDetailScreen from '../screens/main/BookingDetailScreen';
 import ProviderServicesScreen from '../screens/main/ProviderServicesScreen';
+import PaymentResultScreen from '../screens/main/PaymentResultScreen';
+import WebCheckoutScreen from '../screens/main/WebCheckoutScreen';
 import EditProfileScreen from '../screens/main/EditProfileScreen';
 import ChangePasswordScreen from '../screens/main/ChangePasswordScreen';
+import NotificationsScreen from '../screens/main/NotificationsScreen';
+import HelpSupportScreen from '../screens/main/HelpSupportScreen';
+import AboutScreen from '../screens/main/AboutScreen';
+import CheckoutScreen from '../screens/main/CheckoutScreen';
 
 // Import admin screens
 import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
@@ -48,6 +55,11 @@ function HomeStack() {
         component={ServiceDetailScreen}
         options={{ animation: 'slide_from_right' }}
       />
+      <Stack.Screen
+        name="Checkout"
+        component={CheckoutScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
     </Stack.Navigator>
   );
 }
@@ -66,6 +78,11 @@ function SearchStack() {
         component={ServiceDetailScreen}
         options={{ animation: 'slide_from_right' }}
       />
+      <Stack.Screen
+        name="Checkout"
+        component={CheckoutScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
     </Stack.Navigator>
   );
 }
@@ -82,6 +99,21 @@ function BookingsStack() {
       <Stack.Screen
         name="BookingDetail"
         component={BookingDetailScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="WebCheckout"
+        component={WebCheckoutScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="PaymentResult"
+        component={PaymentResultScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="Checkout"
+        component={CheckoutScreen}
         options={{ animation: 'slide_from_right' }}
       />
     </Stack.Navigator>
@@ -125,6 +157,21 @@ function ProfileStack() {
         options={{ animation: 'slide_from_right' }}
       />
       <Stack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="HelpSupport"
+        component={HelpSupportScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="About"
+        component={AboutScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
         name="ProviderServices"
         component={ProviderServicesScreen}
         options={{ animation: 'slide_from_right' }}
@@ -155,7 +202,25 @@ function ProfileStack() {
 
 export default function BottomTabNavigator() {
   const { user } = useAuthStore();
+  const { theme } = useTheme();
   const isProvider = user?.role === 'service_provider';
+  const isDark = theme === 'dark';
+
+  const tabBarColors = isDark
+    ? {
+        background: '#0f172a',
+        border: '#334155',
+        active: '#34d399',
+        inactive: '#94a3b8',
+        shadow: 'rgba(2, 6, 23, 0.45)',
+      }
+    : {
+        background: '#ffffff',
+        border: '#e2e8f0',
+        active: COLORS.primary,
+        inactive: '#64748b',
+        shadow: 'rgba(15, 23, 42, 0.16)',
+      };
 
   const tabItems = [
     { name: 'Home', component: HomeStack, label: 'Home' },
@@ -186,13 +251,32 @@ export default function BottomTabNavigator() {
 
           return <MaterialCommunityIcons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.gray[400],
+        tabBarActiveTintColor: tabBarColors.active,
+        tabBarInactiveTintColor: tabBarColors.inactive,
+        tabBarLabelStyle: {
+          fontWeight: '800',
+          fontSize: 13,
+          marginTop: 2,
+          textTransform: 'uppercase',
+        },
+        tabBarItemStyle: {
+          paddingVertical: 6,
+          borderRadius: 16,
+        },
         tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopColor: COLORS.gray[200],
-          paddingBottom: 5,
-          paddingTop: 5,
+          backgroundColor: tabBarColors.background,
+          borderTopColor: tabBarColors.border,
+          borderTopWidth: 1,
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          height: 72,
+          paddingBottom: 8,
+          paddingTop: 8,
+          shadowColor: tabBarColors.shadow,
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.22,
+          shadowRadius: 12,
+          elevation: 10,
         },
       })}
     >
@@ -203,6 +287,16 @@ export default function BottomTabNavigator() {
           component={tab.component}
           options={{
             tabBarLabel: tab.label,
+            tabBarOnPress: ({ navigation, defaultHandler }) => {
+              if (tab.name === 'Bookings') {
+                navigation.navigate(tab.name, { screen: 'BookingsScreen' });
+                return;
+              }
+              defaultHandler();
+            },
+            ...(tab.name === 'Profile' && {
+              unmountOnBlur: true,
+            }),
           }}
         />
       ))}

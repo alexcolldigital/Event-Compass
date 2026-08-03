@@ -19,8 +19,20 @@ export const useAuthStore = create((set, get) => ({
   initializeAuth: async () => {
     try {
       set({ isLoading: true });
-      const token = await AsyncStorage.getItem('authToken');
-      const userStr = await AsyncStorage.getItem('user');
+      let token = null;
+      let userStr = null;
+
+      try {
+        token = await AsyncStorage.getItem('authToken');
+        userStr = await AsyncStorage.getItem('user');
+      } catch (error) {
+        console.error('Error reading auth state from AsyncStorage:', error);
+      }
+
+      if ((!token || !userStr) && typeof window !== 'undefined' && window.localStorage) {
+        token = token || window.localStorage.getItem('authToken');
+        userStr = userStr || window.localStorage.getItem('user');
+      }
 
       if (token && userStr) {
         const user = JSON.parse(userStr);
@@ -46,6 +58,10 @@ export const useAuthStore = create((set, get) => ({
 
       await AsyncStorage.setItem('authToken', response.token);
       await AsyncStorage.setItem('user', JSON.stringify(response.user));
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('authToken', response.token);
+        window.localStorage.setItem('user', JSON.stringify(response.user));
+      }
 
       set({
         user: response.user,
@@ -94,6 +110,10 @@ export const useAuthStore = create((set, get) => ({
 
       await AsyncStorage.setItem('authToken', response.token);
       await AsyncStorage.setItem('user', JSON.stringify(response.user));
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('authToken', response.token);
+        window.localStorage.setItem('user', JSON.stringify(response.user));
+      }
 
       set({
         user: response.user,

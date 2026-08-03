@@ -31,6 +31,69 @@ export const useBookingStore = create((set, get) => ({
     }
   },
 
+  // Checkout cart
+  checkoutCart: async (data) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await bookingAPI.checkoutCart(data);
+
+      set({
+        bookings: [...(response.bookings || []), ...get().bookings],
+        isLoading: false,
+      });
+
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  // Create booking payment session
+  createBookingPaymentSession: async (id, origin) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await bookingAPI.createBookingPaymentSession(id, origin);
+
+      const state = get();
+      const updatedBooking = response.booking;
+      const updatedBookings = state.bookings.map((b) => (b._id === id ? updatedBooking : b));
+
+      set({
+        bookings: updatedBookings,
+        currentBooking: updatedBooking,
+        isLoading: false,
+      });
+
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  // Mark booking payment as escrowed
+  markBookingPaymentSuccess: async (id) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await bookingAPI.markBookingPaymentSuccess(id);
+
+      const state = get();
+      const updatedBookings = state.bookings.map((b) => (b._id === id ? response.booking : b));
+
+      set({
+        bookings: updatedBookings,
+        currentBooking: response.booking,
+        isLoading: false,
+      });
+
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
   // Get booking by ID
   getBookingById: async (id) => {
     try {
@@ -143,6 +206,50 @@ export const useBookingStore = create((set, get) => ({
       const updatedBookings = state.bookings.map((b) =>
         b._id === id ? response.booking : b
       );
+
+      set({
+        bookings: updatedBookings,
+        currentBooking: response.booking,
+        isLoading: false,
+      });
+
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  // Release escrow funds
+  releaseEscrow: async (id) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await bookingAPI.releaseEscrow(id);
+
+      const state = get();
+      const updatedBookings = state.bookings.map((b) => (b._id === id ? response.booking : b));
+
+      set({
+        bookings: updatedBookings,
+        currentBooking: response.booking,
+        isLoading: false,
+      });
+
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  // Open escrow dispute
+  disputeEscrow: async (id, reason) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await bookingAPI.disputeEscrow(id, { reason });
+
+      const state = get();
+      const updatedBookings = state.bookings.map((b) => (b._id === id ? response.booking : b));
 
       set({
         bookings: updatedBookings,
