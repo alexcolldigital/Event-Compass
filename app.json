@@ -19,7 +19,8 @@
       "favicon": "./assets/favicon.png",
       "bundleUrl": null,
       "port": 3000,
-      "output": "single"
+      "output": "single",
+      "bundler": "metro"
     },
     "splash": {
       "image": "./assets/splash.png",

@@ -1,15 +1,20 @@
 #!/usr/bin/env node
 const { spawn } = require('child_process');
 const path = require('path');
+const { getServerConfig } = require('./webServerConfig');
 
-const projectRoot = path.resolve(__dirname, '..');
+const config = getServerConfig();
+const projectRoot = config.projectRoot;
 const child = spawn(process.execPath, ['scripts/start-web.js'], {
   cwd: projectRoot,
   stdio: 'inherit',
   env: {
     ...process.env,
-    PORT: String(process.env.PORT || process.env.WEB_PORT || 3000),
+    PORT: String(config.port),
+    WEB_PORT: String(config.port),
     CI: '1',
+    EXPO_HOST: config.host,
+    RENDER: process.env.RENDER || process.env.RENDER_SERVICE_NAME ? 'true' : 'false',
   },
 });
 
