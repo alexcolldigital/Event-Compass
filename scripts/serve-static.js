@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const projectRoot = path.resolve(__dirname, '..');
-const publicDir = path.join(projectRoot, 'public');
+const rootDir = path.join(projectRoot, 'dist');
 const port = Number(process.env.PORT || process.env.WEB_PORT || 3000);
 const host = '0.0.0.0';
 
@@ -20,25 +20,35 @@ const mimeTypes = {
 };
 
 const server = http.createServer((req, res) => {
-  const requestedPath = decodeURIComponent(req.url.split('?')[0]);
+  const requestedPath = decodeURIComponent((req.url || '/').split('?')[0]);
   const safePath = requestedPath === '/' ? '/index.html' : requestedPath;
-  const filePath = path.normalize(path.join(publicDir, safePath));
+  const ext = path.extname(safePath).toLowerCase();
 
-  if (!filePath.startsWith(publicDir)) {
-    res.writeHead(403);
-    res.end('Forbidden');
+  const candidatePaths = [];
+  if (ext) {
+    candidatePaths.push(path.normalize(path.join(rootDir, safePath)));
+  } else {
+    candidatePaths.push(path.normalize(path.join(rootDir, safePath, 'index.html')));
+    candidatePaths.push(path.normalize(path.join(rootDir, safePath + '.html')));
+    candidatePaths.push(path.normalize(path.join(rootDir, 'index.html')));
+  }
+
+  const filePath = candidatePaths.find((candidate) => candidate.startsWith(rootDir) && fs.existsSync(candidate));
+
+  if (!filePath) {
+    res.writeHead(404);
+    res.end('Not found');
     return;
   }
 
   fs.readFile(filePath, (error, content) => {
     if (error) {
-      res.writeHead(404);
-      res.end('Not found');
+      res.writeHead(500);
+      res.end('Server error');
       return;
     }
 
-    const ext = path.extname(filePath).toLowerCase();
-    res.writeHead(200, { 'Content-Type': mimeTypes[ext] || 'text/plain; charset=utf-8' });
+    res.writeHead(200, { 'Content-Type': mimeTypes[ext] || 'text/html; charset=utf-8' });
     res.end(content);
   });
 });

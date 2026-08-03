@@ -8,8 +8,9 @@
     "start": "expo start --port 3000",
     "android": "expo start --android --port 3000",
     "ios": "expo start --ios --port 3000",
-    "web": "node scripts/start-web.js",
+    "web": "node scripts/render-entry.js",
     "render:start": "node scripts/render-entry.js",
+    "build:web": "node scripts/fix-expo-metro-externals.js && npx expo export --platform web --output-dir dist",
     "eject": "expo eject",
     "test": "jest",
     "lint": "eslint ."
