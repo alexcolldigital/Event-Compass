@@ -2,7 +2,7 @@
   "name": "event-compass-frontend",
   "version": "1.0.0",
   "description": "Event Compass - Cross-platform event rental and management marketplace",
-  "main": "scripts/start-web.js",
+  "main": "node_modules/expo/AppEntry.js",
   "private": true,
   "scripts": {
     "start": "node scripts/start-web.js",
