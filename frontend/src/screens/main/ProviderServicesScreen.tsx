@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, StyleSheet, Platform, Alert } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, StyleSheet, Platform, Alert, Modal } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useServiceStore } from '../../context/serviceStore.js';
@@ -33,8 +33,13 @@ const categoryOptions = [
   'Others',
 ];
 
-const serviceTypeOptions = ['Professional Service', 'Package'];
-const pricingTypeOptions = ['Fixed Price', 'Hourly', 'Negotiable'];
+const serviceTypeOptions = ['Physical Item Rental', 'Professional Service', 'Package (Service + Items)'];
+const pricingTypeOptions = ['Fixed Price', 'Hourly', 'Daily', 'Weekly', 'Monthly', 'Per Guest', 'Per Item', 'Negotiable'];
+const currencyOptions = ['NGN', 'USD', 'EUR', 'GHS'];
+const unitOptions = ['booking', 'hour', 'day', 'week', 'month', 'guest', 'item'];
+const durationOptions = ['1 hour', '2 hours', '4 hours', 'Full day', 'Custom'];
+const availabilityStatusOptions = ['Available', 'Busy', 'Temporarily unavailable'];
+const weekdayOptions = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 const initialFormState = {
   name: '',
@@ -45,22 +50,31 @@ const initialFormState = {
   subCategory: '',
   pricingType: 'Fixed Price',
   basePrice: '',
+  currency: 'NGN',
   unit: 'booking',
+  duration: '1 hour',
+  availabilityStatus: 'Available',
   minBookingAmount: '',
   discount: '',
   securityDeposit: '',
   coverImage: '',
   galleryImages: [] as string[],
   videoLink: '',
+  availableQuantity: '',
   enableInventory: false,
   availableStock: '',
   reservedStock: '',
   damagedStock: '',
+  workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+  startTime: '',
+  endTime: '',
+  recurringAvailability: true,
   country: 'Nigeria',
   state: '',
   city: '',
   lga: '',
   address: '',
+  radiusCovered: '',
   nationwide: true,
 };
 
@@ -71,6 +85,14 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
   const [formState, setFormState] = useState(initialFormState);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [showForm, setShowForm] = useState(false);
+  const [submissionStatus, setSubmissionStatus] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
+  const [isCurrencyMenuOpen, setIsCurrencyMenuOpen] = useState(false);
+  const [isUnitMenuOpen, setIsUnitMenuOpen] = useState(false);
+  const [isDurationMenuOpen, setIsDurationMenuOpen] = useState(false);
+  const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
 
   const colors = {
     bg: isDark ? '#050816' : '#f5f7f2',
@@ -95,6 +117,16 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
     if (formErrors[field]) {
       setFormErrors((prev) => ({ ...prev, [field]: '' }));
     }
+  };
+
+  const toggleWorkingDay = (day: string) => {
+    setFormState((prev: any) => {
+      const currentDays = prev.workingDays || [];
+      const nextDays = currentDays.includes(day)
+        ? currentDays.filter((item: string) => item !== day)
+        : [...currentDays, day];
+      return { ...prev, workingDays: nextDays };
+    });
   };
 
   const validateForm = () => {
@@ -168,12 +200,19 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
           type: formState.pricingType,
           basePrice: Number(formState.basePrice),
           unit: formState.unit.trim() || 'booking',
+          currency: formState.currency,
           minBookingAmount: formState.minBookingAmount ? Number(formState.minBookingAmount) : undefined,
           discount: formState.discount ? Number(formState.discount) : undefined,
           securityDeposit: formState.securityDeposit ? Number(formState.securityDeposit) : undefined,
         },
         availability: {
-          isAvailable: true,
+          isAvailable: formState.availabilityStatus === 'Available',
+          status: formState.availabilityStatus,
+          duration: formState.duration,
+          workingDays: formState.workingDays,
+          startTime: formState.startTime.trim(),
+          endTime: formState.endTime.trim(),
+          recurringAvailability: formState.recurringAvailability,
         },
         inventory: {
           enabled: formState.enableInventory,
@@ -181,6 +220,7 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
           reservedStock: formState.reservedStock ? Number(formState.reservedStock) : undefined,
           damagedStock: formState.damagedStock ? Number(formState.damagedStock) : undefined,
         },
+        quantity: formState.availableQuantity ? Number(formState.availableQuantity) : undefined,
         media: {
           coverImage: formState.coverImage.trim(),
           galleryImages,
@@ -191,11 +231,12 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
           ...galleryImages.map((url: string) => ({ url, isMain: false })),
         ],
         coverageArea: {
-          country: 'Nigeria',
+          country: formState.country.trim() || 'Nigeria',
           state: formState.state.trim(),
           city: formState.city.trim(),
           lga: formState.lga.trim(),
           address: formState.address.trim(),
+          radiusCovered: formState.radiusCovered.trim(),
           nationwide: formState.nationwide,
         },
       };
@@ -205,12 +246,21 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
         await uploadSelectedImages(response.service._id);
       }
 
+      setSubmissionStatus({
+        type: 'success',
+        message: 'Service created successfully. Your new service is now visible to customers.',
+      });
       Alert.alert('Service added', 'Your service has been created and is ready for customers to view.');
       setFormState(initialFormState);
       setShowForm(false);
       getMyServices().catch(() => {});
     } catch (err) {
-      Alert.alert('Unable to create service', err instanceof Error ? err.message : 'Please try again.');
+      const message = err instanceof Error ? err.message : 'Please try again.';
+      setSubmissionStatus({
+        type: 'error',
+        message: `Unable to create service: ${message}`,
+      });
+      Alert.alert('Unable to create service', message);
     }
   };
 
@@ -235,17 +285,63 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
     </View>
   );
 
+  const renderDropdownModal = (
+    visible,
+    onClose,
+    title,
+    options,
+    selected,
+    onSelect
+  ) => (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+        <View style={[styles.modalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{title}</Text>
+            <TouchableOpacity onPress={onClose}>
+              <MaterialCommunityIcons name="close" size={20} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false}>
+            {options.map((option) => {
+              const active = selected === option;
+              return (
+                <TouchableOpacity
+                  key={option}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    onSelect(option);
+                    onClose();
+                  }}
+                  style={[
+                    styles.modalOption,
+                    active && { backgroundColor: colors.primary },
+                    { borderColor: colors.border },
+                  ]}
+                >
+                  <Text style={[styles.modalOptionText, active && { color: '#fff' }]}>{option}</Text>
+                  {active ? <MaterialCommunityIcons name="check" size={18} color="#fff" /> : null}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}> 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={[styles.hero, { backgroundColor: colors.primary }]}> 
           <View style={styles.heroRow}>
-            <View>
+            <View style={styles.heroCopy}>
               <Text style={styles.heroTitle}>Your services</Text>
               <Text style={styles.heroSubtitle}>Manage what you provide and add new offerings.</Text>
             </View>
-            <TouchableOpacity onPress={() => setShowForm((value) => !value)} style={styles.actionButton}>
-              <MaterialCommunityIcons name={showForm ? 'close' : 'plus'} size={24} color="#fff" />
+            <TouchableOpacity onPress={() => setShowForm((value) => !value)} style={[styles.actionButton, styles.actionButtonPrimary]}>
+              <MaterialCommunityIcons name={showForm ? 'close' : 'plus'} size={20} color="#fff" />
+              <Text style={styles.actionButtonText}>{showForm ? 'Close' : 'Add Service'}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -253,6 +349,11 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
         {showForm ? (
           <View style={[styles.formCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Add a new service</Text>
+            {submissionStatus ? (
+              <View style={[styles.notificationBar, submissionStatus.type === 'success' ? styles.notificationSuccess : styles.notificationError, { backgroundColor: submissionStatus.type === 'success' ? '#ecfdf5' : '#fef2f2', borderColor: submissionStatus.type === 'success' ? '#a7f3d0' : '#fecaca' }]}> 
+                <Text style={[styles.notificationText, { color: submissionStatus.type === 'success' ? '#115e59' : '#991b1b' }]}>{submissionStatus.message}</Text>
+              </View>
+            ) : null}
             {error ? <Text style={[styles.formError, { color: '#dc2626' }]}>{error}</Text> : null}
 
             <Text style={[styles.sectionLabel, { color: colors.text }]}>1. Basic information</Text>
@@ -350,12 +451,56 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
               </View>
               <View style={styles.gridColumn}>
                 <Input
+                  label="Currency"
+                  placeholder="NGN"
+                  value={formState.currency}
+                  editable={false}
+                  icon="currency-ngn"
+                />
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => setIsCurrencyMenuOpen(true)}
+                  style={[styles.dropdownTrigger, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
+                >
+                  <Text style={[styles.dropdownValue, { color: colors.text }]}>{formState.currency}</Text>
+                  <MaterialCommunityIcons name="chevron-down" size={20} color={colors.text} />
+                </TouchableOpacity>
+              </View>
+            </View>
+            <View style={styles.gridRow}>
+              <View style={styles.gridColumn}>
+                <Input
                   label="Unit"
                   placeholder="booking"
                   value={formState.unit}
-                  onChangeText={(text) => updateField('unit', text)}
-                  icon="currency-ngn"
+                  editable={false}
+                  icon="calendar-blank"
                 />
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => setIsUnitMenuOpen(true)}
+                  style={[styles.dropdownTrigger, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
+                >
+                  <Text style={[styles.dropdownValue, { color: colors.text }]}>{formState.unit}</Text>
+                  <MaterialCommunityIcons name="chevron-down" size={20} color={colors.text} />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.gridColumn}>
+                <Input
+                  label="Duration"
+                  placeholder="1 hour"
+                  value={formState.duration}
+                  editable={false}
+                  icon="clock-outline"
+                />
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => setIsDurationMenuOpen(true)}
+                  style={[styles.dropdownTrigger, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
+                >
+                  <Text style={[styles.dropdownValue, { color: colors.text }]}>{formState.duration}</Text>
+                  <MaterialCommunityIcons name="chevron-down" size={20} color={colors.text} />
+                </TouchableOpacity>
               </View>
             </View>
             <View style={styles.gridRow}>
@@ -389,7 +534,15 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
               icon="shield-check-outline"
             />
 
-            <Text style={[styles.sectionLabel, { color: colors.text }]}>4. Inventory</Text>
+            <Text style={[styles.sectionLabel, { color: colors.text }]}>4. Rental and inventory</Text>
+            <Input
+              label="Available Quantity"
+              placeholder="200"
+              value={formState.availableQuantity}
+              onChangeText={(text) => updateField('availableQuantity', text)}
+              keyboardType="numeric"
+              icon="counter"
+            />
             <View style={styles.toggleRow}>
               <Text style={[styles.toggleLabel, { color: colors.text }]}>Enable Inventory Tracking</Text>
               <TouchableOpacity
@@ -413,7 +566,58 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
               <Input label="Damaged Stock" placeholder="5" value={formState.damagedStock} onChangeText={(text) => updateField('damagedStock', text)} keyboardType="numeric" icon="alert-circle-outline" />
             ) : null}
 
-            <Text style={[styles.sectionLabel, { color: colors.text }]}>5. Service area</Text>
+            <Text style={[styles.sectionLabel, { color: colors.text }]}>5. Availability</Text>
+            <View style={styles.fieldBlock}>
+              <Text style={styles.label}>Working Days</Text>
+              <View style={styles.pillRow}>
+                {weekdayOptions.map((day) => {
+                  const active = formState.workingDays.includes(day);
+                  return (
+                    <TouchableOpacity
+                      key={day}
+                      onPress={() => toggleWorkingDay(day)}
+                      style={[
+                        styles.pill,
+                        active && styles.pillActive,
+                        { borderColor: colors.border, backgroundColor: active ? colors.primary : colors.surfaceAlt },
+                      ]}
+                    >
+                      <Text style={[styles.pillText, { color: active ? '#fff' : colors.text }]}>{day}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+            <View style={styles.gridRow}>
+              <View style={styles.gridColumn}>
+                <Input label="Start Time" placeholder="09:00" value={formState.startTime} onChangeText={(text) => updateField('startTime', text)} icon="clock-start" />
+              </View>
+              <View style={styles.gridColumn}>
+                <Input label="End Time" placeholder="18:00" value={formState.endTime} onChangeText={(text) => updateField('endTime', text)} icon="clock-end" />
+              </View>
+            </View>
+            <View style={styles.fieldBlock}>
+              <Text style={styles.label}>Availability Status</Text>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => setIsStatusMenuOpen(true)}
+                style={[styles.dropdownTrigger, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
+              >
+                <Text style={[styles.dropdownValue, { color: colors.text }]}>{formState.availabilityStatus}</Text>
+                <MaterialCommunityIcons name="chevron-down" size={20} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.toggleRow}>
+              <Text style={[styles.toggleLabel, { color: colors.text }]}>Recurring Availability</Text>
+              <TouchableOpacity
+                onPress={() => updateField('recurringAvailability', !formState.recurringAvailability)}
+                style={[styles.toggle, { backgroundColor: formState.recurringAvailability ? colors.primary : colors.surfaceAlt }]}
+              >
+                <Text style={[styles.toggleText, { color: formState.recurringAvailability ? '#fff' : colors.text }]}> {formState.recurringAvailability ? 'Yes' : 'No'} </Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.sectionLabel, { color: colors.text }]}>6. Service area</Text>
             <View style={styles.toggleRow}>
               <Text style={[styles.toggleLabel, { color: colors.text }]}>Covers all of Nigeria</Text>
               <TouchableOpacity
@@ -428,6 +632,7 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
             <Input label="City" placeholder="Ikeja" value={formState.city} onChangeText={(text) => updateField('city', text)} icon="city" />
             <Input label="Local Government" placeholder="Ikeja LGA" value={formState.lga} onChangeText={(text) => updateField('lga', text)} icon="office-building" />
             <Input label="Address" placeholder="12, Adeola Odeku Street" value={formState.address} onChangeText={(text) => updateField('address', text)} icon="home-map-marker" />
+            <Input label="Radius Covered" placeholder="Within 50 km" value={formState.radiusCovered} onChangeText={(text) => updateField('radiusCovered', text)} icon="radius" />
 
             <Button
               title={isLoading ? 'Saving service...' : 'Create service'}
@@ -441,6 +646,39 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
         ) : null}
 
         <View style={styles.section}>
+          {renderDropdownModal(
+            isCurrencyMenuOpen,
+            () => setIsCurrencyMenuOpen(false),
+            'Select currency',
+            currencyOptions,
+            formState.currency,
+            (value) => updateField('currency', value)
+          )}
+          {renderDropdownModal(
+            isUnitMenuOpen,
+            () => setIsUnitMenuOpen(false),
+            'Select unit',
+            unitOptions,
+            formState.unit,
+            (value) => updateField('unit', value)
+          )}
+          {renderDropdownModal(
+            isDurationMenuOpen,
+            () => setIsDurationMenuOpen(false),
+            'Select duration',
+            durationOptions,
+            formState.duration,
+            (value) => updateField('duration', value)
+          )}
+          {renderDropdownModal(
+            isStatusMenuOpen,
+            () => setIsStatusMenuOpen(false),
+            'Select availability status',
+            availabilityStatusOptions,
+            formState.availabilityStatus,
+            (value) => updateField('availabilityStatus', value)
+          )}
+
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>My services</Text>
             <Text style={[styles.sectionSubtitle, { color: colors.muted }]}>{myServices.length} items</Text>
@@ -456,8 +694,6 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
                   image={service.images?.[0]?.url}
                   title={service.name}
                   subtitle={service.category}
-                  rating={service.averageRating || 0}
-                  reviewCount={service.totalReviews || 0}
                   price={service.pricing?.basePrice || 0}
                   unit={service.pricing?.unit || 'booking'}
                   category={service.serviceType}
@@ -472,6 +708,10 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
               <MaterialCommunityIcons name="briefcase-outline" size={56} color="#94a3b8" />
               <Text style={[styles.emptyTitle, { color: colors.text }]}>No services yet</Text>
               <Text style={[styles.emptyCopy, { color: colors.muted }]}>Create your first service to start receiving bookings.</Text>
+              <TouchableOpacity onPress={() => setShowForm(true)} style={styles.emptyActionButton}>
+                <MaterialCommunityIcons name="plus" size={18} color="#fff" />
+                <Text style={styles.emptyActionText}>Add your first service</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -484,10 +724,13 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { paddingHorizontal: 16, paddingBottom: 32 },
   hero: { borderRadius: 28, padding: 20, marginTop: 8, marginBottom: 16 },
-  heroRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  heroRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  heroCopy: { flex: 1 },
   heroTitle: { color: '#fff', fontSize: 24, fontWeight: '800', fontFamily: appFont },
   heroSubtitle: { color: 'rgba(255,255,255,0.9)', fontSize: 13, marginTop: 6, fontFamily: appFont },
-  actionButton: { width: 44, height: 44, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
+  actionButton: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 14, paddingVertical: 10 },
+  actionButtonPrimary: { backgroundColor: 'rgba(255,255,255,0.24)' },
+  actionButtonText: { color: '#fff', fontSize: 13, fontWeight: '800', fontFamily: appFont },
   formCard: { borderRadius: 24, borderWidth: 1, padding: 18, marginBottom: 18 },
   section: { marginBottom: 18 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
@@ -497,6 +740,8 @@ const styles = StyleSheet.create({
   emptyState: { borderRadius: 22, borderWidth: 1, padding: 24, alignItems: 'center' },
   emptyTitle: { fontSize: 16, fontWeight: '800', marginTop: 12, fontFamily: appFont },
   emptyCopy: { fontSize: 13, marginTop: 6, textAlign: 'center', fontFamily: appFont },
+  emptyActionButton: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#1f7a4d', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10, marginTop: 14 },
+  emptyActionText: { color: '#fff', fontSize: 13, fontWeight: '800', fontFamily: appFont },
   formError: { marginBottom: 12, fontSize: 13, fontWeight: '700' },
   gridRow: { flexDirection: 'row', gap: 12 },
   gridColumn: { flex: 1 },
@@ -517,4 +762,69 @@ const styles = StyleSheet.create({
   imagePreviewRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   imagePreviewChip: { backgroundColor: '#ecfdf3', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
   imagePreviewText: { color: '#166534', fontSize: 12, fontWeight: '700' },
+  notificationBar: {
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 12,
+    marginTop: 14,
+    marginBottom: 12,
+  },
+  notificationText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  dropdownTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1.5,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginTop: 8,
+  },
+  dropdownValue: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.3)',
+    justifyContent: 'center',
+    padding: 18,
+  },
+  modalCard: {
+    borderRadius: 22,
+    borderWidth: 1,
+    padding: 16,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  modalList: {
+    marginBottom: 8,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 10,
+  },
+  modalOptionText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
 });
