@@ -148,6 +148,25 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  // Upload profile image
+  uploadProfileImage: async (formData) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authAPI.uploadProfileImage(formData);
+
+      await AsyncStorage.setItem('user', JSON.stringify(response.user));
+      set({
+        user: response.user,
+        isLoading: false,
+      });
+
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
   // Change password
   changePassword: async (currentPassword, newPassword, confirmPassword) => {
     try {

@@ -456,6 +456,8 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
                   image={service.images?.[0]?.url}
                   title={service.name}
                   subtitle={service.category}
+                  rating={service.averageRating || 0}
+                  reviewCount={service.totalReviews || 0}
                   price={service.pricing?.basePrice || 0}
                   unit={service.pricing?.unit || 'booking'}
                   category={service.serviceType}

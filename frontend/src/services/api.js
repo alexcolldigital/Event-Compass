@@ -53,10 +53,15 @@ export const authAPI = {
   login: (email, password) => apiClient.post('/auth/login', { email, password }),
   getCurrentUser: () => apiClient.get('/auth/me'),
   updateProfile: (data) => apiClient.put('/auth/profile', data),
+  uploadProfileImage: (formData) =>
+    apiClient.post('/auth/profile/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
   changePassword: (data) => apiClient.post('/auth/change-password', data),
   forgotPassword: (email) => apiClient.post('/auth/forgot-password', { email }),
   resetPassword: (data) => apiClient.post('/auth/reset-password', data),
 };
+
 
 // Service API calls
 export const serviceAPI = {
@@ -85,6 +90,8 @@ export const bookingAPI = {
   confirmBooking: (id) => apiClient.patch(`/bookings/${id}/confirm`),
   cancelBooking: (id, data) => apiClient.patch(`/bookings/${id}/cancel`, data),
   completeBooking: (id) => apiClient.patch(`/bookings/${id}/complete`),
+  checkoutCart: (data) => apiClient.post('/bookings/checkout', data),
+  markBookingPaymentSuccess: (id) => apiClient.post(`/bookings/${id}/payment-success`),
 };
 
 // Admin API calls

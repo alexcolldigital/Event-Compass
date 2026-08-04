@@ -50,10 +50,10 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     ...(user?.role === 'admin' ? [{ icon: 'view-dashboard', label: 'Admin Dashboard', onPress: () => navigation.navigate('AdminDashboard'), color: '#1f7a4d' }] : []),
     { icon: 'account-edit', label: 'Edit Profile', onPress: () => navigation.navigate('EditProfile'), color: '#2563eb' },
     { icon: 'lock', label: 'Change Password', onPress: () => navigation.navigate('ChangePassword'), color: '#8b5cf6' },
-    { icon: 'bell', label: 'Notifications', onPress: () => Alert.alert('Notifications', 'Preferences are being upgraded.'), color: '#ec4899' },
-    { icon: 'help-circle', label: 'Help & Support', onPress: () => Alert.alert('Help & Support', 'Live support is coming soon.'), color: '#f59e0b' },
+    { icon: 'bell', label: 'Notifications', onPress: () => navigation.navigate('Notifications'), color: '#ec4899' },
+    { icon: 'help-circle', label: 'Help & Support', onPress: () => navigation.navigate('HelpSupport'), color: '#f59e0b' },
     ...(user?.role === 'service_provider' ? [{ icon: 'briefcase-plus', label: 'Manage Services', onPress: () => navigation.navigate('ProviderServices'), color: '#16a34a' }] : []),
-    { icon: 'information', label: 'About', onPress: () => Alert.alert('Event Compass', 'Event Compass marketplace v1.0.0'), color: '#0ea5e9' },
+    { icon: 'information', label: 'About', onPress: () => navigation.navigate('About'), color: '#0ea5e9' },
   ];
 
   return (
@@ -66,6 +66,24 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           <Text style={styles.heroName}>{user?.firstName || 'Guest'} {user?.lastName || ''}</Text>
           <Text style={styles.heroRole}>{user?.role === 'service_provider' ? 'Service Provider' : 'Client'}</Text>
           {user?.businessName ? <Text style={styles.heroBusiness}>{user.businessName}</Text> : null}
+        </View>
+
+        <View style={[styles.contactCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+          <Text style={[styles.contactTitle, { color: colors.text }]}>Contact details</Text>
+          <View style={styles.contactRow}>
+            <MaterialCommunityIcons name="email" size={18} color={colors.primary} />
+            <Text style={[styles.contactText, { color: colors.text }]}>{user?.email || 'Not provided'}</Text>
+          </View>
+          <View style={styles.contactRow}>
+            <MaterialCommunityIcons name="phone" size={18} color={colors.primary} />
+            <Text style={[styles.contactText, { color: colors.text }]}>{user?.phoneNumber || 'Not provided'}</Text>
+          </View>
+          {user?.businessDescription ? (
+            <View style={styles.contactRow}>
+              <MaterialCommunityIcons name="text-box" size={18} color={colors.primary} />
+              <Text style={[styles.contactText, { color: colors.text }]}>{user.businessDescription}</Text>
+            </View>
+          ) : null}
         </View>
 
         {user?.role === 'service_provider' ? (
@@ -126,6 +144,10 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 11, fontWeight: '600', textAlign: 'center', marginTop: 2 },
   section: { marginBottom: 16 },
   sectionTitle: { fontSize: 18, fontWeight: '800', marginBottom: 10 },
+  contactCard: { borderRadius: 20, borderWidth: 1, padding: 18, marginBottom: 16 },
+  contactTitle: { fontSize: 16, fontWeight: '800', marginBottom: 12 },
+  contactRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  contactText: { flex: 1, fontSize: 14, fontWeight: '600' },
   menuItem: { flexDirection: 'row', alignItems: 'center', borderRadius: 20, borderWidth: 1, padding: 14, marginBottom: 10 },
   menuIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   menuLabel: { flex: 1, marginLeft: 12, fontSize: 15, fontWeight: '700' },

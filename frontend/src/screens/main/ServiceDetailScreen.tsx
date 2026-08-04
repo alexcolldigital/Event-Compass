@@ -15,6 +15,7 @@ import Loading from '../../components/Loading.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { Card } from '../../components/Card.jsx';
 import { useTheme } from '../../context/ThemeContext';
+import { BOOKING_POLICY_ITEMS, isBookingPolicyAccepted } from '../../utils/bookingPolicies';
 
 const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
@@ -53,6 +54,7 @@ const ServiceDetailScreen = () => {
     return date.toISOString();
   });
   const [isFavorite, setIsFavorite] = useState(false);
+  const [policyAccepted, setPolicyAccepted] = useState(false);
 
   useEffect(() => {
     if (serviceId) {
@@ -74,6 +76,11 @@ const ServiceDetailScreen = () => {
 
     if (!currentService?._id) {
       Alert.alert('Error', 'Unable to book this service at the moment.');
+      return;
+    }
+
+    if (!isBookingPolicyAccepted(policyAccepted)) {
+      Alert.alert('Agreement required', 'Please review and accept the booking terms, privacy policy, and disclaimer before continuing.');
       return;
     }
 
@@ -245,6 +252,28 @@ const ServiceDetailScreen = () => {
               <Text style={[styles.inputValue, { color: colors.text }]}>{bookingLocation.address || 'Optional'}</Text>
             </View>
           </View>
+
+          <View style={[styles.policyBox, { backgroundColor: colors.surfaceAlt }]}> 
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Booking agreement</Text>
+            <Text style={[styles.copy, { color: colors.muted }]}>Please review the policy details below before confirming your booking.</Text>
+            {BOOKING_POLICY_ITEMS.map((policy) => (
+              <View key={policy.id} style={styles.policyItem}>
+                <Text style={[styles.policyTitle, { color: colors.text }]}>{policy.title}</Text>
+                <Text style={[styles.policyText, { color: colors.muted }]}>{policy.text}</Text>
+              </View>
+            ))}
+            <TouchableOpacity
+              onPress={() => setPolicyAccepted((value) => !value)}
+              style={styles.policyCheckboxRow}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.checkbox, policyAccepted && styles.checkboxActive]}>
+                {policyAccepted ? <MaterialCommunityIcons name="check" size={16} color="#fff" /> : null}
+              </View>
+              <Text style={[styles.policyText, { color: colors.text, flex: 1 }]}>I agree to the terms, privacy policy, and disclaimer for this booking.</Text>
+            </TouchableOpacity>
+          </View>
+
           <Button title={bookingLoading ? 'Processing...' : 'Continue to booking'} onPress={handleBooking} isLoading={bookingLoading} variant="primary" fullWidth size="lg" />
         </Card>
       </ScrollView>
@@ -296,6 +325,13 @@ const styles = StyleSheet.create({
   priceKey: { fontSize: 14, fontWeight: '700', fontFamily: appFont },
   total: { fontSize: 18, fontWeight: '800' },
   locationBox: { borderRadius: 16, padding: 12, marginBottom: 14 },
+  policyBox: { borderRadius: 16, padding: 12, marginBottom: 14 },
+  policyItem: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(15,23,42,0.08)' },
+  policyTitle: { fontSize: 13, fontWeight: '800', marginBottom: 4, fontFamily: appFont },
+  policyText: { fontSize: 13, lineHeight: 20, fontFamily: appFont },
+  policyCheckboxRow: { flexDirection: 'row', alignItems: 'flex-start', marginTop: 12, gap: 8 },
+  checkbox: { width: 20, height: 20, borderRadius: 4, borderWidth: 1.5, borderColor: '#1f7a4d', marginTop: 2, alignItems: 'center', justifyContent: 'center' },
+  checkboxActive: { backgroundColor: '#1f7a4d' },
   inputGroup: { marginTop: 8 },
   inputLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', fontFamily: appFont },
   inputValue: { fontSize: 14, fontWeight: '700', marginTop: 4 },

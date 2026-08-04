@@ -31,6 +31,19 @@ export const useBookingStore = create((set, get) => ({
     }
   },
 
+  // Checkout cart into bookings
+  checkoutCart: async (data) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await bookingAPI.checkoutCart(data);
+      set({ isLoading: false });
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
   // Get booking by ID
   getBookingById: async (id) => {
     try {
@@ -143,6 +156,27 @@ export const useBookingStore = create((set, get) => ({
       const updatedBookings = state.bookings.map((b) =>
         b._id === id ? response.booking : b
       );
+
+      set({
+        bookings: updatedBookings,
+        currentBooking: response.booking,
+        isLoading: false,
+      });
+
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  // Mark payment as successful and escrow the funds
+  markBookingPaymentSuccess: async (id) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await bookingAPI.markBookingPaymentSuccess(id);
+      const state = get();
+      const updatedBookings = state.bookings.map((b) => b._id === id ? response.booking : b);
 
       set({
         bookings: updatedBookings,

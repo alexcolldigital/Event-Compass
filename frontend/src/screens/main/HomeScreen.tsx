@@ -8,6 +8,7 @@ import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Styl
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../context/authStore.js';
 import { useServiceStore } from '../../context/serviceStore.js';
+import { useCartStore } from '../../context/cartStore';
 import Loading from '../../components/Loading.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { MarketplaceCard, FeatureCard, StatCard } from '../../components/Card.jsx';
@@ -16,26 +17,27 @@ import { useTheme } from '../../context/ThemeContext';
 const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
 const featureCategories = [
-  { icon: '🏛️', title: 'Venues', description: 'Stunning, curated locations', count: 450, variant: 'primary' },
-  { icon: '🍽️', title: 'Catering', description: 'Premium culinary experiences', count: 320, variant: 'secondary' },
-  { icon: '🎵', title: 'Entertainment', description: 'Live bands and DJs', count: 280, variant: 'accent' },
-  { icon: '💐', title: 'Decor', description: 'Floral and ambient styling', count: 380, variant: 'gradient' },
-  { icon: '📸', title: 'Photography', description: 'Modern content capture', count: 190, variant: 'primary' },
-  { icon: '🚗', title: 'Transport', description: 'Reliable guest mobility', count: 160, variant: 'secondary' },
-  { icon: '🎂', title: 'Desserts', description: 'Custom celebration cakes', count: 120, variant: 'accent' },
-  { icon: '🎤', title: 'AV & Light', description: 'Sound and lighting setup', count: 95, variant: 'gradient' },
+  { icon: <MaterialCommunityIcons name="map-marker-radius" size={24} color="#2f855a" />, title: 'Venues', description: 'Stunning, curated locations', count: 450, variant: 'primary' },
+  { icon: <MaterialCommunityIcons name="food-fork-drink" size={24} color="#4c51bf" />, title: 'Catering', description: 'Premium culinary experiences', count: 320, variant: 'secondary' },
+  { icon: <MaterialCommunityIcons name="party-popper" size={24} color="#d97706" />, title: 'Entertainment', description: 'Live bands and DJs', count: 280, variant: 'accent' },
+  { icon: <MaterialCommunityIcons name="auto-fix" size={24} color="#db2777" />, title: 'Decor', description: 'Floral and ambient styling', count: 380, variant: 'gradient' },
+  { icon: <MaterialCommunityIcons name="camera-iris" size={24} color="#0f766e" />, title: 'Photography', description: 'Modern content capture', count: 190, variant: 'primary' },
+  { icon: <MaterialCommunityIcons name="van-utility" size={24} color="#2563eb" />, title: 'Transport', description: 'Reliable guest mobility', count: 160, variant: 'secondary' },
+  { icon: <MaterialCommunityIcons name="cake-variant" size={24} color="#b45309" />, title: 'Desserts', description: 'Custom celebration cakes', count: 120, variant: 'accent' },
+  { icon: <MaterialCommunityIcons name="speaker" size={24} color="#7c3aed" />, title: 'AV & Light', description: 'Sound and lighting setup', count: 95, variant: 'gradient' },
 ];
 
 const stats = [
-  { value: '15K+', label: 'Events Completed', icon: '✅', trend: '+12%', trendUp: true },
-  { value: '2.5K+', label: 'Verified Vendors', icon: '⭐', trend: '+8%', trendUp: true },
-  { value: '50K+', label: 'Happy Customers', icon: '😊', trend: '+15%', trendUp: true },
-  { value: '4.9/5', label: 'Average Rating', icon: '🏆', trend: '+0.1', trendUp: true },
+  { value: '15K+', label: 'Events Completed', icon: <MaterialCommunityIcons name="calendar-star" size={22} color="#1f7a4d" />, trend: '+12%', trendUp: true },
+  { value: '2.5K+', label: 'Verified Vendors', icon: <MaterialCommunityIcons name="shield-check" size={22} color="#2563eb" />, trend: '+8%', trendUp: true },
+  { value: '50K+', label: 'Happy Customers', icon: <MaterialCommunityIcons name="account-group" size={22} color="#d97706" />, trend: '+15%', trendUp: true },
+  { value: '4.9/5', label: 'Average Rating', icon: <MaterialCommunityIcons name="medal" size={22} color="#db2777" />, trend: '+0.1', trendUp: true },
 ];
 
 export default function HomeScreen({ navigation }: { navigation: any }) {
   const { user } = useAuthStore();
   const { services, getAllServices, isLoading, error } = useServiceStore();
+  const { items } = useCartStore();
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === 'dark';
   const [searchInput, setSearchInput] = useState('');
@@ -115,8 +117,9 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
               <Text style={styles.heroTitle}>{user?.firstName || 'Guest'}</Text>
               <Text style={styles.heroSubtitle}>Ready to book premium services?</Text>
             </View>
-            <TouchableOpacity style={styles.iconButton} onPress={() => handleTabNavigate('Bookings')}>
-              <MaterialCommunityIcons name="bell-badge" size={22} color="#fff" />
+            <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('Checkout' as never)}>
+              <MaterialCommunityIcons name="cart-outline" size={22} color="#fff" />
+              {items.length > 0 ? <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{items.length}</Text></View> : null}
             </TouchableOpacity>
           </View>
           <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
@@ -232,6 +235,8 @@ const styles = StyleSheet.create({
   heroTitle: { color: '#fff', fontSize: 28, fontWeight: '800', marginTop: 6, fontFamily: appFont },
   heroSubtitle: { color: 'rgba(255,255,255,0.82)', fontSize: 14, marginTop: 6, fontFamily: appFont },
   iconButton: { width: 42, height: 42, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
+  cartBadge: { position: 'absolute', top: -4, right: -4, backgroundColor: '#fef3c7', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 2 },
+  cartBadgeText: { color: '#92400e', fontSize: 11, fontWeight: '800' },
   searchBar: { marginTop: 16, borderRadius: 20, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', gap: 10 },
   searchText: { flex: 1, fontSize: 14, fontWeight: '600', fontFamily: appFont },
   errorWrap: { marginBottom: 10 },
