@@ -4,7 +4,7 @@ const path = require('path');
 
 const projectRoot = path.resolve(__dirname, '..');
 const rootDir = path.join(projectRoot, 'dist');
-const preferredPort = Number(process.env.PORT || process.env.WEB_PORT || 3000);
+const port = Number(process.env.PORT || process.env.WEB_PORT || 3000);
 const host = '0.0.0.0';
 
 const mimeTypes = {
@@ -56,12 +56,9 @@ function startServer(attemptPort) {
 
   server.on('error', (error) => {
     if (error.code === 'EADDRINUSE') {
-      if (attemptPort === preferredPort) {
-        console.warn(`Port ${attemptPort} is busy, trying ${attemptPort + 1}...`);
-        server.close(() => startServer(attemptPort + 1));
-      } else {
-        throw error;
-      }
+      const nextPort = attemptPort + 1;
+      console.warn(`Port ${attemptPort} is busy, trying ${nextPort}...`);
+      server.close(() => startServer(nextPort));
       return;
     }
 
@@ -73,4 +70,4 @@ function startServer(attemptPort) {
   });
 }
 
-startServer(preferredPort);
+startServer(port);

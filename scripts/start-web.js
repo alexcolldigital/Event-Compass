@@ -1,42 +1,41 @@
 const path = require('path');
-const { spawn } = require('child_process');
-const { getServerConfig } = require('./webServerConfig');
 
-const config = getServerConfig();
-const projectRoot = config.projectRoot;
-const port = config.port;
-const host = config.host;
-const isWindows = process.platform === 'win32';
+const { DevServerManager } = require('@expo/cli/build/src/start/server/DevServerManager');
+const { WebSupportProjectPrerequisite } = require('@expo/cli/build/src/start/doctor/web/WebSupportProjectPrerequisite');
+const { setNodeEnv } = require('@expo/cli/build/src/utils/nodeEnv');
 
-console.log(`Starting Expo web server on ${host}:${port}`);
+const projectRoot = path.resolve(__dirname, '..');
+const port = Number(process.env.PORT || process.env.WEB_PORT || 3000);
 
-const env = {
-  ...process.env,
-  PORT: String(port),
-  WEB_PORT: String(port),
-  CI: '1',
-  EXPO_HOST: host,
-  RENDER: process.env.RENDER || process.env.RENDER_SERVICE_NAME ? 'true' : 'false',
-};
+async function main() {
+  setNodeEnv('development');
+  require('@expo/env').load(projectRoot);
 
-const args = ['expo', 'start', '--web', '--port', String(port), '--non-interactive'];
-const child = isWindows
-  ? spawn('cmd.exe', ['/c', 'npx.cmd', ...args], {
-      cwd: projectRoot,
-      stdio: 'inherit',
-      env,
-    })
-  : spawn('npx', args, {
-      cwd: projectRoot,
-      stdio: 'inherit',
-      env,
-    });
+  const options = {
+    mode: 'development',
+    devClient: false,
+    forceManifestType: undefined,
+    privateKeyPath: undefined,
+    https: false,
+    maxWorkers: undefined,
+    resetDevServer: false,
+    minify: false,
+    port,
+    location: {
+      hostType: 'localhost',
+      scheme: null,
+    },
+  };
 
-child.on('exit', (code) => {
-  process.exit(code ?? 0);
-});
+  const devServerManager = new DevServerManager(projectRoot, options);
+  await devServerManager.ensureProjectPrerequisiteAsync(WebSupportProjectPrerequisite);
+  await devServerManager.startAsync([{ type: 'webpack', options }]);
 
-child.on('error', (error) => {
+  console.log(`Web frontend running at http://localhost:${port}`);
+  await new Promise(() => {});
+}
+
+main().catch((error) => {
   console.error(error);
   process.exit(1);
 });
