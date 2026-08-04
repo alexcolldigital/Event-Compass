@@ -87,7 +87,7 @@ function AppShell() {
   }, [initializeAuth]);
 
   return (
-    <NavigationContainer ref={navigationRef} linking={linking} style={{ flex: 1 }}>
+    <NavigationContainer ref={navigationRef} linking={linking}>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       <RootNavigator />
     </NavigationContainer>

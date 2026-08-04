@@ -1,20 +1,30 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { NavigationProp, ParamListBase } from '@react-navigation/native';
 import Input from '../../components/Input.jsx';
 import Button from '../../components/Button.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { useAuthStore } from '../../context/authStore.js';
 import authStyles from '../../styles/authStyles.js';
 
-export default function LoginScreen({ navigation }) {
+type LoginScreenProps = {
+  navigation: NavigationProp<ParamListBase>;
+};
+
+type FormErrors = {
+  email?: string | null;
+  password?: string | null;
+};
+
+export default function LoginScreen({ navigation }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<FormErrors>({});
   const { login, isLoading, error } = useAuthStore();
 
   const validateForm = () => {
-    const nextErrors = {};
+    const nextErrors: FormErrors = {};
     if (!email) nextErrors.email = 'Email is required';
     if (!password) nextErrors.password = 'Password is required';
     setErrors(nextErrors);
