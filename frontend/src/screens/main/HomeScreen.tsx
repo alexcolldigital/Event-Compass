@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, TextInput, StyleSheet, Platform } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, TextInput, StyleSheet, Platform, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../context/authStore.js';
 import { useServiceStore } from '../../context/serviceStore.js';
@@ -13,6 +13,7 @@ import Loading from '../../components/Loading.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { MarketplaceCard, FeatureCard, StatCard } from '../../components/Card.jsx';
 import { useTheme } from '../../context/ThemeContext';
+import { normalizeCartItem } from '../../utils/cartUtils';
 
 const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
@@ -37,7 +38,7 @@ const stats = [
 export default function HomeScreen({ navigation }: { navigation: any }) {
   const { user } = useAuthStore();
   const { services, getAllServices, isLoading, error } = useServiceStore();
-  const { items } = useCartStore();
+  const { items, addItem } = useCartStore();
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === 'dark';
   const [searchInput, setSearchInput] = useState('');
@@ -101,6 +102,16 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
     } catch (err) {
       // The store already surfaces the error state.
     }
+  };
+
+  const handleAddToCart = (service: any) => {
+    const cartItem = normalizeCartItem(service, 1);
+    if (!cartItem) {
+      return;
+    }
+
+    addItem(cartItem);
+    Alert.alert('Added to cart', `${service.name} was added to your cart.`);
   };
 
   if (isLoading && services.length === 0) {
@@ -205,7 +216,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
           {services.length > 0 ? (
             <View style={styles.marketplaceGrid}>
               {services.map((service: any) => (
-                <MarketplaceCard key={service._id} image={service.images?.[0]?.url} title={service.name} subtitle={service.category} rating={service.averageRating || 4.5} reviewCount={service.totalReviews || 0} price={service.pricing?.basePrice || 0} unit={service.unit || 'booking'} category={service.serviceType} badge={service.availability?.isAvailable === false ? 'Unavailable' : 'Available'} onPress={() => navigation.navigate('ServiceDetail', { serviceId: service._id })} style={{ backgroundColor: colors.surface, borderColor: colors.border }} />
+                <MarketplaceCard key={service._id} image={service.images?.[0]?.url} title={service.name} subtitle={service.category} rating={service.averageRating || 4.5} reviewCount={service.totalReviews || 0} price={service.pricing?.basePrice || 0} unit={service.unit || 'booking'} category={service.serviceType} badge={service.availability?.isAvailable === false ? 'Unavailable' : 'Available'} onPress={() => navigation.navigate('ServiceDetail', { serviceId: service._id })} onAddToCart={() => handleAddToCart(service)} style={{ backgroundColor: colors.surface, borderColor: colors.border }} />
               ))}
             </View>
           ) : (

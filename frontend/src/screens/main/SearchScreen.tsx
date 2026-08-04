@@ -4,13 +4,15 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, View, Text, SafeAreaView, ScrollView, TouchableOpacity, TextInput, StyleSheet, Platform } from 'react-native';
+import { ActivityIndicator, View, Text, SafeAreaView, ScrollView, TouchableOpacity, TextInput, StyleSheet, Platform, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRoute } from '@react-navigation/native';
 import { useServiceStore } from '../../context/serviceStore.js';
+import { useCartStore } from '../../context/cartStore.js';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { MarketplaceCard } from '../../components/Card.jsx';
 import { useTheme } from '../../context/ThemeContext';
+import { normalizeCartItem } from '../../utils/cartUtils';
 
 const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
@@ -27,6 +29,7 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const { services, getAllServices, searchServices, isLoading, error } = useServiceStore();
+  const { addItem } = useCartStore();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const params = (route.params as { initialQuery?: string; initialCategory?: string } | undefined) || {};
@@ -96,6 +99,16 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
 
   const displayedServices = services;
 
+  const handleAddToCart = (service: any) => {
+    const cartItem = normalizeCartItem(service, 1);
+    if (!cartItem) {
+      return;
+    }
+
+    addItem(cartItem);
+    Alert.alert('Added to cart', `${service.name} was added to your cart.`);
+  };
+
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}> 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
@@ -159,7 +172,7 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
           ) : displayedServices.length > 0 ? (
             <View style={styles.marketplaceGrid}>
               {displayedServices.map((service: any) => (
-                <MarketplaceCard key={service._id} image={service.images?.[0]?.url} title={service.name} subtitle={service.serviceType} rating={service.averageRating || 4.5} reviewCount={service.totalReviews || 0} price={service.pricing?.basePrice || 0} unit={service.unit || 'booking'} category={service.serviceType} badge={service.availability?.isAvailable === false ? 'Unavailable' : 'Available'} onPress={() => navigation.navigate('ServiceDetail', { serviceId: service._id })} style={{ backgroundColor: colors.surface, borderColor: colors.border }} />
+                <MarketplaceCard key={service._id} image={service.images?.[0]?.url} title={service.name} subtitle={service.serviceType} rating={service.averageRating || 4.5} reviewCount={service.totalReviews || 0} price={service.pricing?.basePrice || 0} unit={service.unit || 'booking'} category={service.serviceType} badge={service.availability?.isAvailable === false ? 'Unavailable' : 'Available'} onPress={() => navigation.navigate('ServiceDetail', { serviceId: service._id })} onAddToCart={() => handleAddToCart(service)} style={{ backgroundColor: colors.surface, borderColor: colors.border }} />
               ))}
             </View>
           ) : (

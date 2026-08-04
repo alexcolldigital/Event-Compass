@@ -8,14 +8,15 @@ import { View, ScrollView, Text, Image, TouchableOpacity, Alert, StyleSheet, Pla
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useServiceStore } from '../../context/serviceStore.js';
-import { useBookingStore } from '../../context/bookingStore.js';
+import { useCartStore } from '../../context/cartStore.js';
 import { useAuthStore } from '../../context/authStore.js';
 import Button from '../../components/Button.jsx';
 import Loading from '../../components/Loading.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { Card } from '../../components/Card.jsx';
 import { useTheme } from '../../context/ThemeContext';
-import { BOOKING_POLICY_ITEMS, isBookingPolicyAccepted } from '../../utils/bookingPolicies';
+import { BOOKING_POLICY_ITEMS, isBookingPolicyAccepted } from '../../utils/bookingPolicies.js';
+import { normalizeCartItem } from '../../utils/cartUtils';
 
 const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
@@ -25,7 +26,7 @@ const ServiceDetailScreen = () => {
   const { serviceId } = (route.params as { serviceId?: string }) || {};
 
   const { currentService, isLoading, error, getServiceById } = useServiceStore();
-  const { createBooking, isLoading: bookingLoading } = useBookingStore();
+  const { addItem } = useCartStore();
   const { user } = useAuthStore();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -85,25 +86,25 @@ const ServiceDetailScreen = () => {
     }
 
     try {
-      await createBooking({
-        serviceId: currentService._id,
-        eventDate: selectedDate,
-        numberOfGuests: quantity,
-        specialRequirements: '',
-        bookingLocation,
-      });
-
-      Alert.alert('Success', 'Booking created successfully!');
-      const tabParent = navigation.getParent?.();
-      if (tabParent?.navigate) {
-        tabParent.navigate('Bookings');
-      } else {
-        navigation.goBack();
-      }
+      const cartItem = normalizeCartItem(currentService, quantity);
+      addItem(cartItem);
+      Alert.alert('Added to cart', `${currentService.name} is ready for checkout.`);
+      navigation.navigate('Checkout' as never);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create booking';
+      const message = err instanceof Error ? err.message : 'Failed to add service to cart';
       Alert.alert('Error', message);
     }
+  };
+
+  const handleAddToCart = () => {
+    if (!currentService?._id) {
+      Alert.alert('Error', 'Unable to add this service to your cart.');
+      return;
+    }
+
+    const cartItem = normalizeCartItem(currentService, quantity);
+    addItem(cartItem);
+    Alert.alert('Added to cart', `${currentService.name} was added to your cart.`);
   };
 
   const handleAddToFavorites = () => {
@@ -256,10 +257,10 @@ const ServiceDetailScreen = () => {
           <View style={[styles.policyBox, { backgroundColor: colors.surfaceAlt }]}> 
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Booking agreement</Text>
             <Text style={[styles.copy, { color: colors.muted }]}>Please review the policy details below before confirming your booking.</Text>
-            {BOOKING_POLICY_ITEMS.map((policy) => (
+            {BOOKING_POLICY_ITEMS.map((policy: { id: string; title: string; description: string }) => (
               <View key={policy.id} style={styles.policyItem}>
                 <Text style={[styles.policyTitle, { color: colors.text }]}>{policy.title}</Text>
-                <Text style={[styles.policyText, { color: colors.muted }]}>{policy.text}</Text>
+                <Text style={[styles.policyText, { color: colors.muted }]}>{policy.description}</Text>
               </View>
             ))}
             <TouchableOpacity
@@ -274,7 +275,10 @@ const ServiceDetailScreen = () => {
             </TouchableOpacity>
           </View>
 
-          <Button title={bookingLoading ? 'Processing...' : 'Continue to booking'} onPress={handleBooking} isLoading={bookingLoading} variant="primary" fullWidth size="lg" />
+          <View style={styles.ctaRow}>
+            <Button title="Add to cart" onPress={handleAddToCart} variant="outline" size="lg" style={styles.secondaryButton} />
+            <Button title="Continue to checkout" onPress={handleBooking} variant="primary" fullWidth size="lg" />
+          </View>
         </Card>
       </ScrollView>
     </View>
@@ -332,6 +336,8 @@ const styles = StyleSheet.create({
   policyCheckboxRow: { flexDirection: 'row', alignItems: 'flex-start', marginTop: 12, gap: 8 },
   checkbox: { width: 20, height: 20, borderRadius: 4, borderWidth: 1.5, borderColor: '#1f7a4d', marginTop: 2, alignItems: 'center', justifyContent: 'center' },
   checkboxActive: { backgroundColor: '#1f7a4d' },
+  ctaRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  secondaryButton: { flex: 1 },
   inputGroup: { marginTop: 8 },
   inputLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', fontFamily: appFont },
   inputValue: { fontSize: 14, fontWeight: '700', marginTop: 4 },

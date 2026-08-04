@@ -79,7 +79,7 @@ export const Card = ({
   );
 };
 
-export const MarketplaceCard = ({ image, title, subtitle, rating, reviewCount, price, unit = 'booking', category, badge, onPress, style }) => {
+export const MarketplaceCard = ({ image, title, subtitle, rating, reviewCount, price, unit = 'booking', category, badge, onPress, onAddToCart, style }) => {
   const surface = getSurfaceColors(style);
   const titleColor = surface.isDark ? '#f8fafc' : '#111827';
   const subtitleColor = surface.isDark ? '#cbd5e1' : '#64748b';
@@ -113,6 +113,19 @@ export const MarketplaceCard = ({ image, title, subtitle, rating, reviewCount, p
           </View>
           <Text style={styles.unitText}>per {unit}</Text>
         </View>
+        {onAddToCart ? (
+          <TouchableOpacity
+            style={styles.primaryAction}
+            onPress={(event) => {
+              event.stopPropagation?.();
+              onAddToCart();
+            }}
+            activeOpacity={0.9}
+          >
+            <MaterialCommunityIcons name="cart-plus" size={16} color="#ffffff" />
+            <Text style={styles.primaryActionText}>Add to cart</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     </Card>
   );
@@ -201,6 +214,18 @@ const styles = StyleSheet.create({
   priceLabel: { fontSize: 11, color: '#64748b', fontWeight: '600' },
   price: { fontSize: 20, fontWeight: '800', color: '#1f7a4d' },
   unitText: { fontSize: 12, color: '#64748b', fontWeight: '600' },
+  primaryAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 14,
+    backgroundColor: '#1f7a4d',
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  primaryActionText: { color: '#ffffff', fontSize: 13, fontWeight: '800' },
   featureCard: { padding: 16, minHeight: 168, borderRadius: 20 },
   featureIconWrap: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#ecfdf3', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   featureTitle: { fontSize: 16, fontWeight: '800', color: '#111827', marginBottom: 4 },

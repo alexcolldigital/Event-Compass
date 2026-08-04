@@ -46,6 +46,7 @@ declare module '../../components/Card.jsx' {
     category?: string;
     badge?: string;
     onPress?: () => void;
+    onAddToCart?: () => void;
     style?: StyleProp<ViewStyle>;
   }
 

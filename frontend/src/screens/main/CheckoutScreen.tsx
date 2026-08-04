@@ -2,15 +2,13 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCartStore } from '../../context/cartStore.js';
-import { useBookingStore } from '../../context/bookingStore.js';
 import { useTheme } from '../../context/ThemeContext';
 import Button from '../../components/Button.jsx';
-import Loading from '../../components/Loading.jsx';
 import { bookingAPI } from '../../services/api.js';
+import { buildCheckoutBookingDetails } from '../../utils/cartUtils';
 
 const CheckoutScreen = ({ navigation }: { navigation: any }) => {
   const { items, removeItem, updateItemQuantity, clearCart, getTotalAmount } = useCartStore();
-  const { createBooking } = useBookingStore();
   const { theme } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -33,11 +31,7 @@ const CheckoutScreen = ({ navigation }: { navigation: any }) => {
 
     setIsLoading(true);
     try {
-      const bookingDetails = {
-        eventDate: new Date().toISOString(),
-        eventTime: '12:00',
-        duration: 1,
-        numberOfGuests: 1,
+      const bookingDetails = buildCheckoutBookingDetails({
         bookingLocation: {
           country: 'Nigeria',
           state: 'Lagos',
@@ -45,25 +39,38 @@ const CheckoutScreen = ({ navigation }: { navigation: any }) => {
           lga: 'Ikeja',
           address: '123 Event Compass Street',
         },
-        clientNotes: 'Booking via cart checkout',
-      };
-
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api'}/bookings/checkout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ cartItems: items, bookingDetails }),
       });
 
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.message || 'Failed to complete checkout');
+      const response: any = await bookingAPI.checkoutCart({
+        cartItems: items.map((item) => ({
+          serviceId: item.serviceId,
+          quantity: item.quantity || 1,
+          specialRequirements: item.specialRequirements || '',
+          price: item.price || 0,
+          name: item.name,
+        })),
+        bookingDetails,
+      });
+
+      const firstCheckout = response?.checkouts?.find((checkout: any) => checkout?.checkoutUrl) || null;
+      clearCart();
+
+      if (firstCheckout?.checkoutUrl) {
+        Alert.alert('Success', 'Your booking is ready for payment.');
+        navigation.navigate('WebCheckout', {
+          checkoutUrl: firstCheckout.checkoutUrl,
+          bookingId: firstCheckout.bookingId,
+        });
+        return;
       }
 
-      Alert.alert('Success', 'Your bookings were created successfully. Proceed to payment in the booking details page.');
-      clearCart();
-      navigation.navigate('Bookings');
+      if (response?.bookings?.length > 0) {
+        Alert.alert('Success', 'Your bookings were created successfully. You can complete payment from the bookings screen.');
+        navigation.navigate('Bookings');
+        return;
+      }
+
+      throw new Error(response?.message || 'Failed to complete checkout');
     } catch (err: any) {
       Alert.alert('Checkout failed', err.message || 'Unable to complete checkout.');
     } finally {
