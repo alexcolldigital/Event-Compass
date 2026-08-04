@@ -3,6 +3,7 @@
     "name": "Event Compass",
     "slug": "event-compass",
     "version": "1.0.0",
+    "platforms": ["ios", "android", "web"],
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTabletMode": true,
