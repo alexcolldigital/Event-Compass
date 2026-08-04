@@ -9,7 +9,7 @@
     "android": "expo start --android --port 3000",
     "ios": "expo start --ios --port 3000",
     "web": "expo start --web --port 3000",
-    "render:start": "expo start --web --port 3000",
+    "render:start": "node scripts/render-entry.js",
     "predeploy": "npm install && npx expo export --platform web --output-dir dist --clear",
     "build:web": "npm install && npx expo export --platform web --output-dir dist --clear",
     "eject": "expo eject",
