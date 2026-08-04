@@ -23,14 +23,15 @@ function startServer(attemptPort) {
   const server = http.createServer((req, res) => {
     const requestedPath = decodeURIComponent((req.url || '/').split('?')[0]);
     const safePath = requestedPath === '/' ? '/index.html' : requestedPath;
-    const ext = path.extname(safePath).toLowerCase();
+    const relativePath = safePath.replace(/^\/+/, '');
+    const ext = path.extname(relativePath).toLowerCase();
 
     const candidatePaths = [];
     if (ext) {
-      candidatePaths.push(path.normalize(path.join(rootDir, safePath)));
+      candidatePaths.push(path.normalize(path.join(rootDir, relativePath)));
     } else {
-      candidatePaths.push(path.normalize(path.join(rootDir, safePath, 'index.html')));
-      candidatePaths.push(path.normalize(path.join(rootDir, safePath + '.html')));
+      candidatePaths.push(path.normalize(path.join(rootDir, relativePath, 'index.html')));
+      candidatePaths.push(path.normalize(path.join(rootDir, relativePath + '.html')));
       candidatePaths.push(path.normalize(path.join(rootDir, 'index.html')));
     }
 
