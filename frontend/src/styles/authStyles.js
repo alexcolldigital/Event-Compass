@@ -142,6 +142,31 @@ export const authStyles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 18,
   },
+  methodToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#f3f8f1',
+    borderRadius: 14,
+    padding: 4,
+    marginBottom: 20,
+  },
+  methodButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  methodButtonActive: {
+    backgroundColor: '#16a34a',
+  },
+  methodButtonText: {
+    color: '#667064',
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  methodButtonTextActive: {
+    color: '#ffffff',
+  },
   inlineRow: {
     flexDirection: 'row',
     justifyContent: 'center',

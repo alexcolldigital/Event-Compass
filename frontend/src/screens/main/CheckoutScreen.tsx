@@ -7,7 +7,8 @@ import Button from '../../components/Button.jsx';
 import { bookingAPI } from '../../services/api.js';
 import { buildCheckoutBookingDetails } from '../../utils/cartUtils';
 
-const CheckoutScreen = ({ navigation }: { navigation: any }) => {
+const CheckoutScreen = ({ navigation, route }: { navigation: any; route: any }) => {
+  const eventDetails = route?.params?.eventDetails;
   const { items, removeItem, updateItemQuantity, clearCart, getTotalAmount } = useCartStore();
   const { theme } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
@@ -23,22 +24,41 @@ const CheckoutScreen = ({ navigation }: { navigation: any }) => {
 
   const totalAmount = useMemo(() => getTotalAmount(), [items, getTotalAmount]);
 
+  const eventDate = eventDetails?.eventDate ? new Date(eventDetails.eventDate) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const eventTime = eventDetails?.eventTime || '12:00 PM';
+  const locationState = eventDetails?.location?.state || 'Lagos';
+  const locationCity = eventDetails?.location?.town || '';
+  const locationAddress = eventDetails?.location?.address || '';
+
   const handlePlaceOrder = async () => {
     if (items.length === 0) {
       Alert.alert('Your cart is empty', 'Please add a service before continuing to checkout.');
+      return;
+    }
+    if (!locationState.trim()) {
+      Alert.alert('Location required', 'Please enter the state for your event.');
       return;
     }
 
     setIsLoading(true);
     try {
       const bookingDetails = buildCheckoutBookingDetails({
+        eventDate: eventDate.toISOString(),
+        eventTime,
         bookingLocation: {
           country: 'Nigeria',
-          state: 'Lagos',
-          city: 'Ikeja',
-          lga: 'Ikeja',
-          address: '123 Event Compass Street',
+          state: locationState,
+          city: locationCity || locationState,
+          lga: eventDetails?.location?.lga || locationCity || locationState,
+          address: locationAddress || locationState,
         },
+      clientName: eventDetails?.clientName,
+      phoneNumber: eventDetails?.phoneNumber,
+      clientAddress: eventDetails?.clientAddress,
+      eventType: eventDetails?.eventType,
+      eventDescription: eventDetails?.eventDescription,
+      expectedGuests: eventDetails?.expectedGuests,
+      additionalNotes: eventDetails?.additionalNotes,
       });
 
       const response: any = await bookingAPI.checkoutCart({
@@ -91,6 +111,34 @@ const CheckoutScreen = ({ navigation }: { navigation: any }) => {
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]}>Cart Checkout</Text>
       </View>
+
+      {/* Event details summary */}
+      {items.length > 0 && eventDetails && (
+        <View style={[styles.eventForm, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <Text style={[styles.formTitle, { color: colors.text }]}>Event Details</Text>
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '700' }}>Edit</Text>
+            </TouchableOpacity>
+          </View>
+          <SummaryRow icon="account" label={eventDetails.clientName} colors={colors} />
+          <SummaryRow icon="phone" label={eventDetails.phoneNumber} colors={colors} />
+          <SummaryRow icon="tag" label={eventDetails.eventType} colors={colors} />
+          <SummaryRow icon="calendar" label={eventDate.toDateString()} colors={colors} />
+          <SummaryRow icon="clock-outline" label={eventTime} colors={colors} />
+          <SummaryRow icon="account-group" label={`${eventDetails.expectedGuests} guests`} colors={colors} />
+          <SummaryRow icon="map-marker" label={`${locationAddress}, ${locationCity}, ${locationState}`} colors={colors} />
+          {eventDetails.eventDescription ? <SummaryRow icon="text" label={eventDetails.eventDescription} colors={colors} /> : null}
+        </View>
+      )}
+      {items.length > 0 && !eventDetails && (
+        <View style={[styles.eventForm, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.formTitle, { color: colors.text }]}>No event details provided</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '700', marginTop: 4 }}>← Go back to fill event details</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       {items.length === 0 ? (
         <View style={[styles.emptyState, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
           <MaterialCommunityIcons name="cart-off" size={64} color={colors.muted} />
@@ -166,6 +214,20 @@ const styles = StyleSheet.create({
   emptyState: { flex: 1, margin: 24, borderWidth: 1, borderRadius: 20, padding: 24, alignItems: 'center', justifyContent: 'center' },
   emptyText: { fontSize: 18, fontWeight: '800', marginTop: 16 },
   emptySubtext: { marginTop: 8, fontSize: 14, textAlign: 'center', maxWidth: 260 },
+  eventForm: { margin: 16, marginBottom: 0, borderWidth: 1, borderRadius: 20, padding: 16, gap: 10 },
+  formTitle: { fontSize: 15, fontWeight: '800', marginBottom: 4 },
+  formRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 },
+  formInput: { flex: 1, fontSize: 14 },
+  formValue: { flex: 1, fontSize: 14 },
+  summaryRowItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  summaryRowText: { flex: 1, fontSize: 13 },
 });
+
+const SummaryRow = ({ icon, label, colors }: { icon: any; label: string; colors: any }) => (
+  <View style={styles.summaryRowItem}>
+    <MaterialCommunityIcons name={icon} size={15} color={colors.primary} />
+    <Text style={[styles.summaryRowText, { color: colors.muted }]} numberOfLines={2}>{label}</Text>
+  </View>
+);
 
 export default CheckoutScreen;

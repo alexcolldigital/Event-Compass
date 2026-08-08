@@ -1,72 +1,39 @@
-/**
- * Admin Dashboard Screen
- * Admin dashboard with statistics and management options
- */
-
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  SafeAreaView,
-  ScrollView,
-  TouchableOpacity,
-  FlatList,
-  Alert,
-} from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { adminAPI } from '../../services/api.js';
 import Loading from '../../components/Loading.jsx';
+
+const MENU_ITEMS = [
+  { icon: 'account-multiple', label: 'User Management', screen: 'ManageUsers' },
+  { icon: 'shield-check', label: 'Provider Approval', screen: 'ManageUsers', params: { filterRole: 'service_provider' } },
+  { icon: 'calendar-check', label: 'Booking Management', screen: 'ManageBookings' },
+  { icon: 'percent', label: 'Commission Management', screen: 'CommissionManagement' },
+  { icon: 'credit-card-outline', label: 'Payment Monitoring', screen: 'PaymentMonitoring' },
+  { icon: 'cash-refund', label: 'Refund Approval', screen: 'RefundApproval' },
+  { icon: 'flag-outline', label: 'Content Moderation', screen: 'ContentModeration' },
+  { icon: 'chart-bar', label: 'Reports Management', screen: 'ReportsManagement' },
+  { icon: 'shape', label: 'Category Management', screen: 'CategoryManagement' },
+  { icon: 'ticket-percent', label: 'Coupon Management', screen: 'CouponManagement' },
+  { icon: 'bullhorn', label: 'Promotions', screen: 'PromotionsManagement' },
+  { icon: 'chart-line', label: 'Analytics Dashboard', screen: 'AnalyticsDashboard' },
+  { icon: 'bell-outline', label: 'Notification Management', screen: 'NotificationManagement' },
+  { icon: 'file-document-outline', label: 'CMS Pages', screen: 'CMSManagement' },
+  { icon: 'clipboard-list-outline', label: 'Audit Logs', screen: 'AuditLogs' },
+];
 
 export default function AdminDashboardScreen({ navigation }) {
   const [stats, setStats] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadStats();
+    adminAPI.getDashboardStats()
+      .then((r) => setStats(r.stats))
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
   }, []);
 
-  const loadStats = async () => {
-    try {
-      setIsLoading(true);
-      const response = await adminAPI.getDashboardStats();
-      setStats(response.stats);
-    } catch (error) {
-      console.error('Error loading stats:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  if (isLoading) {
-    return <Loading />;
-  }
-
-  const menuItems = [
-    {
-      icon: 'account-multiple',
-      label: 'Users',
-      count: stats?.users.total,
-      onPress: () => navigation.navigate('ManageUsers'),
-    },
-    {
-      icon: 'calendar-check',
-      label: 'Bookings',
-      count: stats?.bookings.total,
-      onPress: () => navigation.navigate('ManageBookings'),
-    },
-    {
-      icon: 'briefcase',
-      label: 'Services',
-      count: 'Manage',
-      onPress: () => Alert.alert('Services', 'Service moderation is coming soon.'),
-    },
-    {
-      icon: 'currency-usd',
-      label: 'Revenue',
-      count: `₦${stats?.revenue.total?.toLocaleString() || 0}`,
-      onPress: () => navigation.navigate('RevenueAnalytics'),
-    },
-  ];
+  if (isLoading) return <Loading />;
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -77,141 +44,71 @@ export default function AdminDashboardScreen({ navigation }) {
           <Text className="text-white/70 mt-1">Event Compass Management</Text>
         </View>
 
-        {/* Stats Overview */}
-        <View className="px-6 py-6">
-          <Text className="text-lg font-bold text-gray-800 mb-4">
-            Quick Stats
-          </Text>
-
-          {/* Main Stats */}
-          <View className="flex-row gap-4 mb-4">
-            <View className="flex-1 bg-blue-50 rounded-lg p-4 border border-blue-200">
-              <MaterialCommunityIcons
-                name="account-multiple"
-                size={32}
-                color="#3b82f6"
-              />
-              <Text className="text-3xl font-bold text-blue-600 mt-2">
-                {stats?.users.total || 0}
-              </Text>
-              <Text className="text-blue-700 text-sm">Total Users</Text>
+        {/* Quick Stats */}
+        <View className="px-4 py-4">
+          <View className="flex-row gap-3 mb-3">
+            <View className="flex-1 bg-blue-50 rounded-xl p-4 border border-blue-200">
+              <MaterialCommunityIcons name="account-multiple" size={28} color="#3b82f6" />
+              <Text className="text-3xl font-bold text-blue-600 mt-2">{stats?.users.total || 0}</Text>
+              <Text className="text-blue-700 text-xs mt-1">Total Users</Text>
             </View>
-
-            <View className="flex-1 bg-green-50 rounded-lg p-4 border border-green-200">
-              <MaterialCommunityIcons
-                name="calendar-check"
-                size={32}
-                color="#10b981"
-              />
-              <Text className="text-3xl font-bold text-green-600 mt-2">
-                {stats?.bookings.completed || 0}
-              </Text>
-              <Text className="text-green-700 text-sm">Completed Bookings</Text>
+            <View className="flex-1 bg-green-50 rounded-xl p-4 border border-green-200">
+              <MaterialCommunityIcons name="calendar-check" size={28} color="#10b981" />
+              <Text className="text-3xl font-bold text-green-600 mt-2">{stats?.bookings.completed || 0}</Text>
+              <Text className="text-green-700 text-xs mt-1">Completed</Text>
             </View>
           </View>
-
-          <View className="flex-row gap-4">
-            <View className="flex-1 bg-purple-50 rounded-lg p-4 border border-purple-200">
-              <MaterialCommunityIcons
-                name="percent"
-                size={32}
-                color="#a855f7"
-              />
-              <Text className="text-3xl font-bold text-purple-600 mt-2">
-                {stats?.bookings.pending || 0}
-              </Text>
-              <Text className="text-purple-700 text-sm">Pending Bookings</Text>
+          <View className="flex-row gap-3">
+            <View className="flex-1 bg-yellow-50 rounded-xl p-4 border border-yellow-200">
+              <MaterialCommunityIcons name="clock-outline" size={28} color="#f59e0b" />
+              <Text className="text-3xl font-bold text-yellow-600 mt-2">{stats?.bookings.pending || 0}</Text>
+              <Text className="text-yellow-700 text-xs mt-1">Pending</Text>
             </View>
-
-            <View className="flex-1 bg-orange-50 rounded-lg p-4 border border-orange-200">
-              <MaterialCommunityIcons
-                name="currency-usd"
-                size={32}
-                color="#f97316"
-              />
-              <Text className="text-2xl font-bold text-orange-600 mt-2">
-                ₦{(stats?.revenue.total || 0) / 1000000}M
+            <View className="flex-1 bg-orange-50 rounded-xl p-4 border border-orange-200">
+              <MaterialCommunityIcons name="currency-usd" size={28} color="#f97316" />
+              <Text className="text-xl font-bold text-orange-600 mt-2">
+                ₦{((stats?.revenue.total || 0) / 1000000).toFixed(1)}M
               </Text>
-              <Text className="text-orange-700 text-sm">Total Revenue</Text>
+              <Text className="text-orange-700 text-xs mt-1">Revenue</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Today */}
+        <View className="mx-4 mb-4 bg-white rounded-xl p-4 border border-gray-200">
+          <Text className="text-gray-800 font-bold mb-3">Today</Text>
+          <View className="flex-row justify-between">
+            <View>
+              <Text className="text-gray-500 text-xs">Bookings</Text>
+              <Text className="text-2xl font-bold text-gray-800">{stats?.today.bookings || 0}</Text>
+            </View>
+            <View>
+              <Text className="text-gray-500 text-xs">Revenue</Text>
+              <Text className="text-2xl font-bold text-gray-800">₦{(stats?.today.revenue || 0).toLocaleString()}</Text>
+            </View>
+            <View>
+              <Text className="text-gray-500 text-xs">Providers</Text>
+              <Text className="text-2xl font-bold text-gray-800">{stats?.users.serviceProviders || 0}</Text>
             </View>
           </View>
         </View>
 
         {/* Management Menu */}
-        <View className="px-6 pb-6">
-          <Text className="text-lg font-bold text-gray-800 mb-4">
-            Management
-          </Text>
-
-          {menuItems.map((item, index) => (
+        <View className="px-4 pb-8">
+          <Text className="text-gray-800 font-bold mb-3">Management</Text>
+          {MENU_ITEMS.map((item) => (
             <TouchableOpacity
-              key={index}
-              className="bg-white rounded-lg p-4 mb-3 flex-row items-center justify-between border border-gray-200"
-              onPress={item.onPress}
+              key={item.screen + item.label}
+              className="bg-white rounded-xl p-4 mb-2 flex-row items-center border border-gray-200"
+              onPress={() => navigation.navigate(item.screen, item.params)}
             >
-              <View className="flex-row items-center flex-1">
-                <View className="w-12 h-12 rounded-lg bg-indigo-100 items-center justify-center">
-                  <MaterialCommunityIcons
-                    name={item.icon}
-                    size={24}
-                    color="#6366f1"
-                  />
-                </View>
-                <View className="ml-4">
-                  <Text className="font-semibold text-gray-800">
-                    {item.label}
-                  </Text>
-                  <Text className="text-gray-500 text-sm">
-                    Total: {item.count}
-                  </Text>
-                </View>
+              <View className="w-10 h-10 rounded-lg bg-indigo-100 items-center justify-center">
+                <MaterialCommunityIcons name={item.icon} size={22} color="#6366f1" />
               </View>
-              <MaterialCommunityIcons
-                name="chevron-right"
-                size={24}
-                color="#d1d5db"
-              />
+              <Text className="flex-1 ml-3 font-semibold text-gray-800">{item.label}</Text>
+              <MaterialCommunityIcons name="chevron-right" size={20} color="#d1d5db" />
             </TouchableOpacity>
           ))}
-        </View>
-
-        {/* Recent Activity */}
-        <View className="px-6 pb-6">
-          <Text className="text-lg font-bold text-gray-800 mb-4">
-            Platform Overview
-          </Text>
-
-          <View className="bg-white rounded-lg p-4 border border-gray-200">
-            <View className="flex-row justify-between mb-4 pb-4 border-b border-gray-200">
-              <View>
-                <Text className="text-gray-600 text-sm">Service Providers</Text>
-                <Text className="text-2xl font-bold text-gray-800 mt-1">
-                  {stats?.users.serviceProviders || 0}
-                </Text>
-              </View>
-              <View>
-                <Text className="text-gray-600 text-sm">Clients</Text>
-                <Text className="text-2xl font-bold text-gray-800 mt-1">
-                  {stats?.users.clients || 0}
-                </Text>
-              </View>
-            </View>
-
-            <View className="flex-row justify-between">
-              <View>
-                <Text className="text-gray-600 text-sm">Today Revenue</Text>
-                <Text className="text-2xl font-bold text-gray-800 mt-1">
-                  ₦{(stats?.today.revenue || 0).toLocaleString()}
-                </Text>
-              </View>
-              <View>
-                <Text className="text-gray-600 text-sm">Today Bookings</Text>
-                <Text className="text-2xl font-bold text-gray-800 mt-1">
-                  {stats?.today.bookings || 0}
-                </Text>
-              </View>
-            </View>
-          </View>
         </View>
       </ScrollView>
     </SafeAreaView>

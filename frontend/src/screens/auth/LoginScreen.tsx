@@ -7,15 +7,24 @@ import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { useAuthStore } from '../../context/authStore.js';
 import authStyles from '../../styles/authStyles.js';
 
-export default function LoginScreen({ navigation }) {
-  const [email, setEmail] = useState('');
+interface LoginErrors {
+  identifier?: string | null;
+  password?: string | null;
+}
+
+interface LoginScreenProps {
+  navigation: any;
+}
+
+export default function LoginScreen({ navigation }: LoginScreenProps) {
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState({});
-  const { login, isLoading, error } = useAuthStore();
+  const [errors, setErrors] = useState<LoginErrors>({});
+  const { loginUnified, isLoading, error } = useAuthStore();
 
   const validateForm = () => {
-    const nextErrors = {};
-    if (!email) nextErrors.email = 'Email is required';
+    const nextErrors: LoginErrors = {};
+    if (!identifier) nextErrors.identifier = 'Email or phone number is required';
     if (!password) nextErrors.password = 'Password is required';
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -24,7 +33,7 @@ export default function LoginScreen({ navigation }) {
   const handleLogin = async () => {
     if (!validateForm()) return;
     try {
-      await login(email, password);
+      await loginUnified(identifier, password);
     } catch (err) {
       console.error('Login error:', err);
     }
@@ -50,16 +59,16 @@ export default function LoginScreen({ navigation }) {
 
           <View style={authStyles.card}>
             <Input
-              label="Email Address"
-              placeholder="your@email.com"
-              value={email}
+              label="Email or Phone Number"
+              placeholder="your@email.com or +234 800 000 0000"
+              value={identifier}
               onChangeText={(text) => {
-                setEmail(text);
-                if (errors.email) setErrors({ ...errors, email: null });
+                setIdentifier(text);
+                if (errors.identifier) setErrors({ ...errors, identifier: null });
               }}
-              keyboardType="email-address"
-              icon="email"
-              error={errors.email}
+              keyboardType="default"
+              icon="account"
+              error={errors.identifier}
             />
             <Input
               label="Password"

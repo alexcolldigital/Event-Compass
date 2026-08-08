@@ -83,6 +83,61 @@ const ManageBookingsScreen = () => {
     setFilteredBookings(filtered);
   };
 
+  const handleConfirmBooking = (booking) => {
+    Alert.alert('Confirm Booking', `Confirm booking ${booking.bookingNumber}?`, [
+      { text: 'Cancel' },
+      {
+        text: 'Confirm',
+        onPress: async () => {
+          try {
+            const response = await adminAPI.confirmBooking(booking._id);
+            setBookings((prev) => prev.map((b) => (b._id === booking._id ? response.booking : b)));
+            setSelectedBooking(null);
+          } catch (err) {
+            Alert.alert('Error', err.message || 'Failed to confirm booking');
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleCancelBooking = (booking) => {
+    Alert.alert('Cancel Booking', `Cancel booking ${booking.bookingNumber}?`, [
+      { text: 'No' },
+      {
+        text: 'Yes, Cancel',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const response = await adminAPI.cancelBooking(booking._id, { reason: 'Cancelled by admin' });
+            setBookings((prev) => prev.map((b) => (b._id === booking._id ? response.booking : b)));
+            setSelectedBooking(null);
+          } catch (err) {
+            Alert.alert('Error', err.message || 'Failed to cancel booking');
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleCompleteBooking = (booking) => {
+    Alert.alert('Complete Booking', `Mark booking ${booking.bookingNumber} as completed?`, [
+      { text: 'Cancel' },
+      {
+        text: 'Complete',
+        onPress: async () => {
+          try {
+            const response = await adminAPI.completeBooking(booking._id);
+            setBookings((prev) => prev.map((b) => (b._id === booking._id ? response.booking : b)));
+            setSelectedBooking(null);
+          } catch (err) {
+            Alert.alert('Error', err.message || 'Failed to complete booking');
+          }
+        },
+      },
+    ]);
+  };
+
   const BookingCard = ({ booking }) => {
     const statusColor = getStatusColor(booking.status);
     const client = booking.clientId || booking.client || {};
@@ -227,13 +282,32 @@ const ManageBookingsScreen = () => {
             </View>
 
             {/* Action Buttons */}
-            <View className="flex-row gap-2">
-              <TouchableOpacity className="flex-1 bg-primary px-3 py-2 rounded-lg">
-                <Text className="text-white text-xs font-semibold text-center">Details</Text>
-              </TouchableOpacity>
-              <TouchableOpacity className="flex-1 border border-gray-300 px-3 py-2 rounded-lg">
-                <Text className="text-dark text-xs font-semibold text-center">Contact</Text>
-              </TouchableOpacity>
+            <View className="flex-row gap-2 flex-wrap">
+              {booking.status === BOOKING_STATUS.PENDING && (
+                <TouchableOpacity
+                  className="flex-1 bg-green-100 px-3 py-2 rounded-lg"
+                  onPress={() => handleConfirmBooking(booking)}
+                >
+                  <Text className="text-green-700 text-xs font-semibold text-center">Confirm</Text>
+                </TouchableOpacity>
+              )}
+              {booking.status === BOOKING_STATUS.CONFIRMED && (
+                <TouchableOpacity
+                  className="flex-1 bg-blue-100 px-3 py-2 rounded-lg"
+                  onPress={() => handleCompleteBooking(booking)}
+                >
+                  <Text className="text-blue-700 text-xs font-semibold text-center">Complete</Text>
+                </TouchableOpacity>
+              )}
+              {booking.status !== BOOKING_STATUS.CANCELLED &&
+                booking.status !== BOOKING_STATUS.COMPLETED && (
+                  <TouchableOpacity
+                    className="flex-1 bg-red-100 px-3 py-2 rounded-lg"
+                    onPress={() => handleCancelBooking(booking)}
+                  >
+                    <Text className="text-red-700 text-xs font-semibold text-center">Cancel</Text>
+                  </TouchableOpacity>
+                )}
             </View>
           </View>
         )}

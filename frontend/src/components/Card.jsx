@@ -29,7 +29,10 @@ const getSurfaceColors = (styleProp) => {
   return { isDark: false };
 };
 
-const formatPrice = (value) => `₦${Number(value || 0).toLocaleString()}`;
+const formatPrice = (value) => {
+  if (!value || Number(value) === 0) return 'Not a static price';
+  return `₦${Number(value).toLocaleString()}`;
+};
 
 const variantStyles = {
   default: { backgroundColor: '#ffffff', borderColor: 'rgba(15, 23, 42, 0.08)' },
@@ -108,10 +111,14 @@ export const MarketplaceCard = ({ image, title, subtitle, rating, reviewCount, p
         </View>
         <View style={styles.priceRow}>
           <View>
-            <Text style={[styles.priceLabel, { color: subtitleColor }, baseText]}>Starting from</Text>
+            {(!price || Number(price) === 0) ? null : (
+              <Text style={[styles.priceLabel, { color: subtitleColor }, baseText]}>Starting from</Text>
+            )}
             <Text style={[styles.price, { color: surface.isDark ? '#4ade80' : '#1f7a4d' }, baseText]}>{formatPrice(price)}</Text>
           </View>
-          <Text style={styles.unitText}>per {unit}</Text>
+          {(!price || Number(price) === 0) ? null : (
+            <Text style={styles.unitText}>per {unit}</Text>
+          )}
         </View>
         {onAddToCart ? (
           <TouchableOpacity
@@ -184,7 +191,9 @@ export const HorizontalCard = ({ image, title, subtitle, rating, reviewCount, pr
         ) : null}
         <View style={styles.priceRow}>
           <Text style={[styles.price, { color: surface.isDark ? '#4ade80' : '#1f7a4d' }, baseText]}>{formatPrice(price)}</Text>
-          <Text style={[styles.unitText, { color: subtitleColor }, baseText]}>per {unit}</Text>
+          {(!price || Number(price) === 0) ? null : (
+            <Text style={[styles.unitText, { color: subtitleColor }, baseText]}>per {unit}</Text>
+          )}
         </View>
       </View>
     </Card>

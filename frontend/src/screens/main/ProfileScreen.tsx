@@ -48,6 +48,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
   const menuItems: MenuItem[] = [
     ...(user?.role === 'admin' ? [{ icon: 'view-dashboard', label: 'Admin Dashboard', onPress: () => navigation.navigate('AdminDashboard'), color: '#1f7a4d' }] : []),
+    { icon: 'message-text', label: 'Messages', onPress: () => navigation.navigate('Conversations'), color: '#0ea5e9' },
     { icon: 'account-edit', label: 'Edit Profile', onPress: () => navigation.navigate('EditProfile'), color: '#2563eb' },
     { icon: 'lock', label: 'Change Password', onPress: () => navigation.navigate('ChangePassword'), color: '#8b5cf6' },
     { icon: 'bell', label: 'Notifications', onPress: () => navigation.navigate('Notifications'), color: '#ec4899' },

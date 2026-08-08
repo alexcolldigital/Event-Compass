@@ -85,6 +85,29 @@ export const BOOKING_STATUS = {
   COMPLETED: 'completed',
 };
 
+// Payment Plan
+export const PAYMENT_PLAN = {
+  FULL: 'full',
+  SPLIT_50_50: 'split_50_50',
+  DEPOSIT_20: 'deposit_20',
+};
+
+// Reschedule Status
+export const RESCHEDULE_STATUS = {
+  PENDING: 'pending',
+  ACCEPTED: 'accepted',
+  REJECTED: 'rejected',
+};
+
+// Refund Status
+export const REFUND_STATUS = {
+  NONE: 'none',
+  REQUESTED: 'requested',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+  COMPLETED: 'completed',
+};
+
 // Payment Status
 export const PAYMENT_STATUS = {
   PENDING: 'pending',

@@ -191,6 +191,75 @@ export const useBookingStore = create((set, get) => ({
     }
   },
 
+  checkAvailability: async (params) => {
+    try {
+      const response = await bookingAPI.checkAvailability(params);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  requestReschedule: async (id, data) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await bookingAPI.requestReschedule(id, data);
+      set({ currentBooking: response.booking, isLoading: false });
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  respondReschedule: async (id, data) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await bookingAPI.respondReschedule(id, data);
+      set({ currentBooking: response.booking, isLoading: false });
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  requestRefund: async (id, data) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await bookingAPI.requestRefund(id, data);
+      set({ currentBooking: response.booking, isLoading: false });
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  respondRefund: async (id, data) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await bookingAPI.respondRefund(id, data);
+      set({ currentBooking: response.booking, isLoading: false });
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  payBalance: async (id, data) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await bookingAPI.payBalance(id, data);
+      set({ isLoading: false });
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
   // Clear error
   clearError: () => set({ error: null }),
 }));

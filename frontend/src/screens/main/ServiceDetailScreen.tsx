@@ -141,7 +141,8 @@ const ServiceDetailScreen = () => {
     );
   }
 
-  const totalPrice = currentService.pricing?.basePrice * quantity || 0;
+  const hasPrice = !!(currentService.pricing?.basePrice && Number(currentService.pricing.basePrice) > 0);
+  const totalPrice = hasPrice ? currentService.pricing.basePrice * quantity : 0;
   const tax = totalPrice * 0.05;
   const finalPrice = totalPrice + tax;
 
@@ -171,9 +172,15 @@ const ServiceDetailScreen = () => {
             </View>
           </View>
           <View style={styles.priceBlock}>
-            <Text style={[styles.priceLabel, { color: colors.muted }]}>Starting from</Text>
-            <Text style={[styles.price, { color: colors.primary }]}>₦{currentService.pricing?.basePrice?.toLocaleString() || '0'}</Text>
-            <Text style={[styles.unitText, { color: colors.muted }]}>per {currentService.unit || 'booking'}</Text>
+            {hasPrice ? (
+              <Text style={[styles.priceLabel, { color: colors.muted }]}>Starting from</Text>
+            ) : null}
+            <Text style={[styles.price, { color: colors.primary }]}>
+              {hasPrice ? `₦${currentService.pricing.basePrice.toLocaleString()}` : 'Not a static price'}
+            </Text>
+            {hasPrice ? (
+              <Text style={[styles.unitText, { color: colors.muted }]}>per {currentService.unit || 'booking'}</Text>
+            ) : null}
           </View>
         </Card>
 
@@ -203,7 +210,9 @@ const ServiceDetailScreen = () => {
                 <View style={{ flex: 1, marginLeft: 8 }}>
                   <Text style={[styles.packageTitle, { color: colors.text }]}>{pkg.name}</Text>
                   <Text style={[styles.copy, { color: colors.muted }]}>{pkg.description}</Text>
-                  <Text style={[styles.packagePrice, { color: colors.primary }]}>₦{pkg.price?.toLocaleString()}</Text>
+                  <Text style={[styles.packagePrice, { color: colors.primary }]}>
+                    {pkg.price && Number(pkg.price) > 0 ? `₦${pkg.price.toLocaleString()}` : 'Not a static price'}
+                  </Text>
                 </View>
               </View>
             ))}
@@ -228,10 +237,19 @@ const ServiceDetailScreen = () => {
               </TouchableOpacity>
             ))}
           </View>
-          <View style={[styles.priceBox, { backgroundColor: colors.surfaceAlt }]}> 
-            <View style={styles.priceLine}><Text style={[styles.priceLabel, { color: colors.muted }]}>Subtotal</Text><Text style={[styles.priceKey, { color: colors.text }]}>₦{totalPrice.toLocaleString()}</Text></View>
-            <View style={styles.priceLine}><Text style={[styles.priceLabel, { color: colors.muted }]}>Tax (5%)</Text><Text style={[styles.priceKey, { color: colors.text }]}>₦{tax.toLocaleString()}</Text></View>
-            <View style={styles.priceLine}><Text style={[styles.priceLabel, { color: colors.text }]}>Total</Text><Text style={[styles.total, { color: colors.primary }]}>₦{finalPrice.toLocaleString()}</Text></View>
+          <View style={[styles.priceBox, { backgroundColor: colors.surfaceAlt }]}>
+            {hasPrice ? (
+              <>
+                <View style={styles.priceLine}><Text style={[styles.priceLabel, { color: colors.muted }]}>Subtotal</Text><Text style={[styles.priceKey, { color: colors.text }]}>₦{totalPrice.toLocaleString()}</Text></View>
+                <View style={styles.priceLine}><Text style={[styles.priceLabel, { color: colors.muted }]}>Tax (5%)</Text><Text style={[styles.priceKey, { color: colors.text }]}>₦{tax.toLocaleString()}</Text></View>
+                <View style={styles.priceLine}><Text style={[styles.priceLabel, { color: colors.text }]}>Total</Text><Text style={[styles.total, { color: colors.primary }]}>₦{finalPrice.toLocaleString()}</Text></View>
+              </>
+            ) : (
+              <View style={styles.priceLine}>
+                <Text style={[styles.priceLabel, { color: colors.muted }]}>Price</Text>
+                <Text style={[styles.total, { color: colors.primary }]}>Not a static price</Text>
+              </View>
+            )}
           </View>
           <View style={[styles.locationBox, { backgroundColor: colors.surfaceAlt }]}> 
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Service location</Text>

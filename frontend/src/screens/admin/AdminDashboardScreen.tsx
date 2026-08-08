@@ -17,8 +17,42 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { adminAPI } from '../../services/api.js';
 import Loading from '../../components/Loading.jsx';
 
-export default function AdminDashboardScreen({ navigation }) {
-  const [stats, setStats] = useState(null);
+type AdminDashboardNavigation = {
+  navigate: (screen:
+    | 'ManageUsers'
+    | 'ManageBookings'
+    | 'ManageServices'
+    | 'RevenueAnalytics') => void;
+};
+
+// Define the stats type based on backend response
+interface DashboardStats {
+  users: {
+    total: number;
+    serviceProviders: number;
+    clients: number;
+  };
+  bookings: {
+    total: number;
+    completed: number;
+    pending: number;
+  };
+  revenue: {
+    total: number;
+    platformFees: number;
+  };
+  today: {
+    bookings: number;
+    revenue: number;
+  };
+}
+
+type AdminDashboardScreenProps = {
+  navigation: AdminDashboardNavigation;
+};
+
+export default function AdminDashboardScreen({ navigation }: AdminDashboardScreenProps) {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -28,7 +62,8 @@ export default function AdminDashboardScreen({ navigation }) {
   const loadStats = async () => {
     try {
       setIsLoading(true);
-      const response = await adminAPI.getDashboardStats();
+      // The axios interceptor returns response.data directly, so response is the data object
+      const response = await adminAPI.getDashboardStats() as unknown as { stats: DashboardStats };
       setStats(response.stats);
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -41,7 +76,15 @@ export default function AdminDashboardScreen({ navigation }) {
     return <Loading />;
   }
 
-  const menuItems = [
+  // Type for menu items with proper icon name type
+  type MenuItem = {
+    icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+    label: string;
+    count: string | number | undefined;
+    onPress: () => void;
+  };
+
+  const menuItems: MenuItem[] = [
     {
       icon: 'account-multiple',
       label: 'Users',
@@ -58,7 +101,7 @@ export default function AdminDashboardScreen({ navigation }) {
       icon: 'briefcase',
       label: 'Services',
       count: 'Manage',
-      onPress: () => Alert.alert('Services', 'Service moderation is coming soon.'),
+      onPress: () => navigation.navigate('ManageServices'),
     },
     {
       icon: 'currency-usd',

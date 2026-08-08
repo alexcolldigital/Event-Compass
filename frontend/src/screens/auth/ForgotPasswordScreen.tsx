@@ -6,22 +6,25 @@ import Button from '../../components/Button.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { useAuthStore } from '../../context/authStore.js';
 import authStyles from '../../styles/authStyles.js';
+import { useNavigation } from '@react-navigation/native';
+import { AuthNavigationProp } from '../../navigation/types';
 
-export default function ForgotPasswordScreen({ navigation }) {
-  const [email, setEmail] = useState('');
+export default function ForgotPasswordScreen() {
+  const navigation = useNavigation<AuthNavigationProp>();
+  const [identifier, setIdentifier] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<{ identifier?: string }>({});
   const { forgotPassword, isLoading, error } = useAuthStore();
 
   const handleSubmit = async () => {
     setErrors({});
-    if (!email) {
-      setErrors({ email: 'Email is required' });
+    if (!identifier) {
+      setErrors({ identifier: 'Email or phone number is required' });
       return;
     }
 
     try {
-      await forgotPassword(email);
+      await forgotPassword(identifier);
       setIsSubmitted(true);
     } catch (err) {
       console.error('Forgot password error:', err);
@@ -39,13 +42,13 @@ export default function ForgotPasswordScreen({ navigation }) {
               </View>
               <Text style={authStyles.title}>Reset Link Sent</Text>
               <Text style={authStyles.subtitle}>
-                We sent a password reset link to your email address.
+                We sent a password reset link to your email or phone number.
               </Text>
             </View>
 
             <View style={authStyles.successBox}>
-              <Text style={authStyles.smallLabel}>Email Sent To</Text>
-              <Text style={authStyles.strongText}>{email}</Text>
+              <Text style={authStyles.smallLabel}>Sent To</Text>
+              <Text style={authStyles.strongText}>{identifier}</Text>
             </View>
 
             <Button
@@ -56,7 +59,7 @@ export default function ForgotPasswordScreen({ navigation }) {
               size="lg"
             />
             <Text style={authStyles.terms}>
-              Did not receive the email? Check your spam folder or contact support.
+              Did not receive the link? Check your spam folder or contact support.
             </Text>
           </View>
         </ScrollView>
@@ -78,7 +81,7 @@ export default function ForgotPasswordScreen({ navigation }) {
             </View>
             <Text style={authStyles.title}>Reset Password</Text>
             <Text style={authStyles.subtitle}>
-              Enter your email and we will send you a link to reset your password.
+              Enter your email or phone number and we will send you a link to reset your password.
             </Text>
           </View>
 
@@ -86,16 +89,16 @@ export default function ForgotPasswordScreen({ navigation }) {
 
           <View style={authStyles.card}>
             <Input
-              label="Email Address"
-              placeholder="your@email.com"
-              value={email}
+              label="Email or Phone Number"
+              placeholder="your@email.com or +234 800 000 0000"
+              value={identifier}
               onChangeText={(text) => {
-                setEmail(text);
-                if (errors.email) setErrors({});
+                setIdentifier(text);
+                if (errors.identifier) setErrors({});
               }}
-              keyboardType="email-address"
-              icon="email"
-              error={errors.email}
+              keyboardType="default"
+              icon="account"
+              error={errors.identifier}
             />
           </View>
 

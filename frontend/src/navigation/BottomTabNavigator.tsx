@@ -28,12 +28,31 @@ import NotificationsScreen from '../screens/main/NotificationsScreen';
 import HelpSupportScreen from '../screens/main/HelpSupportScreen';
 import AboutScreen from '../screens/main/AboutScreen';
 import CheckoutScreen from '../screens/main/CheckoutScreen';
+import EventDetailsScreen from '../screens/main/EventDetailsScreen';
+import EscrowStatusScreen from '../screens/main/EscrowStatusScreen';
+import ChatScreen from '../screens/main/ChatScreen';
+import DisputeEvidenceScreen from '../screens/main/DisputeEvidenceScreen';
+import VendorVerificationScreen from '../screens/main/VendorVerificationScreen';
+import ConversationsScreen from '../screens/main/ConversationsScreen';
 
 // Import admin screens
 import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
 import ManageUsersScreen from '../screens/admin/ManageUsersScreen';
 import ManageBookingsScreen from '../screens/admin/ManageBookingsScreen';
 import RevenueAnalyticsScreen from '../screens/admin/RevenueAnalyticsScreen';
+import ManageServicesScreen from '../screens/admin/ManageServicesScreen';
+import CommissionManagementScreen from '../screens/admin/CommissionManagementScreen';
+import PaymentMonitoringScreen from '../screens/admin/PaymentMonitoringScreen';
+import RefundApprovalScreen from '../screens/admin/RefundApprovalScreen';
+import ContentModerationScreen from '../screens/admin/ContentModerationScreen';
+import ReportsManagementScreen from '../screens/admin/ReportsManagementScreen';
+import CategoryManagementScreen from '../screens/admin/CategoryManagementScreen';
+import CouponManagementScreen from '../screens/admin/CouponManagementScreen';
+import PromotionsManagementScreen from '../screens/admin/PromotionsManagementScreen';
+import AnalyticsDashboardScreen from '../screens/admin/AnalyticsDashboardScreen';
+import NotificationManagementScreen from '../screens/admin/NotificationManagementScreen';
+import CMSManagementScreen from '../screens/admin/CMSManagementScreen';
+import AuditLogsScreen from '../screens/admin/AuditLogsScreen';
 
 // Import constants
 import { COLORS } from '../utils/constants';
@@ -53,6 +72,11 @@ function HomeStack() {
       <Stack.Screen
         name="ServiceDetail"
         component={ServiceDetailScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="EventDetails"
+        component={EventDetailsScreen}
         options={{ animation: 'slide_from_right' }}
       />
       <Stack.Screen
@@ -76,6 +100,11 @@ function SearchStack() {
       <Stack.Screen
         name="ServiceDetail"
         component={ServiceDetailScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="EventDetails"
+        component={EventDetailsScreen}
         options={{ animation: 'slide_from_right' }}
       />
       <Stack.Screen
@@ -114,6 +143,36 @@ function BookingsStack() {
       <Stack.Screen
         name="Checkout"
         component={CheckoutScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="EventDetails"
+        component={EventDetailsScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="EscrowStatus"
+        component={EscrowStatusScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="Chat"
+        component={ChatScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="Conversations"
+        component={ConversationsScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="DisputeEvidence"
+        component={DisputeEvidenceScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="VendorVerification"
+        component={VendorVerificationScreen}
         options={{ animation: 'slide_from_right' }}
       />
     </Stack.Navigator>
@@ -182,6 +241,16 @@ function ProfileStack() {
         options={{ animation: 'slide_from_right' }}
       />
       <Stack.Screen
+        name="Conversations"
+        component={ConversationsScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="Chat"
+        component={ChatScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
         name="ManageUsers"
         component={ManageUsersScreen}
         options={{ animation: 'slide_from_right' }}
@@ -194,6 +263,71 @@ function ProfileStack() {
       <Stack.Screen
         name="RevenueAnalytics"
         component={RevenueAnalyticsScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="ManageServices"
+        component={ManageServicesScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="CommissionManagement"
+        component={CommissionManagementScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="PaymentMonitoring"
+        component={PaymentMonitoringScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="RefundApproval"
+        component={RefundApprovalScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="ContentModeration"
+        component={ContentModerationScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="ReportsManagement"
+        component={ReportsManagementScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="CategoryManagement"
+        component={CategoryManagementScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="CouponManagement"
+        component={CouponManagementScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="PromotionsManagement"
+        component={PromotionsManagementScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="AnalyticsDashboard"
+        component={AnalyticsDashboardScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="NotificationManagement"
+        component={NotificationManagementScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="CMSManagement"
+        component={CMSManagementScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="AuditLogs"
+        component={AuditLogsScreen}
         options={{ animation: 'slide_from_right' }}
       />
     </Stack.Navigator>

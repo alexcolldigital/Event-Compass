@@ -7,7 +7,8 @@
  * Format currency to Nigerian Naira
  */
 export const formatCurrency = (amount) => {
-  return `₦${(amount || 0).toLocaleString('en-NG', {
+  if (!amount || Number(amount) === 0) return 'Not a static price';
+  return `₦${Number(amount).toLocaleString('en-NG', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   })}`;

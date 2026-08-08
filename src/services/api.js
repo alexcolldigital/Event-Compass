@@ -67,11 +67,28 @@ export const authAPI = {
   register: (userData) => apiClient.post('/auth/register', userData),
   registerProvider: (userData) => apiClient.post('/auth/register-provider', userData),
   login: (email, password) => apiClient.post('/auth/login', { email, password }),
+  loginWithPhone: (phoneNumber, password) => apiClient.post('/auth/login-phone', { phoneNumber, password }),
+  loginUnified: (identifier, password) => apiClient.post('/auth/login-unified', { identifier, password }),
   getCurrentUser: () => apiClient.get('/auth/me'),
   updateProfile: (data) => apiClient.put('/auth/profile', data),
+  uploadProfileImage: (formData) =>
+    apiClient.post('/auth/profile/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
   changePassword: (data) => apiClient.post('/auth/change-password', data),
-  forgotPassword: (email) => apiClient.post('/auth/forgot-password', { email }),
+  forgotPassword: (identifier) => apiClient.post('/auth/forgot-password', { identifier }),
   resetPassword: (data) => apiClient.post('/auth/reset-password', data),
+  // Email verification
+  verifyEmail: (token) => apiClient.post('/auth/verify-email', { token }),
+  resendVerification: () => apiClient.post('/auth/resend-verification'),
+  // 2FA
+  verifyTwoFactor: (userId, code) => apiClient.post('/auth/verify-2fa', { userId, code }),
+  toggleTwoFactor: () => apiClient.post('/auth/2fa/toggle'),
+  // Login history & devices
+  getLoginHistory: () => apiClient.get('/auth/login-history'),
+  getDevices: () => apiClient.get('/auth/devices'),
+  addDevice: (deviceId, deviceName) => apiClient.post('/auth/devices', { deviceId, deviceName }),
+  removeDevice: (deviceId) => apiClient.delete(`/auth/devices/${deviceId}`),
 };
 
 // Service API calls
@@ -112,14 +129,81 @@ export const bookingAPI = {
 
 // Admin API calls
 export const adminAPI = {
+  // Dashboard & Stats
   getDashboardStats: () => apiClient.get('/admin/dashboard'),
+  getAnalyticsDashboard: (query) => apiClient.get('/admin/analytics/dashboard', { params: query }),
+
+  // Users
   getAllUsers: (query) => apiClient.get('/admin/users', { params: query }),
   blockUser: (id, data) => apiClient.patch(`/admin/users/${id}/block`, data),
   verifyProvider: (id) => apiClient.patch(`/admin/users/${id}/verify`),
-  getAllBookings: (query) => apiClient.get('/admin/bookings', { params: query }),
-  getRevenueAnalytics: (query) => apiClient.get('/admin/revenue', { params: query }),
   getUserAnalytics: () => apiClient.get('/admin/users/analytics/breakdown'),
+
+  // Bookings
+  getAllBookings: (query) => apiClient.get('/admin/bookings', { params: query }),
+  confirmBooking: (id) => apiClient.patch(`/admin/bookings/${id}/confirm`),
+  cancelBooking: (id, data) => apiClient.patch(`/admin/bookings/${id}/cancel`, data),
+  completeBooking: (id) => apiClient.patch(`/admin/bookings/${id}/complete`),
+
+  // Commission
+  getCommissionSettings: () => apiClient.get('/admin/commission'),
+  updateCommissionSettings: (data) => apiClient.put('/admin/commission', data),
+  getCommissionBreakdown: (query) => apiClient.get('/admin/commission/breakdown', { params: query }),
+
+  // Payments
+  getAllPayments: (query) => apiClient.get('/admin/payments', { params: query }),
+
+  // Refunds
+  getPendingRefunds: (query) => apiClient.get('/admin/refunds', { params: query }),
+  approveRefund: (id, data) => apiClient.patch(`/admin/refunds/${id}/approve`, data),
+  rejectRefund: (id, data) => apiClient.patch(`/admin/refunds/${id}/reject`, data),
+
+  // Content Moderation
+  getFlaggedReviews: (query) => apiClient.get('/admin/moderation/reviews', { params: query }),
+  moderateReview: (id, data) => apiClient.patch(`/admin/moderation/reviews/${id}`, data),
+  getFlaggedServices: (query) => apiClient.get('/admin/moderation/services', { params: query }),
+  moderateService: (id, data) => apiClient.patch(`/admin/moderation/services/${id}`, data),
+
+  // Reports
+  getRevenueAnalytics: (query) => apiClient.get('/admin/revenue', { params: query }),
   getSystemReports: () => apiClient.get('/admin/reports'),
+  getDetailedReports: (query) => apiClient.get('/admin/reports/detailed', { params: query }),
+
+  // Categories
+  getCategories: () => apiClient.get('/admin/categories'),
+  createCategory: (data) => apiClient.post('/admin/categories', data),
+  updateCategory: (id, data) => apiClient.put(`/admin/categories/${id}`, data),
+  deleteCategory: (id) => apiClient.delete(`/admin/categories/${id}`),
+
+  // Coupons
+  getCoupons: (query) => apiClient.get('/admin/coupons', { params: query }),
+  createCoupon: (data) => apiClient.post('/admin/coupons', data),
+  updateCoupon: (id, data) => apiClient.put(`/admin/coupons/${id}`, data),
+  deleteCoupon: (id) => apiClient.delete(`/admin/coupons/${id}`),
+  toggleCoupon: (id) => apiClient.patch(`/admin/coupons/${id}/toggle`),
+
+  // Promotions
+  getPromotions: (query) => apiClient.get('/admin/promotions', { params: query }),
+  createPromotion: (data) => apiClient.post('/admin/promotions', data),
+  updatePromotion: (id, data) => apiClient.put(`/admin/promotions/${id}`, data),
+  deletePromotion: (id) => apiClient.delete(`/admin/promotions/${id}`),
+  togglePromotion: (id) => apiClient.patch(`/admin/promotions/${id}/toggle`),
+
+  // Notifications
+  getNotifications: (query) => apiClient.get('/admin/notifications', { params: query }),
+  createNotification: (data) => apiClient.post('/admin/notifications', data),
+  sendNotification: (id) => apiClient.post(`/admin/notifications/${id}/send`),
+  deleteNotification: (id) => apiClient.delete(`/admin/notifications/${id}`),
+
+  // CMS Pages
+  getCMSPages: (query) => apiClient.get('/admin/cms', { params: query }),
+  getCMSPage: (id) => apiClient.get(`/admin/cms/${id}`),
+  createCMSPage: (data) => apiClient.post('/admin/cms', data),
+  updateCMSPage: (id, data) => apiClient.put(`/admin/cms/${id}`, data),
+  deleteCMSPage: (id) => apiClient.delete(`/admin/cms/${id}`),
+
+  // Audit Logs
+  getAuditLogs: (query) => apiClient.get('/admin/audit-logs', { params: query }),
 };
 
 export default apiClient;

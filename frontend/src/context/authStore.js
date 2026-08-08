@@ -14,6 +14,8 @@ export const useAuthStore = create((set, get) => ({
   isAuthenticated: false,
   isLoading: false,
   error: null,
+  requiresTwoFactor: false,
+  pendingUserId: null,
 
   // Initialize auth state from storage
   initializeAuth: async () => {
@@ -24,12 +26,7 @@ export const useAuthStore = create((set, get) => ({
 
       if (token && userStr) {
         const user = JSON.parse(userStr);
-        set({
-          user,
-          token,
-          isAuthenticated: true,
-          isLoading: false,
-        });
+        set({ user, token, isAuthenticated: true, isLoading: false });
       } else {
         set({ isLoading: false });
       }
@@ -43,21 +40,12 @@ export const useAuthStore = create((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       const response = await authAPI.register(userData);
-
       await AsyncStorage.setItem('authToken', response.token);
       await AsyncStorage.setItem('user', JSON.stringify(response.user));
-
-      set({
-        user: response.user,
-        token: response.token,
-        isAuthenticated: true,
-        isLoading: false,
-      });
-
+      set({ user: response.user, token: response.token, isAuthenticated: true, isLoading: false });
       return response;
     } catch (error) {
-      const errorMessage = error.message || 'Registration failed';
-      set({ error: errorMessage, isLoading: false });
+      set({ error: error.message || 'Registration failed', isLoading: false });
       throw error;
     }
   },
@@ -67,45 +55,168 @@ export const useAuthStore = create((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       const response = await authAPI.registerProvider(userData);
-
       await AsyncStorage.setItem('authToken', response.token);
       await AsyncStorage.setItem('user', JSON.stringify(response.user));
-
-      set({
-        user: response.user,
-        token: response.token,
-        isAuthenticated: true,
-        isLoading: false,
-      });
-
+      set({ user: response.user, token: response.token, isAuthenticated: true, isLoading: false });
       return response;
     } catch (error) {
-      const errorMessage = error.message || 'Provider registration failed';
-      set({ error: errorMessage, isLoading: false });
+      set({ error: error.message || 'Provider registration failed', isLoading: false });
       throw error;
     }
   },
 
-  // Login user
+  // Shared post-login handler
+  _handleLoginResponse: async (response) => {
+    if (response.requiresTwoFactor) {
+      set({ requiresTwoFactor: true, pendingUserId: response.userId, isLoading: false });
+      return response;
+    }
+    await AsyncStorage.setItem('authToken', response.token);
+    await AsyncStorage.setItem('user', JSON.stringify(response.user));
+    set({
+      user: response.user,
+      token: response.token,
+      isAuthenticated: true,
+      isLoading: false,
+      requiresTwoFactor: false,
+      pendingUserId: null,
+    });
+    return response;
+  },
+
+  // Login user with email
   login: async (email, password) => {
     try {
       set({ isLoading: true, error: null });
       const response = await authAPI.login(email, password);
+      return get()._handleLoginResponse(response);
+    } catch (error) {
+      set({ error: error.message || 'Login failed', isLoading: false });
+      throw error;
+    }
+  },
 
+  // Login user with phone number
+  loginWithPhone: async (phoneNumber, password) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authAPI.loginWithPhone(phoneNumber, password);
+      return get()._handleLoginResponse(response);
+    } catch (error) {
+      set({ error: error.message || 'Login failed', isLoading: false });
+      throw error;
+    }
+  },
+
+  // Unified login with email or phone number
+  loginUnified: async (identifier, password) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authAPI.loginUnified(identifier, password);
+      return get()._handleLoginResponse(response);
+    } catch (error) {
+      set({ error: error.message || 'Login failed', isLoading: false });
+      throw error;
+    }
+  },
+
+  // Verify 2FA code
+  verifyTwoFactor: async (code) => {
+    try {
+      set({ isLoading: true, error: null });
+      const { pendingUserId } = get();
+      const response = await authAPI.verifyTwoFactor(pendingUserId, code);
       await AsyncStorage.setItem('authToken', response.token);
       await AsyncStorage.setItem('user', JSON.stringify(response.user));
-
       set({
         user: response.user,
         token: response.token,
         isAuthenticated: true,
         isLoading: false,
+        requiresTwoFactor: false,
+        pendingUserId: null,
       });
-
       return response;
     } catch (error) {
-      const errorMessage = error.message || 'Login failed';
-      set({ error: errorMessage, isLoading: false });
+      set({ error: error.message || '2FA verification failed', isLoading: false });
+      throw error;
+    }
+  },
+
+  // Toggle 2FA
+  toggleTwoFactor: async () => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authAPI.toggleTwoFactor();
+      const user = { ...get().user, twoFactorEnabled: response.twoFactorEnabled };
+      await AsyncStorage.setItem('user', JSON.stringify(user));
+      set({ user, isLoading: false });
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  // Verify email
+  verifyEmail: async (token) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authAPI.verifyEmail(token);
+      const user = { ...get().user, isEmailVerified: true };
+      await AsyncStorage.setItem('user', JSON.stringify(user));
+      set({ user, isLoading: false });
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  // Resend verification email
+  resendVerification: async () => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authAPI.resendVerification();
+      set({ isLoading: false });
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  // Get login history
+  getLoginHistory: async () => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authAPI.getLoginHistory();
+      set({ isLoading: false });
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  // Get trusted devices
+  getDevices: async () => {
+    try {
+      const response = await authAPI.getDevices();
+      return response;
+    } catch (error) {
+      set({ error: error.message });
+      throw error;
+    }
+  },
+
+  // Remove trusted device
+  removeDevice: async (deviceId) => {
+    try {
+      const response = await authAPI.removeDevice(deviceId);
+      return response;
+    } catch (error) {
+      set({ error: error.message });
       throw error;
     }
   },
@@ -113,14 +224,7 @@ export const useAuthStore = create((set, get) => ({
   // Logout user
   logout: async () => {
     try {
-      set({
-        user: null,
-        token: null,
-        isAuthenticated: false,
-        error: null,
-        isLoading: false,
-      });
-
+      set({ user: null, token: null, isAuthenticated: false, error: null, isLoading: false, requiresTwoFactor: false, pendingUserId: null });
       await AsyncStorage.multiRemove(['authToken', 'user']);
       return true;
     } catch (error) {
@@ -134,13 +238,8 @@ export const useAuthStore = create((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       const response = await authAPI.updateProfile(data);
-
       await AsyncStorage.setItem('user', JSON.stringify(response.user));
-      set({
-        user: response.user,
-        isLoading: false,
-      });
-
+      set({ user: response.user, isLoading: false });
       return response;
     } catch (error) {
       set({ error: error.message, isLoading: false });
@@ -153,13 +252,8 @@ export const useAuthStore = create((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       const response = await authAPI.uploadProfileImage(formData);
-
       await AsyncStorage.setItem('user', JSON.stringify(response.user));
-      set({
-        user: response.user,
-        isLoading: false,
-      });
-
+      set({ user: response.user, isLoading: false });
       return response;
     } catch (error) {
       set({ error: error.message, isLoading: false });
@@ -171,12 +265,7 @@ export const useAuthStore = create((set, get) => ({
   changePassword: async (currentPassword, newPassword, confirmPassword) => {
     try {
       set({ isLoading: true, error: null });
-      const response = await authAPI.changePassword({
-        currentPassword,
-        newPassword,
-        confirmPassword,
-      });
-
+      const response = await authAPI.changePassword({ currentPassword, newPassword, confirmPassword });
       set({ isLoading: false });
       return response;
     } catch (error) {
@@ -186,11 +275,10 @@ export const useAuthStore = create((set, get) => ({
   },
 
   // Forgot password
-  forgotPassword: async (email) => {
+  forgotPassword: async (identifier) => {
     try {
       set({ isLoading: true, error: null });
-      const response = await authAPI.forgotPassword(email);
-
+      const response = await authAPI.forgotPassword(identifier);
       set({ isLoading: false });
       return response;
     } catch (error) {
@@ -204,7 +292,6 @@ export const useAuthStore = create((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       const response = await authAPI.resetPassword(data);
-
       set({ isLoading: false });
       return response;
     } catch (error) {
