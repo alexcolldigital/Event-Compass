@@ -14,26 +14,34 @@ import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { MarketplaceCard, FeatureCard, StatCard } from '../../components/Card.jsx';
 import { useTheme } from '../../context/ThemeContext';
 import { normalizeCartItem } from '../../utils/cartUtils';
+import { serviceAPI } from '../../services/api.js';
 
 const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
 const featureCategories = [
-  { icon: <MaterialCommunityIcons name="map-marker-radius" size={24} color="#2f855a" />, title: 'Venues', description: 'Stunning, curated locations', count: 450, variant: 'primary' },
-  { icon: <MaterialCommunityIcons name="food-fork-drink" size={24} color="#4c51bf" />, title: 'Catering', description: 'Premium culinary experiences', count: 320, variant: 'secondary' },
-  { icon: <MaterialCommunityIcons name="party-popper" size={24} color="#d97706" />, title: 'Entertainment', description: 'Live bands and DJs', count: 280, variant: 'accent' },
-  { icon: <MaterialCommunityIcons name="auto-fix" size={24} color="#db2777" />, title: 'Decor', description: 'Floral and ambient styling', count: 380, variant: 'gradient' },
-  { icon: <MaterialCommunityIcons name="camera-iris" size={24} color="#0f766e" />, title: 'Photography', description: 'Modern content capture', count: 190, variant: 'primary' },
-  { icon: <MaterialCommunityIcons name="van-utility" size={24} color="#2563eb" />, title: 'Transport', description: 'Reliable guest mobility', count: 160, variant: 'secondary' },
-  { icon: <MaterialCommunityIcons name="cake-variant" size={24} color="#b45309" />, title: 'Desserts', description: 'Custom celebration cakes', count: 120, variant: 'accent' },
-  { icon: <MaterialCommunityIcons name="speaker" size={24} color="#7c3aed" />, title: 'AV & Light', description: 'Sound and lighting setup', count: 95, variant: 'gradient' },
+  { icon: <MaterialCommunityIcons name="tent" size={24} color="#2f855a" />, title: 'Canopies and Tent', description: 'Canopies, tents & marquees', count: 210, variant: 'primary' },
+  { icon: <MaterialCommunityIcons name="seat" size={24} color="#4c51bf" />, title: 'Chairs', description: 'Plastic, chivalry & bridal chairs', count: 340, variant: 'secondary' },
+  { icon: <MaterialCommunityIcons name="table-furniture" size={24} color="#d97706" />, title: 'Tables', description: 'Plastic & banquet tables', count: 280, variant: 'accent' },
+  { icon: <MaterialCommunityIcons name="clipboard-list" size={24} color="#db2777" />, title: 'Event Planners and Managers', description: 'Full-service event planning', count: 180, variant: 'gradient' },
+  { icon: <MaterialCommunityIcons name="store" size={24} color="#0f766e" />, title: 'Events Services Providers and Vendors', description: 'All-in-one event vendors', count: 420, variant: 'primary' },
+  { icon: <MaterialCommunityIcons name="handshake" size={24} color="#2563eb" />, title: 'Events Facilitators and Agents', description: 'Coordination & logistics', count: 95, variant: 'secondary' },
+  { icon: <MaterialCommunityIcons name="account-star" size={24} color="#b45309" />, title: 'Special Events Hosts and Organizers', description: 'Hosts for special occasions', count: 110, variant: 'accent' },
+  { icon: <MaterialCommunityIcons name="home-city" size={24} color="#7c3aed" />, title: 'Events Venues', description: 'Halls, grounds & spaces', count: 450, variant: 'gradient' },
+  { icon: <MaterialCommunityIcons name="palette" size={24} color="#db2777" />, title: 'Event Decorators', description: 'Floral & ambient styling', count: 380, variant: 'primary' },
+  { icon: <MaterialCommunityIcons name="face-woman-shimmer" size={24} color="#ec4899" />, title: 'Make-up Artists', description: 'Bridal & event make-up', count: 260, variant: 'secondary' },
+  { icon: <MaterialCommunityIcons name="account-tie" size={24} color="#0f766e" />, title: 'Ushers', description: 'Professional event ushers', count: 140, variant: 'accent' },
+  { icon: <MaterialCommunityIcons name="shield-account" size={24} color="#374151" />, title: 'Bouncers', description: 'Security & crowd control', count: 90, variant: 'gradient' },
+  { icon: <MaterialCommunityIcons name="warehouse" size={24} color="#b45309" />, title: 'Events Facilities Rental and Hiring Companies', description: 'Equipment & facility hire', count: 175, variant: 'primary' },
+  { icon: <MaterialCommunityIcons name="snowflake" size={24} color="#2563eb" />, title: 'Ice Chilling Services', description: 'Ice & chilling solutions', count: 60, variant: 'secondary' },
+  { icon: <MaterialCommunityIcons name="truck-snowflake" size={24} color="#0f766e" />, title: 'Refrigerated Vans/Cooling Vans Providers', description: 'Cold chain transport', count: 45, variant: 'accent' },
+  { icon: <MaterialCommunityIcons name="silverware-fork-knife" size={24} color="#4c51bf" />, title: 'Food Caterers', description: 'Premium culinary experiences', count: 320, variant: 'gradient' },
+  { icon: <MaterialCommunityIcons name="bottle-wine" size={24} color="#7c3aed" />, title: 'Drinks Suppliers', description: 'Beverages for every event', count: 150, variant: 'primary' },
+  { icon: <MaterialCommunityIcons name="music" size={24} color="#d97706" />, title: 'Music (D-J and Live Performances)', description: 'DJs & live bands', count: 280, variant: 'secondary' },
+  { icon: <MaterialCommunityIcons name="microphone" size={24} color="#db2777" />, title: 'MCs and Compares', description: 'Masters of ceremony', count: 120, variant: 'accent' },
+  { icon: <MaterialCommunityIcons name="emoticon-happy" size={24} color="#b45309" />, title: 'Comedians and Entertainers', description: 'Comedy & live entertainment', count: 85, variant: 'gradient' },
 ];
 
-const stats = [
-  { value: '15K+', label: 'Events Completed', icon: <MaterialCommunityIcons name="calendar-star" size={22} color="#1f7a4d" />, trend: '+12%', trendUp: true },
-  { value: '2.5K+', label: 'Verified Vendors', icon: <MaterialCommunityIcons name="shield-check" size={22} color="#2563eb" />, trend: '+8%', trendUp: true },
-  { value: '50K+', label: 'Happy Customers', icon: <MaterialCommunityIcons name="account-group" size={22} color="#d97706" />, trend: '+15%', trendUp: true },
-  { value: '4.9/5', label: 'Average Rating', icon: <MaterialCommunityIcons name="medal" size={22} color="#db2777" />, trend: '+0.1', trendUp: true },
-];
+
 
 export default function HomeScreen({ navigation }: { navigation: any }) {
   const { user } = useAuthStore();
@@ -42,6 +50,8 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === 'dark';
   const [searchInput, setSearchInput] = useState('');
+  const [platformStats, setPlatformStats] = useState<{ completedBookings: number; verifiedVendors: number; totalClients: number; averageRating: string } | null>(null);
+  const [categoryCountMap, setCategoryCountMap] = useState<Record<string, number>>({});
 
   const colors = {
     bg: isDark ? '#050816' : '#f5f7f2',
@@ -55,7 +65,38 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
 
   useEffect(() => {
     getAllServices({ limit: 8 }).catch(() => {});
+    serviceAPI.getPublicStats()
+      .then((res: any) => {
+        setPlatformStats(res.stats);
+        const map = res.categoryCountMap || {};
+        // If all counts are 0 (stats endpoint broken/empty), fetch counts per category
+        const hasRealCounts = Object.keys(map).length > 0;
+        if (hasRealCounts) {
+          setCategoryCountMap(map);
+        } else {
+          fetchCategoryCountsFallback();
+        }
+      })
+      .catch(() => fetchCategoryCountsFallback());
   }, []);
+
+  const fetchCategoryCountsFallback = async () => {
+    // Only fetch counts for the 5 visible categories to minimize requests
+    const visibleTitles = featureCategories.slice(0, 5).map((c) => c.title);
+    const results = await Promise.allSettled(
+      visibleTitles.map((title) =>
+        serviceAPI.getAllServices({ category: title, limit: 1 }).then((res: any) => ({
+          title,
+          count: res.pagination?.total ?? 0,
+        }))
+      )
+    );
+    const map: Record<string, number> = {};
+    results.forEach((r) => {
+      if (r.status === 'fulfilled') map[r.value.title] = r.value.count;
+    });
+    setCategoryCountMap(map);
+  };
 
   const handleTabNavigate = (routeName: string, params?: Record<string, unknown>) => {
     const parent = navigation.getParent?.();
@@ -186,9 +227,10 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Highlights</Text>
           <View style={styles.statsGrid}>
-            {stats.map((stat, index) => (
-              <StatCard key={index} value={stat.value} label={stat.label} icon={stat.icon} trend={stat.trend} trendUp={stat.trendUp} />
-            ))}
+            <StatCard value={platformStats ? (platformStats.completedBookings >= 1000 ? `${(platformStats.completedBookings / 1000).toFixed(1)}K+` : `${platformStats.completedBookings}+`) : '—'} label="Events Completed" icon={<MaterialCommunityIcons name="calendar-check" size={22} color="#1f7a4d" />} />
+            <StatCard value={platformStats ? `${platformStats.verifiedVendors}+` : '—'} label="Verified Vendors" icon={<MaterialCommunityIcons name="shield-check" size={22} color="#2563eb" />} />
+            <StatCard value={platformStats ? (platformStats.totalClients >= 1000 ? `${(platformStats.totalClients / 1000).toFixed(1)}K+` : `${platformStats.totalClients}+`) : '—'} label="Happy Customers" icon={<MaterialCommunityIcons name="account-group" size={22} color="#d97706" />} />
+            <StatCard value={platformStats ? `${platformStats.averageRating}/5` : '—'} label="Average Rating" icon={<MaterialCommunityIcons name="star-circle" size={22} color="#db2777" />} />
           </View>
         </View>
 
@@ -200,8 +242,8 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
             </TouchableOpacity>
           </View>
           <View style={styles.categoryGrid}>
-            {featureCategories.map((category, index) => (
-              <FeatureCard key={index} icon={category.icon} title={category.title} description={category.description} count={category.count} variant={category.variant} onPress={() => handleCategoryPress(category.title)} style={{ backgroundColor: colors.surface, borderColor: colors.border }} />
+            {featureCategories.slice(0, 5).map((category, index) => (
+              <FeatureCard key={index} icon={category.icon} title={category.title} description={category.description} count={categoryCountMap[category.title] ?? category.count} variant={category.variant} onPress={() => handleCategoryPress(category.title)} style={{ backgroundColor: colors.surface, borderColor: colors.border }} />
             ))}
           </View>
         </View>
@@ -216,7 +258,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
           {services.length > 0 ? (
             <View style={styles.marketplaceGrid}>
               {services.map((service: any) => (
-                <MarketplaceCard key={service._id} image={service.images?.[0]?.url} title={service.name} subtitle={service.category} rating={service.averageRating || 4.5} reviewCount={service.totalReviews || 0} price={service.pricing?.basePrice || 0} unit={service.unit || 'booking'} category={service.serviceType} badge={service.availability?.isAvailable === false ? 'Unavailable' : 'Available'} onPress={() => navigation.navigate('ServiceDetail', { serviceId: service._id })} onAddToCart={() => handleAddToCart(service)} style={{ backgroundColor: colors.surface, borderColor: colors.border }} />
+                <MarketplaceCard key={service._id} image={service.images?.[0]?.url} images={service.images} title={service.name} subtitle={service.category} rating={service.averageRating || 4.5} reviewCount={service.totalReviews || 0} price={service.pricing?.basePrice || 0} unit={service.unit || 'booking'} category={service.serviceType} badge={service.availability?.isAvailable === false ? 'Unavailable' : 'Available'} onPress={() => navigation.navigate('ServiceDetail', { serviceId: service._id })} onAddToCart={() => handleAddToCart(service)} style={{ backgroundColor: colors.surface, borderColor: colors.border }} />
               ))}
             </View>
           ) : (

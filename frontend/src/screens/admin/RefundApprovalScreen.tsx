@@ -1,17 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Alert, SafeAreaView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { adminAPI } from '../../services/api.js';
 import Loading from '../../components/Loading.jsx';
-import { COLORS } from '../../utils/constants.js';
 import { formatCurrency, formatDateTime } from '../../utils/helpers.js';
+import { useTheme } from '../../context/ThemeContext';
+import adminStyles, { getColors, appFont } from '../../styles/adminStyles.js';
 
 export default function RefundApprovalScreen() {
   const navigation = useNavigation();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const C = getColors(isDark);
+
   const [refunds, setRefunds] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedId, setSelectedId] = useState(null);
 
   useEffect(() => { loadRefunds(); }, []);
 
@@ -25,18 +29,22 @@ export default function RefundApprovalScreen() {
   };
 
   const handleApprove = (item) => {
-    Alert.alert('Approve Refund', `Approve refund of ${formatCurrency(item.refund?.amount || item.amount)} to ${item.payer?.firstName}?`, [
-      { text: 'Cancel' },
-      {
-        text: 'Approve', onPress: async () => {
-          try {
-            await adminAPI.approveRefund(item._id, {});
-            setRefunds((r) => r.filter((x) => x._id !== item._id));
-            Alert.alert('Success', 'Refund approved');
-          } catch (e) { Alert.alert('Error', e.message); }
+    Alert.alert(
+      'Approve Refund',
+      `Approve refund of ${formatCurrency(item.refund?.amount || item.amount)} to ${item.payer?.firstName}?`,
+      [
+        { text: 'Cancel' },
+        {
+          text: 'Approve', onPress: async () => {
+            try {
+              await adminAPI.approveRefund(item._id, {});
+              setRefunds((r) => r.filter((x) => x._id !== item._id));
+              Alert.alert('Success', 'Refund approved');
+            } catch (e) { Alert.alert('Error', e.message); }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const handleReject = (item) => {
@@ -51,35 +59,43 @@ export default function RefundApprovalScreen() {
   };
 
   const RefundCard = ({ item }) => (
-    <View className="bg-white rounded-xl p-4 mb-3 border border-gray-200">
-      <View className="flex-row justify-between mb-2">
-        <Text className="font-bold text-gray-800">{item.transactionId}</Text>
-        <Text className="text-primary font-bold">{formatCurrency(item.refund?.amount || item.amount)}</Text>
+    <View style={[adminStyles.card, { backgroundColor: C.surface, borderColor: C.border }]}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+        <Text style={{ color: C.text, fontWeight: '700', fontSize: 14, fontFamily: appFont }}>{item.transactionId}</Text>
+        <Text style={{ color: C.primary, fontWeight: '800', fontSize: 15, fontFamily: appFont }}>{formatCurrency(item.refund?.amount || item.amount)}</Text>
       </View>
-      <Text className="text-gray-600 text-sm">{item.payer?.firstName} {item.payer?.lastName} · {item.payer?.email}</Text>
-      <Text className="text-gray-500 text-xs mt-1">Booking: {item.booking?.bookingNumber}</Text>
-      {item.refund?.reason && <Text className="text-gray-500 text-xs mt-1">Reason: {item.refund.reason}</Text>}
-      <Text className="text-gray-400 text-xs mt-1">Requested: {formatDateTime(item.refund?.requestedAt)}</Text>
-      <View className="flex-row gap-2 mt-3">
-        <TouchableOpacity className="flex-1 bg-green-100 py-2 rounded-lg" onPress={() => handleApprove(item)}>
-          <Text className="text-green-700 font-semibold text-center text-sm">Approve</Text>
+      <Text style={{ color: C.text, fontSize: 13, fontFamily: appFont }}>{item.payer?.firstName} {item.payer?.lastName}</Text>
+      <Text style={{ color: C.muted, fontSize: 12, marginTop: 2, fontFamily: appFont }}>{item.payer?.email}</Text>
+      {item.booking?.bookingNumber && (
+        <Text style={{ color: C.muted, fontSize: 12, marginTop: 2, fontFamily: appFont }}>Booking: {item.booking.bookingNumber}</Text>
+      )}
+      {item.refund?.reason && (
+        <View style={{ backgroundColor: isDark ? '#451a03' : '#fff7ed', borderRadius: 10, padding: 8, marginTop: 8 }}>
+          <Text style={{ color: C.muted, fontSize: 11, fontWeight: '700', fontFamily: appFont }}>Reason</Text>
+          <Text style={{ color: isDark ? '#fb923c' : '#c2410c', fontSize: 12, marginTop: 2, fontFamily: appFont }}>{item.refund.reason}</Text>
+        </View>
+      )}
+      <Text style={{ color: C.muted, fontSize: 11, marginTop: 6, fontFamily: appFont }}>Requested: {formatDateTime(item.refund?.requestedAt)}</Text>
+      <View style={adminStyles.actionRow}>
+        <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: isDark ? '#14532d' : '#dcfce7' }]} onPress={() => handleApprove(item)}>
+          <Text style={[adminStyles.actionBtnText, { color: '#166534', fontFamily: appFont }]}>Approve</Text>
         </TouchableOpacity>
-        <TouchableOpacity className="flex-1 bg-red-100 py-2 rounded-lg" onPress={() => handleReject(item)}>
-          <Text className="text-red-700 font-semibold text-center text-sm">Reject</Text>
+        <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: isDark ? '#450a0a' : '#fee2e2' }]} onPress={() => handleReject(item)}>
+          <Text style={[adminStyles.actionBtnText, { color: '#b91c1c', fontFamily: appFont }]}>Reject</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
   return (
-    <View className="flex-1 bg-light">
-      <View className="flex-row items-center p-4 bg-white border-b border-gray-200">
+    <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
+      <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.dark} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />
         </TouchableOpacity>
-        <Text className="text-dark text-lg font-bold flex-1 ml-4">Refund Approval</Text>
-        <View className="bg-red-100 px-2 py-1 rounded-full">
-          <Text className="text-red-700 text-xs font-bold">{refunds.length} pending</Text>
+        <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>Refund Approval</Text>
+        <View style={[adminStyles.badge, { backgroundColor: isDark ? '#450a0a' : '#fee2e2' }]}>
+          <Text style={[adminStyles.badgeText, { color: '#b91c1c', fontFamily: appFont }]}>{refunds.length} pending</Text>
         </View>
       </View>
 
@@ -88,15 +104,17 @@ export default function RefundApprovalScreen() {
           data={refunds}
           keyExtractor={(i) => i._id}
           renderItem={({ item }) => <RefundCard item={item} />}
-          contentContainerStyle={{ padding: 12 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <View className="items-center py-12">
-              <MaterialCommunityIcons name="check-circle-outline" size={48} color={COLORS.gray[300]} />
-              <Text className="text-gray-500 mt-3 font-semibold">No pending refunds</Text>
+            <View style={adminStyles.emptyState}>
+              <MaterialCommunityIcons name="check-circle-outline" size={48} color={C.muted} />
+              <Text style={[adminStyles.emptyText, { color: C.muted, fontFamily: appFont }]}>No pending refunds</Text>
+              <Text style={[adminStyles.emptySubtext, { color: C.muted, fontFamily: appFont }]}>All refunds have been processed</Text>
             </View>
           }
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }

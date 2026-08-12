@@ -105,6 +105,30 @@ export const EVENT_TYPES = {
   FUNERAL: 'funeral',
 };
 
+// Search / Browse Categories (with optional subcategories)
+export const SERVICE_CATEGORIES = [
+  { id: 1,  name: 'Canopies and Tent',                              icon: 'tent',                    subcategories: ['12 by 12 Canopy', '12 by 24 Canopy', '20 by 40 Tent', '30 by 60 Tent', '40 by 80 Tent'] },
+  { id: 2,  name: 'Chairs',                                         icon: 'seat',                    subcategories: ['Plastic Chair', 'Chivalry Chair', 'Bridal Chair'] },
+  { id: 3,  name: 'Tables',                                         icon: 'table-furniture',         subcategories: ['Plastic Table', 'Banquet Table'] },
+  { id: 4,  name: 'Event Planners and Managers',                    icon: 'clipboard-list',          subcategories: [] },
+  { id: 5,  name: 'Events Services Providers and Vendors',          icon: 'store',                   subcategories: [] },
+  { id: 6,  name: 'Events Facilitators and Agents',                 icon: 'handshake',               subcategories: [] },
+  { id: 7,  name: 'Special Events Hosts and Organizers',            icon: 'account-star',            subcategories: [] },
+  { id: 8,  name: 'Events Venues',                                  icon: 'home-city',               subcategories: [] },
+  { id: 9,  name: 'Event Decorators',                               icon: 'palette',                 subcategories: [] },
+  { id: 10, name: 'Make-up Artists',                                icon: 'face-woman-shimmer',      subcategories: [] },
+  { id: 11, name: 'Ushers',                                         icon: 'account-tie',             subcategories: [] },
+  { id: 12, name: 'Bouncers',                                       icon: 'shield-account',          subcategories: [] },
+  { id: 13, name: 'Events Facilities Rental and Hiring Companies',  icon: 'warehouse',               subcategories: [] },
+  { id: 14, name: 'Ice Chilling Services',                          icon: 'snowflake',               subcategories: [] },
+  { id: 15, name: 'Refrigerated Vans/Cooling Vans Providers',       icon: 'truck-snowflake',         subcategories: [] },
+  { id: 16, name: 'Food Caterers',                                  icon: 'silverware-fork-knife',   subcategories: [] },
+  { id: 17, name: 'Drinks Suppliers',                               icon: 'bottle-wine',             subcategories: [] },
+  { id: 18, name: 'Music (D-J and Live Performances)',              icon: 'music',                   subcategories: [] },
+  { id: 19, name: 'MCs and Compares',                               icon: 'microphone',              subcategories: [] },
+  { id: 20, name: 'Comedians and Entertainers',                     icon: 'emoticon-happy',          subcategories: [] },
+];
+
 // Service Provider Types
 export const SERVICE_PROVIDER_TYPE_OPTIONS = [
   { value: 'event_planner', label: 'Event planners and managers' },

@@ -1,16 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Alert, TextInput, Modal, ScrollView } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Alert, TextInput, Modal, ScrollView, SafeAreaView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { adminAPI } from '../../services/api.js';
 import Loading from '../../components/Loading.jsx';
-import { COLORS } from '../../utils/constants.js';
 import { formatDate } from '../../utils/helpers.js';
+import { useTheme } from '../../context/ThemeContext';
+import adminStyles, { getColors, appFont } from '../../styles/adminStyles.js';
 
 const EMPTY_FORM = { code: '', description: '', discountType: 'percentage', discountValue: '', minOrderAmount: '', usageLimit: '', startDate: '', endDate: '' };
 
 export default function CouponManagementScreen() {
   const navigation = useNavigation();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const C = getColors(isDark);
+
   const [coupons, setCoupons] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -71,55 +76,65 @@ export default function CouponManagementScreen() {
   };
 
   const CouponCard = ({ item }) => (
-    <View className="bg-white rounded-xl p-4 mb-3 border border-gray-200">
-      <View className="flex-row justify-between items-start mb-2">
-        <View className="flex-1">
-          <View className="flex-row items-center gap-2">
-            <Text className="font-bold text-gray-800 text-base">{item.code}</Text>
-            <View className={`px-2 py-0.5 rounded-full ${item.isActive ? 'bg-green-100' : 'bg-gray-100'}`}>
-              <Text className={`text-xs font-semibold ${item.isActive ? 'text-green-700' : 'text-gray-500'}`}>{item.isActive ? 'Active' : 'Inactive'}</Text>
+    <View style={[adminStyles.card, { backgroundColor: C.surface, borderColor: C.border }]}>
+      <View style={adminStyles.cardRow}>
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <Text style={{ color: C.text, fontWeight: '800', fontSize: 15, fontFamily: appFont }}>{item.code}</Text>
+            <View style={[adminStyles.badge, { backgroundColor: item.isActive ? '#dcfce7' : C.surfaceAlt }]}>
+              <Text style={[adminStyles.badgeText, { color: item.isActive ? '#166534' : C.muted, fontFamily: appFont }]}>{item.isActive ? 'Active' : 'Inactive'}</Text>
             </View>
           </View>
-          <Text className="text-primary font-semibold mt-1">
+          <Text style={{ color: C.primary, fontWeight: '700', fontSize: 13, fontFamily: appFont }}>
             {item.discountType === 'percentage' ? `${item.discountValue}% off` : `₦${item.discountValue} off`}
           </Text>
-          {item.description ? <Text className="text-gray-500 text-xs mt-0.5">{item.description}</Text> : null}
+          {item.description ? <Text style={{ color: C.muted, fontSize: 12, marginTop: 2, fontFamily: appFont }}>{item.description}</Text> : null}
         </View>
-        <View className="flex-row gap-2">
+        <View style={{ flexDirection: 'row', gap: 10 }}>
           <TouchableOpacity onPress={() => openEdit(item)}>
-            <MaterialCommunityIcons name="pencil" size={18} color={COLORS.primary} />
+            <MaterialCommunityIcons name="pencil" size={18} color={C.primary} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => handleDelete(item)}>
-            <MaterialCommunityIcons name="delete-outline" size={18} color={COLORS.danger} />
+            <MaterialCommunityIcons name="delete-outline" size={18} color={C.danger} />
           </TouchableOpacity>
         </View>
       </View>
-      <View className="flex-row justify-between items-center pt-2 border-t border-gray-100">
-        <Text className="text-gray-400 text-xs">{formatDate(item.startDate)} – {formatDate(item.endDate)}</Text>
-        <Text className="text-gray-400 text-xs">Used: {item.usedCount}/{item.usageLimit || '∞'}</Text>
-        <TouchableOpacity onPress={() => handleToggle(item)} className={`px-2 py-1 rounded ${item.isActive ? 'bg-red-50' : 'bg-green-50'}`}>
-          <Text className={`text-xs font-semibold ${item.isActive ? 'text-red-600' : 'text-green-600'}`}>{item.isActive ? 'Disable' : 'Enable'}</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.border }}>
+        <Text style={{ color: C.muted, fontSize: 11, fontFamily: appFont }}>{formatDate(item.startDate)} – {formatDate(item.endDate)}</Text>
+        <Text style={{ color: C.muted, fontSize: 11, fontFamily: appFont }}>Used: {item.usedCount}/{item.usageLimit || '∞'}</Text>
+        <TouchableOpacity
+          onPress={() => handleToggle(item)}
+          style={[adminStyles.badge, { backgroundColor: item.isActive ? (isDark ? '#450a0a' : '#fee2e2') : (isDark ? '#14532d' : '#dcfce7') }]}
+        >
+          <Text style={[adminStyles.badgeText, { color: item.isActive ? '#b91c1c' : '#166534', fontFamily: appFont }]}>{item.isActive ? 'Disable' : 'Enable'}</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
   const Field = ({ label, value, onChange, placeholder, keyboardType = 'default' }) => (
-    <>
-      <Text className="text-gray-600 text-sm mb-1">{label}</Text>
-      <TextInput className="border border-gray-300 rounded-lg px-3 py-2 mb-3 text-dark" value={value} onChangeText={onChange} placeholder={placeholder} keyboardType={keyboardType} />
-    </>
+    <View style={adminStyles.formField}>
+      <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>{label}</Text>
+      <TextInput
+        style={[adminStyles.formInput, { color: C.text, borderColor: C.inputBorder, backgroundColor: C.surfaceAlt, fontFamily: appFont }]}
+        value={value}
+        onChangeText={onChange}
+        placeholder={placeholder}
+        placeholderTextColor={C.muted}
+        keyboardType={keyboardType}
+      />
+    </View>
   );
 
   return (
-    <View className="flex-1 bg-light">
-      <View className="flex-row items-center p-4 bg-white border-b border-gray-200">
+    <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
+      <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.dark} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />
         </TouchableOpacity>
-        <Text className="text-dark text-lg font-bold flex-1 ml-4">Coupon Management</Text>
-        <TouchableOpacity onPress={openCreate} className="bg-primary px-3 py-1.5 rounded-lg">
-          <Text className="text-white font-semibold text-sm">+ Add</Text>
+        <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>Coupon Management</Text>
+        <TouchableOpacity onPress={openCreate} style={[adminStyles.badge, { backgroundColor: C.primary, paddingHorizontal: 12, paddingVertical: 6 }]}>
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13, fontFamily: appFont }}>+ Add</Text>
         </TouchableOpacity>
       </View>
 
@@ -128,46 +143,56 @@ export default function CouponManagementScreen() {
           data={coupons}
           keyExtractor={(i) => i._id}
           renderItem={({ item }) => <CouponCard item={item} />}
-          contentContainerStyle={{ padding: 12 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <View className="items-center py-12">
-              <MaterialCommunityIcons name="ticket-percent-outline" size={48} color={COLORS.gray[300]} />
-              <Text className="text-gray-500 mt-3">No coupons yet</Text>
+            <View style={adminStyles.emptyState}>
+              <MaterialCommunityIcons name="ticket-percent-outline" size={48} color={C.muted} />
+              <Text style={[adminStyles.emptyText, { color: C.muted, fontFamily: appFont }]}>No coupons yet</Text>
             </View>
           }
         />
       )}
 
       <Modal visible={modalVisible} animationType="slide" transparent>
-        <View className="flex-1 justify-end bg-black/40">
-          <ScrollView className="bg-white rounded-t-2xl" contentContainerStyle={{ padding: 24 }}>
-            <Text className="text-dark text-lg font-bold mb-4">{editingId ? 'Edit Coupon' : 'New Coupon'}</Text>
+        <View style={adminStyles.modalOverlay}>
+          <ScrollView style={[adminStyles.modalSheet, { backgroundColor: C.surface }]} contentContainerStyle={{ paddingBottom: 24 }}>
+            <Text style={[adminStyles.modalTitle, { color: C.text, fontFamily: appFont }]}>{editingId ? 'Edit Coupon' : 'New Coupon'}</Text>
             <Field label="Code *" value={form.code} onChange={(v) => setForm((f) => ({ ...f, code: v.toUpperCase() }))} placeholder="e.g. SAVE20" />
             <Field label="Description" value={form.description} onChange={(v) => setForm((f) => ({ ...f, description: v }))} placeholder="Optional" />
-            <Text className="text-gray-600 text-sm mb-1">Discount Type</Text>
-            <View className="flex-row gap-2 mb-3">
-              {['percentage', 'fixed'].map((t) => (
-                <TouchableOpacity key={t} className={`flex-1 py-2 rounded-lg border ${form.discountType === t ? 'bg-primary border-primary' : 'border-gray-300'}`} onPress={() => setForm((f) => ({ ...f, discountType: t }))}>
-                  <Text className={`text-center text-sm font-semibold capitalize ${form.discountType === t ? 'text-white' : 'text-dark'}`}>{t}</Text>
-                </TouchableOpacity>
-              ))}
+
+            <View style={adminStyles.formField}>
+              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>Discount Type</Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                {['percentage', 'fixed'].map((t) => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[{ flex: 1, paddingVertical: 10, borderRadius: 12, borderWidth: 1, alignItems: 'center' }, form.discountType === t ? { backgroundColor: C.primary, borderColor: C.primary } : { backgroundColor: C.surfaceAlt, borderColor: C.inputBorder }]}
+                    onPress={() => setForm((f) => ({ ...f, discountType: t }))}
+                  >
+                    <Text style={{ color: form.discountType === t ? '#fff' : C.text, fontWeight: '700', textTransform: 'capitalize', fontFamily: appFont }}>{t}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
+
             <Field label="Discount Value *" value={form.discountValue} onChange={(v) => setForm((f) => ({ ...f, discountValue: v }))} placeholder={form.discountType === 'percentage' ? '10' : '500'} keyboardType="decimal-pad" />
             <Field label="Min Order Amount (₦)" value={form.minOrderAmount} onChange={(v) => setForm((f) => ({ ...f, minOrderAmount: v }))} placeholder="0" keyboardType="decimal-pad" />
             <Field label="Usage Limit (blank = unlimited)" value={form.usageLimit} onChange={(v) => setForm((f) => ({ ...f, usageLimit: v }))} placeholder="e.g. 100" keyboardType="number-pad" />
             <Field label="Start Date * (YYYY-MM-DD)" value={form.startDate} onChange={(v) => setForm((f) => ({ ...f, startDate: v }))} placeholder="2025-01-01" />
             <Field label="End Date * (YYYY-MM-DD)" value={form.endDate} onChange={(v) => setForm((f) => ({ ...f, endDate: v }))} placeholder="2025-12-31" />
-            <View className="flex-row gap-3 mt-2 mb-6">
-              <TouchableOpacity className="flex-1 border border-gray-300 py-3 rounded-lg" onPress={() => setModalVisible(false)}>
-                <Text className="text-dark font-semibold text-center">Cancel</Text>
+
+            <View style={adminStyles.modalActions}>
+              <TouchableOpacity style={[adminStyles.modalBtn, { borderWidth: 1, borderColor: C.inputBorder }]} onPress={() => setModalVisible(false)}>
+                <Text style={[adminStyles.modalBtnText, { color: C.text, fontFamily: appFont }]}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity className="flex-1 bg-primary py-3 rounded-lg" onPress={handleSave} disabled={isSaving}>
-                <Text className="text-white font-semibold text-center">{isSaving ? 'Saving...' : 'Save'}</Text>
+              <TouchableOpacity style={[adminStyles.modalBtn, { backgroundColor: C.primary }]} onPress={handleSave} disabled={isSaving}>
+                <Text style={[adminStyles.modalBtnText, { color: '#fff', fontFamily: appFont }]}>{isSaving ? 'Saving...' : 'Save'}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }

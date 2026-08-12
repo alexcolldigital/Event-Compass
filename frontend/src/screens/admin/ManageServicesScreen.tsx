@@ -1,217 +1,104 @@
-/**
- * Manage Services Screen
- * Admin screen for managing services
- */
-
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  ScrollView,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  TextInput,
-  Modal,
-  KeyboardAvoidingView,
-  Platform,
-  KeyboardTypeOptions,
-  StyleSheet,
+  View, Text, FlatList, TouchableOpacity, Alert, TextInput, KeyboardTypeOptions,
+  Modal, KeyboardAvoidingView, Platform, ScrollView, SafeAreaView, Image, ActivityIndicator, StyleSheet,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import Button from '../../components/Button.jsx';
 import Loading from '../../components/Loading.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { adminAPI } from '../../services/api.js';
-import { COLORS, USER_ROLES, SERVICE_PROVIDER_TYPES } from '../../utils/constants.js';
 import { formatDate } from '../../utils/helpers.js';
+import { useTheme } from '../../context/ThemeContext';
+import adminStyles, { getColors, appFont } from '../../styles/adminStyles.js';
 
-// Type definitions
-interface Service {
-  _id: string;
-  name: string;
-  description: string;
-  shortDescription?: string;
-  serviceType: string;
-  category: string;
-  subCategory?: string;
-  pricing: {
-    basePrice: number;
-    unit: string;
-    currency?: string;
-  };
-  availability: {
-    isAvailable: boolean;
-  };
-  coverageArea?: Record<string, unknown>;
-  packages?: unknown[];
-  images?: unknown[];
-  media?: Record<string, unknown>;
-  inventory?: Record<string, unknown>;
-  quantity?: number;
-  fullDescription?: string;
-  provider?: string | { _id: string; businessName?: string; firstName?: string; lastName?: string };
-  providerType?: string;
-  isActive: boolean;
-  isFeatured: boolean;
-  tags?: string[];
-  specifications?: unknown[];
-  cancellationPolicy?: string;
-  cancellationDetails?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
+const SERVICE_TYPES = [
+  'Canopy & Tent Rental', 'Chair Rental', 'Table Rental',
+  'Event Planning', 'Event Management', 'Event Facilitation', 'Event Hosting',
+  'Venue', 'Decor', 'Make-up', 'Ushering', 'Security / Bouncing',
+  'Equipment Rental', 'Ice Chilling', 'Refrigerated Van', 'Catering',
+  'Drinks Supply', 'DJ / Live Music', 'MC / Compere', 'Comedy / Entertainment',
+];
 
-interface ServicesResponse {
-  services: Service[];
-  [key: string]: unknown;
-}
+const CATEGORIES_WITH_SUBS: Record<string, string[]> = {
+  'Canopies and Tent': ['12 by 12 Canopy', '12 by 24 Canopy', '20 by 40 Tent', '30 by 60 Tent', '40 by 80 Tent'],
+  'Chairs': ['Plastic Chair', 'Chivalry Chair', 'Bridal Chair'],
+  'Tables': ['Plastic Table', 'Banquet Table'],
+  'Event Planners and Managers': [],
+  'Events Services Providers and Vendors': [],
+  'Events Facilitators and Agents': [],
+  'Special Events Hosts and Organizers': [],
+  'Events Venues': [],
+  'Event Decorators': [],
+  'Make-up Artists': [],
+  'Ushers': [],
+  'Bouncers': [],
+  'Events Facilities Rental and Hiring Companies': [],
+  'Ice Chilling Services': [],
+  'Refrigerated Vans/Cooling Vans Providers': [],
+  'Food Caterers': [],
+  'Drinks Suppliers': [],
+  'Music (D-J and Live Performances)': [],
+  'MCs and Compares': [],
+  'Comedians and Entertainers': [],
+};
 
-interface ServiceResponse {
-  service: Service;
-  [key: string]: unknown;
-}
+const PRICING_UNITS = [
+  { label: 'Fixed Price', value: 'fixed' },
+  { label: 'Hourly', value: 'hourly' },
+  { label: 'Daily', value: 'daily' },
+  { label: 'Weekly', value: 'weekly' },
+  { label: 'Monthly', value: 'monthly' },
+  { label: 'Per Person', value: 'per_person' },
+  { label: 'Per Item', value: 'per_item' },
+  { label: 'Negotiable', value: 'negotiable' },
+  { label: 'Per Booking', value: 'booking' },
+];
 
-interface FormData {
-  name: string;
-  description: string;
-  shortDescription: string;
-  serviceType: string;
-  category: string;
-  subCategory: string;
-  pricing: {
-    basePrice: string;
-    unit: string;
-  };
-  availability: {
-    isAvailable: boolean;
-  };
-  coverageArea: Record<string, unknown>;
-  packages: unknown[];
-  images: unknown[];
-  media: Record<string, unknown>;
-  inventory: Record<string, unknown>;
-  quantity: number;
-  fullDescription: string;
-  provider: string;
-  providerType: string;
-  isActive: boolean;
-  isFeatured: boolean;
-  tags: string[];
-  specifications: unknown[];
-  cancellationPolicy: string;
-  cancellationDetails: string;
-}
-
-interface FormErrors {
-  name?: string;
-  description?: string;
-  serviceType?: string;
-  pricing?: string;
-  [key: string]: string | undefined;
-}
-
-interface ApiError {
-  message?: string;
-  [key: string]: unknown;
-}
-
-interface ServiceCardProps {
-  service: Service;
-}
-
-type InputKeyboardType = KeyboardTypeOptions | 'text';
-
-interface RenderFormFieldProps {
-  label: string;
-  name: keyof FormData;
-  type?: InputKeyboardType;
-  placeholder?: string;
-  multiline?: boolean;
-}
-
-interface RenderNestedFieldProps {
-  label: string;
-  parent: keyof FormData;
-  child: string;
-  type?: InputKeyboardType;
-  placeholder?: string;
-}
-
-// Style type helpers
-type FlexDirection = 'row' | 'column' | 'row-reverse' | 'column-reverse';
-type AlignItems = 'flex-start' | 'flex-end' | 'center' | 'stretch' | 'baseline';
-type JustifyContent = 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around' | 'space-evenly';
-type FontWeight = 'normal' | 'bold' | '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900';
-type FlexWrap = 'wrap' | 'nowrap' | 'wrap-reverse';
-type AlignSelf = 'auto' | 'flex-start' | 'flex-end' | 'center' | 'stretch' | 'baseline';
-type TextAlign = 'auto' | 'left' | 'right' | 'center' | 'justify';
+const DEFAULT_FORM = {
+  name: '', description: '', shortDescription: '', serviceType: '', category: '',
+  subCategory: '', pricing: { basePrice: '', unit: 'fixed' },
+  availability: { isAvailable: true }, coverageArea: {}, packages: [], images: [],
+  media: {}, inventory: {}, quantity: 1, fullDescription: '', provider: '',
+  providerType: 'events_service_provider', isActive: true, isFeatured: false,
+  tags: [], specifications: [], cancellationPolicy: 'moderate', cancellationDetails: '',
+};
 
 const ManageServicesScreen = () => {
   const navigation = useNavigation();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const C = getColors(isDark);
 
-  const [services, setServices] = useState<Service[]>([]);
-  const [filteredServices, setFilteredServices] = useState<Service[]>([]);
+  const [services, setServices] = useState<any[]>([]);
+  const [filteredServices, setFilteredServices] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
   const [searchText, setSearchText] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedService, setSelectedService] = useState<any>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [formData, setFormData] = useState<FormData>({
-    name: '',
-    description: '',
-    shortDescription: '',
-    serviceType: '',
-    category: '',
-    subCategory: '',
-    pricing: {
-      basePrice: '',
-      unit: 'fixed',
-    },
-    availability: {
-      isAvailable: true,
-    },
-    coverageArea: {},
-    packages: [],
-    images: [],
-    media: {},
-    inventory: {},
-    quantity: 1,
-    fullDescription: '',
-    provider: '',
-    providerType: 'events_service_provider',
-    isActive: true,
-    isFeatured: false,
-    tags: [],
-    specifications: [],
-    cancellationPolicy: 'moderate',
-    cancellationDetails: '',
-  });
-  const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [formData, setFormData] = useState<Record<string, any>>(DEFAULT_FORM);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Each picked image: { uri, uploading, uploaded, cloudUrl }
+  const [pickedImages, setPickedImages] = useState<{ uri: string; uploading: boolean; cloudUrl: string }[]>([]);
 
-  useEffect(() => {
-    loadServices();
-  }, []);
-
-  useEffect(() => {
-    filterServices();
-  }, [searchText, filterCategory, filterStatus, services]);
+  useEffect(() => { loadServices(); }, []);
+  useEffect(() => { filterServices(); }, [searchText, filterCategory, filterStatus, services]);
 
   const loadServices = async () => {
     setIsLoading(true);
     try {
-      const response = (await adminAPI.getAllServices({ limit: 100 })) as unknown as ServicesResponse;
-      setServices(response.services || []);
+      const response = await adminAPI.getAllServices({ limit: 100 });
+      setServices(response.data?.services || response.data || []);
       setError(null);
-    } catch (err) {
-      const error = err as ApiError;
-      setError(error.message || 'Failed to load services');
+    } catch (err: any) {
+      setError(err.message || 'Failed to load services');
     } finally {
       setIsLoading(false);
     }
@@ -219,324 +106,447 @@ const ManageServicesScreen = () => {
 
   const filterServices = () => {
     let filtered = services;
-
     if (searchText.trim()) {
-      filtered = filtered.filter(
-        (service) =>
-          service.name.toLowerCase().includes(searchText.toLowerCase()) ||
-          service.description.toLowerCase().includes(searchText.toLowerCase()) ||
-          service.serviceType.toLowerCase().includes(searchText.toLowerCase()) ||
-          (service.provider &&
-            typeof service.provider === 'object' &&
-            service.provider.businessName &&
-            service.provider.businessName.toLowerCase().includes(searchText.toLowerCase()))
+      filtered = filtered.filter((s) =>
+        s.name.toLowerCase().includes(searchText.toLowerCase()) ||
+        s.description.toLowerCase().includes(searchText.toLowerCase()) ||
+        s.serviceType.toLowerCase().includes(searchText.toLowerCase()) ||
+        (s.provider && typeof s.provider === 'object' && s.provider.businessName?.toLowerCase().includes(searchText.toLowerCase()))
       );
     }
-
-    if (filterCategory !== 'all') {
-      filtered = filtered.filter((service) => service.category === filterCategory);
-    }
-
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter((service) => (service.isActive ? 'active' : 'inactive') === filterStatus);
-    }
-
+    if (filterCategory !== 'all') filtered = filtered.filter((s) => s.category === filterCategory);
+    if (filterStatus !== 'all') filtered = filtered.filter((s) => (s.isActive ? 'active' : 'inactive') === filterStatus);
     setFilteredServices(filtered);
   };
 
-  const handleToggleFeatured = async (service: Service) => {
+  const handleToggleFeatured = async (service: any) => {
     try {
-      const response = (await adminAPI.toggleFeatured(service._id)) as unknown as ServiceResponse;
-      const updatedServices = services.map((s) =>
-        s._id === service._id ? response.service : s
-      );
-      setServices(updatedServices);
-      Alert.alert('Success', `Service ${response.service.isFeatured ? 'featured' : 'unfeatured'} successfully`);
-    } catch (err) {
-      const error = err as ApiError;
-      Alert.alert('Error', error.message || 'Failed to update service');
-    }
+      const response = await adminAPI.toggleFeatured(service._id);
+      setServices(services.map((s) => s._id === service._id ? (response.data?.service ?? response.data) : s));
+    } catch (err: any) { Alert.alert('Error', err.message || 'Failed to update service'); }
   };
 
-  const handleToggleActive = async (service: Service) => {
+  const handleToggleActive = async (service: any) => {
     try {
-      const response = (await adminAPI.toggleActive(service._id)) as unknown as ServiceResponse;
-      const updatedServices = services.map((s) =>
-        s._id === service._id ? response.service : s
-      );
-      setServices(updatedServices);
-      Alert.alert('Success', `Service ${response.service.isActive ? 'activated' : 'deactivated'} successfully`);
-    } catch (err) {
-      const error = err as ApiError;
-      Alert.alert('Error', error.message || 'Failed to update service');
-    }
+      const response = await adminAPI.toggleActive(service._id);
+      setServices(services.map((s) => s._id === service._id ? (response.data?.service ?? response.data) : s));
+    } catch (err: any) { Alert.alert('Error', err.message || 'Failed to update service'); }
   };
 
-  const handleDeleteService = (service: Service) => {
-    Alert.alert(
-      'Delete Service',
-      `Are you sure you want to delete "${service.name}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', onPress: () => {} },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await adminAPI.deleteService(service._id);
-              const updatedServices = services.filter((s) => s._id !== service._id);
-              setServices(updatedServices);
-              Alert.alert('Success', 'Service deleted successfully');
-            } catch (err) {
-              const error = err as ApiError;
-              Alert.alert('Error', error.message || 'Failed to delete service');
-            }
-          },
+  const handleDeleteService = (service: any) => {
+    Alert.alert('Delete Service', `Delete "${service.name}"? This cannot be undone.`, [
+      { text: 'Cancel' },
+      {
+        text: 'Delete', style: 'destructive', onPress: async () => {
+          try {
+            await adminAPI.deleteService(service._id);
+            setServices(services.filter((s) => s._id !== service._id));
+          } catch (err: any) { Alert.alert('Error', err.message || 'Failed to delete service'); }
         },
-      ]
-    );
+      },
+    ]);
   };
 
-  const handleOpenAddModal = () => {
-    resetForm();
-    setShowAddModal(true);
-  };
-
-  const handleOpenEditModal = (service: Service) => {
-    setSelectedService(service);
-    setFormData({
-      name: service.name || '',
-      description: service.description || '',
-      shortDescription: service.shortDescription || '',
-      serviceType: service.serviceType || '',
-      category: service.category || '',
-      subCategory: service.subCategory || '',
-      pricing: {
-        basePrice: service.pricing?.basePrice?.toString() || '',
-        unit: service.pricing?.unit || 'fixed',
-      },
-      availability: {
-        isAvailable: service.availability?.isAvailable !== false,
-      },
-      coverageArea: service.coverageArea || {},
-      packages: service.packages || [],
-      images: service.images || [],
-      media: service.media || {},
-      inventory: service.inventory || {},
-      quantity: service.quantity || 1,
-      fullDescription: service.fullDescription || '',
-      provider: typeof service.provider === 'object' ? service.provider._id : service.provider || '',
-      providerType: service.providerType || 'events_service_provider',
-      isActive: service.isActive !== false,
-      isFeatured: service.isFeatured || false,
-      tags: service.tags || [],
-      specifications: service.specifications || [],
-      cancellationPolicy: service.cancellationPolicy || 'moderate',
-      cancellationDetails: service.cancellationDetails || '',
-    });
-    setShowEditModal(true);
-  };
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      description: '',
-      shortDescription: '',
-      serviceType: '',
-      category: '',
-      subCategory: '',
-      pricing: {
-        basePrice: '',
-        unit: 'fixed',
-      },
-      availability: {
-        isAvailable: true,
-      },
-      coverageArea: {},
-      packages: [],
-      images: [],
-      media: {},
-      inventory: {},
-      quantity: 1,
-      fullDescription: '',
-      provider: '',
-      providerType: 'events_service_provider',
-      isActive: true,
-      isFeatured: false,
-      tags: [],
-      specifications: [],
-      cancellationPolicy: 'moderate',
-      cancellationDetails: '',
-    });
-    setFormErrors({});
-    setSelectedService(null);
-  };
+  const resetForm = () => { setFormData(DEFAULT_FORM); setFormErrors({}); setSelectedService(null); setPickedImages([]); };
 
   const validateForm = () => {
-    const errors: FormErrors = {};
+    const errors: Record<string, string> = {};
     if (!formData.name.trim()) errors.name = 'Name is required';
     if (!formData.description.trim()) errors.description = 'Description is required';
     if (!formData.serviceType.trim()) errors.serviceType = 'Service type is required';
-    if (!formData.pricing.basePrice || parseFloat(formData.pricing.basePrice) < 0) {
-      errors.pricing = 'Valid base price is required';
-    }
+    if (!formData.pricing.basePrice || parseFloat(formData.pricing.basePrice) < 0) errors.pricing = 'Valid base price is required';
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
+  const pickImages = async () => {
+    if (pickedImages.length >= 12) {
+      Alert.alert('Limit reached', 'Maximum 12 images per service.');
+      return;
+    }
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Please allow access to your photo library.');
+      return;
+    }
+    const remaining = 12 - pickedImages.length;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      selectionLimit: remaining,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets.length > 0) {
+      const newImages = result.assets.map((a) => ({ uri: a.uri, uploading: false, cloudUrl: '' }));
+      setPickedImages((prev) => [...prev, ...newImages].slice(0, 10));
+    }
+  };
+
+  const removePickedImage = (index: number) => {
+    setPickedImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadPickedImages = async (serviceId: string) => {
+    const toUpload = pickedImages.filter((img) => !img.cloudUrl);
+    if (toUpload.length === 0) return;
+    const formDataUpload = new FormData() as any;
+    toUpload.forEach((img, i) => {
+      const ext = img.uri.split('.').pop() || 'jpg';
+      formDataUpload.append('images', { uri: img.uri, name: `image_${i}.${ext}`, type: `image/${ext}` } as any);
+    });
+    await adminAPI.uploadServiceMedia(serviceId, formDataUpload);
+  };
+
   const handleSubmit = async () => {
     if (!validateForm()) return;
-
     setIsSubmitting(true);
     try {
+      // Keep existing cloud images (from edit) + newly picked ones that already have cloudUrl
+      const existingImages = pickedImages
+        .filter((img) => img.cloudUrl)
+        .map((img, i) => ({ url: img.cloudUrl, isMain: i === 0 }));
+
       const submitData = {
         ...formData,
-        pricing: {
-          basePrice: parseFloat(formData.pricing.basePrice),
-          unit: formData.pricing.unit,
-          currency: 'NGN',
-        },
-        availability: {
-          isAvailable: formData.availability.isAvailable,
-        },
-        isActive: formData.isActive,
-        isFeatured: formData.isFeatured,
-        tags: formData.tags,
-        specifications: formData.specifications,
-        cancellationPolicy: formData.cancellationPolicy,
-        cancellationDetails: formData.cancellationDetails,
+        pricing: { basePrice: parseFloat(formData.pricing.basePrice), unit: formData.pricing.unit, currency: 'NGN' },
+        images: existingImages,
+        media: { ...formData.media, coverImage: existingImages[0]?.url || '', galleryImages: existingImages.slice(1).map((i) => i.url) },
       };
 
+      let serviceId: string;
       if (showEditModal && selectedService) {
-        await adminAPI.updateService(selectedService._id, submitData);
-        Alert.alert('Success', 'Service updated successfully');
+        const res = await adminAPI.updateService(selectedService._id, submitData);
+        serviceId = selectedService._id;
       } else {
-        await adminAPI.createService(submitData);
-        Alert.alert('Success', 'Service created successfully');
+        const res: any = await adminAPI.createService(submitData);
+        serviceId = res.service?._id;
       }
 
+      // Upload any newly picked local images
+      const hasNewLocalImages = pickedImages.some((img) => !img.cloudUrl);
+      if (serviceId && hasNewLocalImages) {
+        await uploadPickedImages(serviceId);
+      }
+
+      Alert.alert('Success', showEditModal ? 'Service updated successfully' : 'Service created successfully');
       setShowAddModal(false);
       setShowEditModal(false);
       resetForm();
       loadServices();
-    } catch (err) {
-      const error = err as ApiError;
-      Alert.alert('Error', error.message || 'Failed to save service');
+    } catch (err: any) {
+      Alert.alert('Error', (err as any).message || 'Failed to save service');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const ServiceCard = ({ service }: ServiceCardProps) => {
+  const FormField = ({ label, name, keyboardType, multiline, nested }: { label: string; name: string; keyboardType?: KeyboardTypeOptions; multiline?: boolean; nested?: { parent: string; child: string } }) => {
+    const kbType: KeyboardTypeOptions = keyboardType ?? 'default';
+    const isMultiline = multiline ?? false;
+    const value = nested ? (formData[nested.parent]?.[nested.child] || '') : (formData[name] || '');
+    const onChange = nested
+      ? (v: string) => setFormData({ ...formData, [nested.parent]: { ...formData[nested.parent], [nested.child]: v } })
+      : (v: string) => setFormData({ ...formData, [name]: v });
+    const errorMsg = formErrors[name] || (nested ? formErrors[nested.parent] : undefined);
+    return (
+      <View style={adminStyles.formField}>
+        <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>{label}</Text>
+        <TextInput
+          value={value}
+          onChangeText={onChange}
+          keyboardType={kbType}
+          multiline={isMultiline}
+          numberOfLines={isMultiline ? 4 : 1}
+          style={[isMultiline ? adminStyles.formInputMultiline : adminStyles.formInput, { color: C.text, borderColor: C.inputBorder, backgroundColor: C.surfaceAlt, fontFamily: appFont }]}
+          placeholderTextColor={C.muted}
+        />
+        {errorMsg && <Text style={adminStyles.formError}>{errorMsg}</Text>}
+      </View>
+    );
+  };
+
+  const Toggle = ({ label, value, onToggle, color = C.primary }: { label: string; value: boolean; onToggle: () => void; color?: string }) => (
+    <View style={[adminStyles.toggleRow, { backgroundColor: C.surfaceAlt }]}>
+      <Text style={[adminStyles.toggleLabel, { color: C.text, fontFamily: appFont }]}>{label}</Text>
+      <TouchableOpacity onPress={onToggle} style={[adminStyles.toggleSwitch, { backgroundColor: value ? color : C.border }]}>
+        <View style={[adminStyles.toggleThumb, { marginLeft: value ? 24 : 4 }]} />
+      </TouchableOpacity>
+    </View>
+  );
+
+  const SelectField = ({ label, value, options, onSelect, error }: { label: string; value: string; options: { label: string; value: string }[]; onSelect: (v: string) => void; error?: string }) => (
+    <View style={adminStyles.formField}>
+      <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>{label}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={{ flexDirection: 'row', gap: 8, paddingVertical: 4 }}>
+          {options.map((opt) => (
+            <TouchableOpacity
+              key={opt.value}
+              onPress={() => onSelect(opt.value)}
+              style={[{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
+                value === opt.value
+                  ? { backgroundColor: C.primary, borderColor: C.primary }
+                  : { backgroundColor: C.surfaceAlt, borderColor: C.inputBorder }]}
+            >
+              <Text style={{ color: value === opt.value ? '#fff' : C.text, fontSize: 12, fontFamily: appFont, fontWeight: '600' }}>{opt.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+      {error && <Text style={adminStyles.formError}>{error}</Text>}
+    </View>
+  );
+
+  const subCategoryOptions = formData.category
+    ? (CATEGORIES_WITH_SUBS[formData.category] || []).map((s) => ({ label: s, value: s }))
+    : [];
+
+  const ImageSection = () => (
+    <View style={adminStyles.formSection}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <Text style={[adminStyles.formSectionTitle, { color: C.text, fontFamily: appFont }]}>Images ({pickedImages.length}/12)</Text>
+        {pickedImages.length < 12 && (
+          <TouchableOpacity
+            onPress={pickImages}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }}
+          >
+            <MaterialCommunityIcons name="image-plus" size={14} color="#fff" />
+            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700', fontFamily: appFont }}>Add Photos</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+      <Text style={{ color: C.muted, fontSize: 12, marginBottom: 12, fontFamily: appFont }}>Pick up to 12 photos from your device. First photo is the cover.</Text>
+
+      {pickedImages.length === 0 ? (
+        <TouchableOpacity
+          onPress={pickImages}
+          style={{ borderWidth: 2, borderColor: C.inputBorder, borderStyle: 'dashed', borderRadius: 16, paddingVertical: 32, alignItems: 'center', gap: 8 }}
+        >
+          <MaterialCommunityIcons name="image-multiple-outline" size={40} color={C.muted} />
+          <Text style={{ color: C.muted, fontSize: 13, fontWeight: '600', fontFamily: appFont }}>Tap to pick photos</Text>
+        </TouchableOpacity>
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={{ flexDirection: 'row', gap: 10, paddingVertical: 4 }}>
+            {pickedImages.map((img, index) => (
+              <View key={index} style={{ position: 'relative' }}>
+                <Image
+                  source={{ uri: img.cloudUrl || img.uri }}
+                  style={{ width: 90, height: 90, borderRadius: 14, backgroundColor: C.surfaceAlt }}
+                />
+                {index === 0 && (
+                  <View style={{ position: 'absolute', bottom: 4, left: 4, backgroundColor: C.primary, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 2 }}>
+                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>COVER</Text>
+                  </View>
+                )}
+                {img.uploading && (
+                  <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 14, alignItems: 'center', justifyContent: 'center' }}>
+                    <ActivityIndicator color="#fff" size="small" />
+                  </View>
+                )}
+                <TouchableOpacity
+                  onPress={() => removePickedImage(index)}
+                  style={{ position: 'absolute', top: -6, right: -6, backgroundColor: '#ef4444', borderRadius: 999, width: 22, height: 22, alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <MaterialCommunityIcons name="close" size={13} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            ))}
+            {pickedImages.length < 12 && (
+              <TouchableOpacity
+                onPress={pickImages}
+                style={{ width: 90, height: 90, borderRadius: 14, borderWidth: 2, borderColor: C.inputBorder, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+              >
+                <MaterialCommunityIcons name="plus" size={24} color={C.muted} />
+                <Text style={{ color: C.muted, fontSize: 10, fontWeight: '700', fontFamily: appFont }}>Add</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </ScrollView>
+      )}
+    </View>
+  );
+
+  const ServiceForm = () => (
+    <ScrollView style={{ flex: 1, padding: 16 }}>
+      <View style={adminStyles.formSection}>
+        <Text style={[adminStyles.formSectionTitle, { color: C.text, fontFamily: appFont }]}>Basic Information</Text>
+        <FormField label="Service Name *" name="name" />
+        <SelectField
+          label="Service Type *"
+          value={formData.serviceType}
+          options={SERVICE_TYPES.map((t) => ({ label: t, value: t }))}
+          onSelect={(v) => setFormData({ ...formData, serviceType: v })}
+          error={formErrors.serviceType}
+        />
+        <SelectField
+          label="Category"
+          value={formData.category}
+          options={Object.keys(CATEGORIES_WITH_SUBS).map((c) => ({ label: c, value: c }))}
+          onSelect={(v) => setFormData({ ...formData, category: v, subCategory: '' })}
+        />
+        {subCategoryOptions.length > 0 && (
+          <SelectField
+            label="Sub-category"
+            value={formData.subCategory}
+            options={subCategoryOptions}
+            onSelect={(v) => setFormData({ ...formData, subCategory: v })}
+          />
+        )}
+        <FormField label="Short Description" name="shortDescription" multiline />
+        <FormField label="Full Description *" name="description" multiline />
+      </View>
+
+      <View style={adminStyles.formSection}>
+        <Text style={[adminStyles.formSectionTitle, { color: C.text, fontFamily: appFont }]}>Pricing</Text>
+        <FormField label="Base Price (₦) *" name="pricing" nested={{ parent: 'pricing', child: 'basePrice' }} keyboardType="numeric" />
+        <SelectField
+          label="Pricing Type"
+          value={formData.pricing.unit}
+          options={PRICING_UNITS}
+          onSelect={(v) => setFormData({ ...formData, pricing: { ...formData.pricing, unit: v } })}
+        />
+      </View>
+
+      <View style={adminStyles.formSection}>
+        <Text style={[adminStyles.formSectionTitle, { color: C.text, fontFamily: appFont }]}>Status</Text>
+        <Toggle label="Active" value={formData.isActive} onToggle={() => setFormData({ ...formData, isActive: !formData.isActive })} />
+        <Toggle label="Featured" value={formData.isFeatured} onToggle={() => setFormData({ ...formData, isFeatured: !formData.isFeatured })} color="#f59e0b" />
+        <Toggle label="Available for Booking" value={formData.availability.isAvailable} onToggle={() => setFormData({ ...formData, availability: { isAvailable: !formData.availability.isAvailable } })} color="#10b981" />
+      </View>
+
+      <View style={adminStyles.formSection}>
+        <Text style={[adminStyles.formSectionTitle, { color: C.text, fontFamily: appFont }]}>Cancellation Policy</Text>
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+          {['flexible', 'moderate', 'strict'].map((p) => (
+            <TouchableOpacity
+              key={p}
+              style={[{ flex: 1, paddingVertical: 8, borderRadius: 12, borderWidth: 1, alignItems: 'center' }, formData.cancellationPolicy === p ? { backgroundColor: C.primary, borderColor: C.primary } : { backgroundColor: C.surface, borderColor: C.inputBorder }]}
+              onPress={() => setFormData({ ...formData, cancellationPolicy: p })}
+            >
+              <Text style={{ color: formData.cancellationPolicy === p ? '#fff' : C.text, fontSize: 12, fontWeight: '700', fontFamily: appFont, textTransform: 'capitalize' }}>{p}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <FormField label="Cancellation Details" name="cancellationDetails" multiline />
+      </View>
+
+      <ImageSection />
+
+      <View style={adminStyles.modalActions}>
+        <TouchableOpacity style={[adminStyles.modalBtn, { borderWidth: 1, borderColor: C.inputBorder }]} onPress={() => { setShowAddModal(false); setShowEditModal(false); }}>
+          <Text style={[adminStyles.modalBtnText, { color: C.text, fontFamily: appFont }]}>Cancel</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[adminStyles.modalBtn, { backgroundColor: C.primary }]} onPress={handleSubmit} disabled={isSubmitting}>
+          <Text style={[adminStyles.modalBtnText, { color: '#fff', fontFamily: appFont }]}>{isSubmitting ? 'Saving...' : showEditModal ? 'Update' : 'Save'}</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+
+  const ServiceCard = ({ service }: { service: any }) => {
     const isActive = service.isActive !== false;
     const isFeatured = service.isFeatured || false;
+    const expanded = selectedService?._id === service._id;
+    const providerName = typeof service.provider === 'object'
+      ? service.provider.businessName || `${service.provider.firstName} ${service.provider.lastName}`
+      : service.provider;
 
     return (
       <TouchableOpacity
-        onPress={() => setSelectedService(selectedService?._id === service._id ? null : service)}
-        style={styles.serviceCard}
+        onPress={() => setSelectedService(expanded ? null : service)}
+        style={[adminStyles.card, { backgroundColor: C.surface, borderColor: C.border }]}
+        activeOpacity={0.85}
       >
-        <View style={styles.cardHeader}>
-          <View style={styles.iconContainer}>
-            <MaterialCommunityIcons name="briefcase" size={24} color="white" />
+        <View style={adminStyles.cardRow}>
+          <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+            <MaterialCommunityIcons name="briefcase" size={22} color="#fff" />
           </View>
-          <View style={styles.cardContent}>
-            <View style={styles.nameRow}>
-              <Text style={styles.serviceName}>{service.name}</Text>
-              <View style={styles.badgeContainer}>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={{ color: C.text, fontWeight: '700', fontSize: 14, flex: 1, marginRight: 8, fontFamily: appFont }}>{service.name}</Text>
+              <View style={{ flexDirection: 'row', gap: 4 }}>
                 {isFeatured && (
-                  <View style={styles.featuredBadge}>
-                    <MaterialCommunityIcons name="star" size={12} color="#f59e0b" />
-                    <Text style={styles.featuredText}>Featured</Text>
+                  <View style={[adminStyles.badge, { backgroundColor: '#fef3c7', flexDirection: 'row', alignItems: 'center' }]}>
+                    <MaterialCommunityIcons name="star" size={10} color="#f59e0b" />
+                    <Text style={[adminStyles.badgeText, { color: '#b45309', marginLeft: 2 }]}>Featured</Text>
                   </View>
                 )}
-                <View style={[styles.statusBadge, isActive ? styles.activeBadge : styles.inactiveBadge]}>
-                  <Text style={[styles.statusText, isActive ? styles.activeText : styles.inactiveText]}>
-                    {isActive ? 'Active' : 'Inactive'}
-                  </Text>
+                <View style={[adminStyles.badge, { backgroundColor: isActive ? '#dcfce7' : '#fee2e2' }]}>
+                  <Text style={[adminStyles.badgeText, { color: isActive ? '#166534' : '#b91c1c' }]}>{isActive ? 'Active' : 'Inactive'}</Text>
                 </View>
               </View>
             </View>
-            {service.provider && (
-              <Text style={styles.providerText}>
-                Provider:{' '}
-                {typeof service.provider === 'object'
-                  ? service.provider.businessName || `${service.provider.firstName} ${service.provider.lastName}`
-                  : service.provider}
-              </Text>
-            )}
-            <Text style={styles.serviceType}>{service.serviceType}</Text>
-            <Text style={styles.priceText}>
-              ₦{service.pricing?.basePrice?.toLocaleString() || 0} / {service.pricing?.unit || 'fixed'}
-            </Text>
+            {providerName && <Text style={{ color: C.muted, fontSize: 12, marginTop: 2, fontFamily: appFont }}>Provider: {providerName}</Text>}
+            <Text style={{ color: C.muted, fontSize: 12, marginTop: 1, fontFamily: appFont }}>{service.serviceType}</Text>
+            <Text style={{ color: C.primary, fontWeight: '700', fontSize: 13, marginTop: 2, fontFamily: appFont }}>₦{service.pricing?.basePrice?.toLocaleString() || 0} / {service.pricing?.unit || 'fixed'}</Text>
           </View>
-
-          <MaterialCommunityIcons
-            name={selectedService?._id === service._id ? 'chevron-up' : 'chevron-down'}
-            size={24}
-            color="#d1d5db"
-          />
+          <MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={20} color={C.muted} />
         </View>
 
-        {selectedService?._id === service._id && (
-          <View style={styles.additionalInfo}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Category</Text>
-              <Text style={styles.infoValue}>{service.category || 'N/A'}</Text>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Sub-category</Text>
-              <Text style={styles.infoValue}>{service.subCategory || 'N/A'}</Text>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Created</Text>
-              <Text style={styles.infoValue}>{formatDate(service.createdAt)}</Text>
-            </View>
-
+        {expanded && (
+          <View style={{ marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: C.border }}>
+            {[
+              { label: 'Category', value: service.category || 'N/A' },
+              { label: 'Sub-category', value: service.subCategory || 'N/A' },
+              { label: 'Created', value: formatDate(service.createdAt) },
+            ].map((row) => (
+              <View key={row.label} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Text style={{ color: C.muted, fontSize: 12, fontFamily: appFont }}>{row.label}</Text>
+                <Text style={{ color: C.text, fontSize: 12, fontWeight: '700', fontFamily: appFont }}>{row.value}</Text>
+              </View>
+            ))}
             {service.description && (
-              <View style={styles.descriptionContainer}>
-                <Text style={styles.descriptionLabel}>Description</Text>
-                <Text style={styles.descriptionText}>{service.description}</Text>
+              <View style={{ marginBottom: 10 }}>
+                <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', marginBottom: 4, fontFamily: appFont }}>Description</Text>
+                <Text style={{ color: C.text, fontSize: 12, fontFamily: appFont }}>{service.description}</Text>
               </View>
             )}
-
-            <View style={styles.actionButtons}>
-              <TouchableOpacity
-                style={[styles.actionButton, isFeatured ? styles.featuredAction : styles.defaultAction]}
-                onPress={() => handleToggleFeatured(service)}
-              >
-                <Text
-                  style={[styles.actionButtonText, isFeatured ? styles.featuredActionText : styles.defaultActionText]}
-                >
-                  {isFeatured ? 'Unfeature' : 'Feature'}
-                </Text>
+            {service.images && service.images.length > 0 && (
+              <View style={{ marginBottom: 12 }}>
+                <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', marginBottom: 6, fontFamily: appFont }}>Images ({service.images.length})</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {service.images.map((img: any, i: number) => {
+                      const uri = typeof img === 'string' ? img : img?.url;
+                      return uri ? (
+                        <View key={i} style={{ position: 'relative' }}>
+                          <Image source={{ uri }} style={{ width: 72, height: 72, borderRadius: 12, backgroundColor: C.surfaceAlt }} />
+                          {i === 0 && (
+                            <View style={{ position: 'absolute', bottom: 4, left: 4, backgroundColor: C.primary, borderRadius: 6, paddingHorizontal: 4, paddingVertical: 2 }}>
+                              <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>COVER</Text>
+                            </View>
+                          )}
+                        </View>
+                      ) : null;
+                    })}
+                  </View>
+                </ScrollView>
+              </View>
+            )}
+            <View style={adminStyles.actionRow}>
+              <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: isFeatured ? '#fef3c7' : C.surfaceAlt }]} onPress={() => handleToggleFeatured(service)}>
+                <Text style={[adminStyles.actionBtnText, { color: isFeatured ? '#b45309' : C.text }]}>{isFeatured ? 'Unfeature' : 'Feature'}</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.actionButton, isActive ? styles.deactivateAction : styles.activateAction]}
-                onPress={() => handleToggleActive(service)}
-              >
-                <Text
-                  style={[styles.actionButtonText, isActive ? styles.deactivateActionText : styles.activateActionText]}
-                >
-                  {isActive ? 'Deactivate' : 'Activate'}
-                </Text>
+              <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: isActive ? (isDark ? '#450a0a' : '#fee2e2') : (isDark ? '#14532d' : '#dcfce7') }]} onPress={() => handleToggleActive(service)}>
+                <Text style={[adminStyles.actionBtnText, { color: isActive ? '#b91c1c' : '#166534' }]}>{isActive ? 'Deactivate' : 'Activate'}</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.editAction}
-                onPress={() => handleOpenEditModal(service)}
-              >
-                <Text style={styles.editActionText}>Edit</Text>
+              <TouchableOpacity style={[adminStyles.actionBtn, { borderWidth: 1, borderColor: C.primary }]} onPress={() => {
+                setSelectedService(service);
+                // Pre-populate existing cloud images so they show in the picker grid
+                const existing = (service.images || []).map((img: any) => ({
+                  uri: typeof img === 'string' ? img : img?.url || '',
+                  uploading: false,
+                  cloudUrl: typeof img === 'string' ? img : img?.url || '',
+                })).filter((img: any) => img.uri);
+                setPickedImages(existing);
+                setFormData({ name: service.name || '', description: service.description || '', shortDescription: service.shortDescription || '', serviceType: service.serviceType || '', category: service.category || '', subCategory: service.subCategory || '', pricing: { basePrice: service.pricing?.basePrice?.toString() || '', unit: service.pricing?.unit || 'fixed' }, availability: { isAvailable: service.availability?.isAvailable !== false }, coverageArea: service.coverageArea || {}, packages: service.packages || [], images: service.images || [], media: service.media || {}, inventory: service.inventory || {}, quantity: service.quantity || 1, fullDescription: service.fullDescription || '', provider: typeof service.provider === 'object' ? service.provider._id : service.provider || '', providerType: service.providerType || 'events_service_provider', isActive: service.isActive !== false, isFeatured: service.isFeatured || false, tags: service.tags || [], specifications: service.specifications || [], cancellationPolicy: service.cancellationPolicy || 'moderate', cancellationDetails: service.cancellationDetails || '' });
+                setShowEditModal(true);
+              }}>
+                <Text style={[adminStyles.actionBtnText, { color: C.primary }]}>Edit</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.deleteAction}
-                onPress={() => handleDeleteService(service)}
-              >
-                <Text style={styles.deleteActionText}>Delete</Text>
+              <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: isDark ? '#450a0a' : '#fee2e2' }]} onPress={() => handleDeleteService(service)}>
+                <Text style={[adminStyles.actionBtnText, { color: '#b91c1c' }]}>Delete</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -545,1006 +555,128 @@ const ManageServicesScreen = () => {
     );
   };
 
-  const renderFormField = ({
-    label,
-    name,
-    type = 'text',
-    placeholder = '',
-    multiline = false,
-  }: RenderFormFieldProps) => {
-    const keyboardType: KeyboardTypeOptions = type === 'text' ? 'default' : type;
-    return (
-      <View style={styles.formField} key={name}>
-        <Text style={styles.formLabel}>{label}</Text>
-        {multiline ? (
-          <TextInput
-            placeholder={placeholder}
-            value={formData[name] as string}
-            onChangeText={(value) => setFormData({ ...formData, [name]: value })}
-            style={styles.textInput}
-            multiline
-            numberOfLines={4}
-            placeholderTextColor={COLORS.gray[400]}
-          />
-        ) : (
-          <TextInput
-            placeholder={placeholder}
-            value={formData[name] as string}
-            onChangeText={(value) => setFormData({ ...formData, [name]: value })}
-            style={styles.textInput}
-            keyboardType={keyboardType}
-            placeholderTextColor={COLORS.gray[400]}
-          />
-        )}
-        {formErrors[name] && <Text style={styles.errorText}>{formErrors[name]}</Text>}
-      </View>
-    );
-  };
+  const CATEGORY_FILTERS = [
+    { label: 'All', value: 'all' }, { label: 'Venue', value: 'venue' }, { label: 'Catering', value: 'catering' },
+    { label: 'Photo', value: 'photography' }, { label: 'Entertainment', value: 'entertainment' },
+    { label: 'Decor', value: 'decoration' }, { label: 'Other', value: 'other' },
+  ];
 
-  const renderNestedField = ({
-    label,
-    parent,
-    child,
-    type = 'text',
-    placeholder = '',
-  }: RenderNestedFieldProps) => {
-    const keyboardType: KeyboardTypeOptions = type === 'text' ? 'default' : type;
-    const parentData = (formData[parent] as unknown as Record<string, unknown>) || {};
-    return (
-      <View style={styles.formField} key={`${parent}.${child}`}>
-        <Text style={styles.formLabel}>{label}</Text>
-        <TextInput
-          placeholder={placeholder}
-          value={(parentData?.[child] as string) || ''}
-          onChangeText={(value) =>
-            setFormData({
-              ...formData,
-              [parent]: { ...parentData, [child]: value },
-            })
-          }
-          style={styles.textInput}
-          keyboardType={keyboardType}
-          placeholderTextColor={COLORS.gray[400]}
-        />
-        {formErrors[parent] && <Text style={styles.errorText}>{formErrors[parent]}</Text>}
-      </View>
-    );
-  };
+  const STAT_CARDS = [
+    { label: 'Total', value: services.length, accent: '#2563eb', bg: isDark ? '#1e3a5f' : '#eff6ff', border: isDark ? '#1e40af' : '#bfdbfe' },
+    { label: 'Active', value: services.filter((s: any) => s.isActive !== false).length, accent: '#1f7a4d', bg: isDark ? '#14532d' : '#f0fdf4', border: isDark ? '#166534' : '#bbf7d0' },
+    { label: 'Featured', value: services.filter((s: any) => s.isFeatured).length, accent: '#d97706', bg: isDark ? '#451a03' : '#fffbeb', border: isDark ? '#92400e' : '#fde68a' },
+  ];
 
-  if (isLoading) {
-    return <Loading fullScreen message="Loading services..." />;
-  }
+  if (isLoading) return <Loading fullScreen message="Loading services..." />;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
+      <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.dark} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Manage Services</Text>
-        <TouchableOpacity onPress={handleOpenAddModal} style={styles.addButton}>
-          <MaterialCommunityIcons name="plus-circle" size={28} color={COLORS.primary} />
+        <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>Manage Services</Text>
+        <TouchableOpacity onPress={() => { resetForm(); setShowAddModal(true); }}>
+          <MaterialCommunityIcons name="plus-circle" size={28} color={C.primary} />
         </TouchableOpacity>
-      </View>
-
-      {error && (
-        <View style={styles.errorContainer}>
-          <ErrorMessage error={error} />
-        </View>
-      )}
-
-      <View style={styles.filterContainer}>
-        <View style={styles.searchInputContainer}>
-          <MaterialCommunityIcons name="magnify" size={20} color={COLORS.gray[400]} />
-          <TextInput
-            placeholder="Search by name, type, provider..."
-            value={searchText}
-            onChangeText={setSearchText}
-            style={styles.searchInput}
-            placeholderTextColor={COLORS.gray[400]}
-          />
-          {searchText !== '' && (
-            <TouchableOpacity onPress={() => setSearchText('')}>
-              <MaterialCommunityIcons name="close-circle" size={18} color={COLORS.gray[400]} />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <View style={styles.filterRow}>
-          <Text style={styles.filterLabel}>Category:</Text>
-          {[
-            { label: 'All', value: 'all' },
-            { label: 'Venue', value: 'venue' },
-            { label: 'Catering', value: 'catering' },
-            { label: 'Photography', value: 'photography' },
-            { label: 'Entertainment', value: 'entertainment' },
-            { label: 'Decoration', value: 'decoration' },
-            { label: 'Other', value: 'other' },
-          ].map((filter) => (
-            <TouchableOpacity
-              key={filter.value}
-              style={[
-                styles.filterChip,
-                filterCategory === filter.value ? styles.activeFilterChip : styles.inactiveFilterChip,
-              ]}
-              onPress={() => setFilterCategory(filter.value)}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  filterCategory === filter.value ? styles.activeFilterChipText : styles.inactiveFilterChipText,
-                ]}
-              >
-                {filter.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.filterRow}>
-          <Text style={styles.filterLabel}>Status:</Text>
-          {[
-            { label: 'All', value: 'all' },
-            { label: 'Active', value: 'active' },
-            { label: 'Inactive', value: 'inactive' },
-          ].map((filter) => (
-            <TouchableOpacity
-              key={filter.value}
-              style={[
-                styles.filterChip,
-                filterStatus === filter.value ? styles.activeFilterChip : styles.inactiveFilterChip,
-              ]}
-              onPress={() => setFilterStatus(filter.value)}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  filterStatus === filter.value ? styles.activeFilterChipText : styles.inactiveFilterChipText,
-                ]}
-              >
-                {filter.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statLabel}>Total Services</Text>
-          <Text style={styles.statValue}>{services.length}</Text>
-        </View>
-        <View style={styles.statCardActive}>
-          <Text style={styles.statLabelActive}>Active</Text>
-          <Text style={styles.statValueActive}>
-            {services.filter((s) => s.isActive !== false).length}
-          </Text>
-        </View>
-        <View style={styles.statCardFeatured}>
-          <Text style={styles.statLabelFeatured}>Featured</Text>
-          <Text style={styles.statValueFeatured}>
-            {services.filter((s) => s.isFeatured).length}
-          </Text>
-        </View>
       </View>
 
       <FlatList
         data={filteredServices}
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => <ServiceCard service={item} />}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <>
+            <View style={[adminStyles.hero, { backgroundColor: C.primary, marginTop: 12 }]}>
+              <Text style={[adminStyles.heroEyebrow, { fontFamily: appFont }]}>ADMIN</Text>
+              <Text style={[adminStyles.heroTitle, { fontFamily: appFont }]}>Manage Services</Text>
+              <Text style={[adminStyles.heroSubtitle, { fontFamily: appFont }]}>{services.length} services</Text>
+            </View>
+
+            {error && <View style={{ marginBottom: 12 }}><ErrorMessage error={error} /></View>}
+
+            <View style={[adminStyles.searchBar, { backgroundColor: C.surface, borderColor: C.inputBorder }]}>
+              <MaterialCommunityIcons name="magnify" size={20} color={C.muted} />
+              <TextInput
+                placeholder="Search by name, type, provider..."
+                value={searchText}
+                onChangeText={setSearchText}
+                style={[adminStyles.searchInput, { color: C.text, fontFamily: appFont }]}
+                placeholderTextColor={C.muted}
+              />
+              {searchText !== '' && (
+                <TouchableOpacity onPress={() => setSearchText('')}>
+                  <MaterialCommunityIcons name="close-circle" size={18} color={C.muted} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {CATEGORY_FILTERS.map((f) => (
+                <TouchableOpacity
+                  key={f.value}
+                  style={[adminStyles.filterChip, { marginRight: 8, backgroundColor: filterCategory === f.value ? C.primary : C.surface, borderColor: filterCategory === f.value ? C.primary : C.inputBorder }]}
+                  onPress={() => setFilterCategory(f.value)}
+                >
+                  <Text style={[adminStyles.filterChipText, { color: filterCategory === f.value ? '#fff' : C.text, fontFamily: appFont }]}>{f.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <View style={[adminStyles.filterRow, { marginBottom: 12 }]}>
+              {[{ label: 'All', value: 'all' }, { label: 'Active', value: 'active' }, { label: 'Inactive', value: 'inactive' }].map((f) => (
+                <TouchableOpacity
+                  key={f.value}
+                  style={[adminStyles.filterChip, { flex: 1, alignItems: 'center', backgroundColor: filterStatus === f.value ? C.primary : C.surface, borderColor: filterStatus === f.value ? C.primary : C.inputBorder }]}
+                  onPress={() => setFilterStatus(f.value)}
+                >
+                  <Text style={[adminStyles.filterChipText, { color: filterStatus === f.value ? '#fff' : C.text, fontFamily: appFont }]}>{f.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={adminStyles.statsGrid}>
+              {STAT_CARDS.map((s) => (
+                <View key={s.label} style={[adminStyles.statCard, { backgroundColor: s.bg, borderColor: s.border }]}>
+                  <Text style={[adminStyles.statLabel, { color: s.accent, fontFamily: appFont }]}>{s.label}</Text>
+                  <Text style={[adminStyles.statValue, { color: s.accent, fontFamily: appFont }]}>{s.value}</Text>
+                </View>
+              ))}
+            </View>
+
+            <Text style={[adminStyles.sectionTitle, { color: C.text, fontFamily: appFont, marginBottom: 12 }]}>Services</Text>
+          </>
+        }
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <MaterialCommunityIcons name="briefcase-off" size={48} color={COLORS.gray[300]} />
-            <Text style={styles.emptyText}>No services found</Text>
-            <Text style={styles.emptySubtext}>Try adjusting your filters</Text>
+          <View style={adminStyles.emptyState}>
+            <MaterialCommunityIcons name="briefcase-off" size={48} color={C.muted} />
+            <Text style={[adminStyles.emptyText, { color: C.muted, fontFamily: appFont }]}>No services found</Text>
+            <Text style={[adminStyles.emptySubtext, { color: C.muted, fontFamily: appFont }]}>Try adjusting your filters</Text>
           </View>
         }
-        scrollEnabled={true}
       />
 
-      <Modal visible={showAddModal} animationType="slide" transparent={false}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1 }}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setShowAddModal(false)}>
-                <MaterialCommunityIcons name="close" size={24} color={COLORS.dark} />
-              </TouchableOpacity>
-              <Text style={styles.modalTitle}>Add New Service</Text>
-              <View style={styles.modalHeaderSpacer} />
-            </View>
-
-            <ScrollView style={styles.modalContent}>
-              <View style={styles.modalSection}>
-                <Text style={styles.sectionTitle}>Basic Information</Text>
-                {renderFormField({ label: 'Service Name *', name: 'name', type: 'text', placeholder: 'Enter service name' })}
-                {renderFormField({ label: 'Service Type *', name: 'serviceType', type: 'text', placeholder: 'e.g., venue, catering, photography' })}
-                {renderFormField({ label: 'Category', name: 'category', type: 'text', placeholder: 'e.g., venue, catering, photography' })}
-                {renderFormField({ label: 'Sub-category', name: 'subCategory', type: 'text', placeholder: 'Optional sub-category' })}
-                {renderFormField({ label: 'Short Description', name: 'shortDescription', type: 'text', placeholder: 'Brief description for listings', multiline: true })}
-                {renderFormField({ label: 'Full Description *', name: 'description', type: 'text', placeholder: 'Detailed description', multiline: true })}
+      {[{ visible: showAddModal, title: 'Add New Service', onClose: () => setShowAddModal(false) },
+        { visible: showEditModal, title: 'Edit Service', onClose: () => setShowEditModal(false) }].map(({ visible, title, onClose }) => (
+        <Modal key={title} visible={visible} animationType="slide" transparent={false}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+            <SafeAreaView style={[{ flex: 1 }, { backgroundColor: C.bg }]}>
+              <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
+                <TouchableOpacity onPress={onClose}>
+                  <MaterialCommunityIcons name="close" size={24} color={C.text} />
+                </TouchableOpacity>
+                <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont, textAlign: 'center' }]}>{title}</Text>
+                <View style={{ width: 24 }} />
               </View>
-
-              <View style={styles.modalSection}>
-                <Text style={styles.sectionTitle}>Pricing</Text>
-                <View style={styles.pricingRow}>
-                  <View style={styles.pricingField}>
-                    {renderNestedField({ label: 'Base Price (₦) *', parent: 'pricing', child: 'basePrice', type: 'numeric', placeholder: '0.00' })}
-                  </View>
-                  <View style={styles.pricingField}>
-                    <View style={styles.formField}>
-                      <Text style={styles.formLabel}>Unit</Text>
-                      <TextInput
-                        value={formData.pricing.unit}
-                        onChangeText={(value) =>
-                          setFormData({ ...formData, pricing: { ...formData.pricing, unit: value } })
-                        }
-                        style={styles.textInput}
-                        placeholder="fixed"
-                      />
-                    </View>
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.modalSection}>
-                <Text style={styles.sectionTitle}>Availability & Status</Text>
-                <View style={styles.toggleRow}>
-                  <Text style={styles.toggleLabel}>Active</Text>
-                  <TouchableOpacity
-                    onPress={() => setFormData({ ...formData, isActive: !formData.isActive })}
-                    style={[
-                      styles.toggleSwitch,
-                      formData.isActive ? styles.activeToggle : styles.inactiveToggle,
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.toggleThumb,
-                        formData.isActive ? styles.activeThumb : styles.inactiveThumb,
-                      ]}
-                    />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.toggleRow}>
-                  <Text style={styles.toggleLabel}>Featured</Text>
-                  <TouchableOpacity
-                    onPress={() => setFormData({ ...formData, isFeatured: !formData.isFeatured })}
-                    style={[
-                      styles.toggleSwitch,
-                      formData.isFeatured ? styles.featuredToggle : styles.inactiveToggle,
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.toggleThumb,
-                        formData.isFeatured ? styles.activeThumb : styles.inactiveThumb,
-                      ]}
-                    />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.toggleRow}>
-                  <Text style={styles.toggleLabel}>Available for Booking</Text>
-                  <TouchableOpacity
-                    onPress={() =>
-                      setFormData({
-                        ...formData,
-                        availability: { ...formData.availability, isAvailable: !formData.availability.isAvailable },
-                      })
-                    }
-                    style={[
-                      styles.toggleSwitch,
-                      formData.availability.isAvailable ? styles.availableToggle : styles.inactiveToggle,
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.toggleThumb,
-                        formData.availability.isAvailable ? styles.activeThumb : styles.inactiveThumb,
-                      ]}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={styles.modalSection}>
-                <Text style={styles.sectionTitle}>Cancellation Policy</Text>
-                <View style={styles.policyOptions}>
-                  {['flexible', 'moderate', 'strict'].map((policy) => (
-                    <TouchableOpacity
-                      key={policy}
-                      style={[
-                        styles.policyOption,
-                        formData.cancellationPolicy === policy ? styles.activePolicyOption : styles.inactivePolicyOption,
-                      ]}
-                      onPress={() => setFormData({ ...formData, cancellationPolicy: policy })}
-                    >
-                      <Text
-                        style={[
-                          styles.policyOptionText,
-                          formData.cancellationPolicy === policy ? styles.activePolicyText : styles.inactivePolicyText,
-                        ]}
-                      >
-                        {policy.charAt(0).toUpperCase() + policy.slice(1)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                {renderFormField({ label: 'Cancellation Details', name: 'cancellationDetails', type: 'text', placeholder: 'Additional cancellation terms', multiline: true })}
-              </View>
-
-              <View style={styles.modalActions}>
-                <Button
-                  title="Cancel"
-                  variant="outline"
-                  onPress={() => setShowAddModal(false)}
-                  style={styles.modalButton}
-                />
-                <Button
-                  title={isSubmitting ? 'Saving...' : 'Save Service'}
-                  onPress={handleSubmit}
-                  disabled={isSubmitting}
-                  style={styles.modalButton}
-                />
-              </View>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      <Modal visible={showEditModal} animationType="slide" transparent={false}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1 }}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setShowEditModal(false)}>
-                <MaterialCommunityIcons name="close" size={24} color={COLORS.dark} />
-              </TouchableOpacity>
-              <Text style={styles.modalTitle}>Edit Service</Text>
-              <View style={styles.modalHeaderSpacer} />
-            </View>
-
-            <ScrollView style={styles.modalContent}>
-              <View style={styles.modalSection}>
-                <Text style={styles.sectionTitle}>Basic Information</Text>
-                {renderFormField({ label: 'Service Name *', name: 'name', type: 'text', placeholder: 'Enter service name' })}
-                {renderFormField({ label: 'Service Type *', name: 'serviceType', type: 'text', placeholder: 'e.g., venue, catering, photography' })}
-                {renderFormField({ label: 'Category', name: 'category', type: 'text', placeholder: 'e.g., venue, catering, photography' })}
-                {renderFormField({ label: 'Sub-category', name: 'subCategory', type: 'text', placeholder: 'Optional sub-category' })}
-                {renderFormField({ label: 'Short Description', name: 'shortDescription', type: 'text', placeholder: 'Brief description for listings', multiline: true })}
-                {renderFormField({ label: 'Full Description *', name: 'description', type: 'text', placeholder: 'Detailed description', multiline: true })}
-              </View>
-
-              <View style={styles.modalSection}>
-                <Text style={styles.sectionTitle}>Pricing</Text>
-                <View style={styles.pricingRow}>
-                  <View style={styles.pricingField}>
-                    {renderNestedField({ label: 'Base Price (₦) *', parent: 'pricing', child: 'basePrice', type: 'numeric', placeholder: '0.00' })}
-                  </View>
-                  <View style={styles.pricingField}>
-                    <View style={styles.formField}>
-                      <Text style={styles.formLabel}>Unit</Text>
-                      <TextInput
-                        value={formData.pricing.unit}
-                        onChangeText={(value) =>
-                          setFormData({ ...formData, pricing: { ...formData.pricing, unit: value } })
-                        }
-                        style={styles.textInput}
-                        placeholder="fixed"
-                      />
-                    </View>
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.modalSection}>
-                <Text style={styles.sectionTitle}>Availability & Status</Text>
-                <View style={styles.toggleRow}>
-                  <Text style={styles.toggleLabel}>Active</Text>
-                  <TouchableOpacity
-                    onPress={() => setFormData({ ...formData, isActive: !formData.isActive })}
-                    style={[
-                      styles.toggleSwitch,
-                      formData.isActive ? styles.activeToggle : styles.inactiveToggle,
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.toggleThumb,
-                        formData.isActive ? styles.activeThumb : styles.inactiveThumb,
-                      ]}
-                    />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.toggleRow}>
-                  <Text style={styles.toggleLabel}>Featured</Text>
-                  <TouchableOpacity
-                    onPress={() => setFormData({ ...formData, isFeatured: !formData.isFeatured })}
-                    style={[
-                      styles.toggleSwitch,
-                      formData.isFeatured ? styles.featuredToggle : styles.inactiveToggle,
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.toggleThumb,
-                        formData.isFeatured ? styles.activeThumb : styles.inactiveThumb,
-                      ]}
-                    />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.toggleRow}>
-                  <Text style={styles.toggleLabel}>Available for Booking</Text>
-                  <TouchableOpacity
-                    onPress={() =>
-                      setFormData({
-                        ...formData,
-                        availability: { ...formData.availability, isAvailable: !formData.availability.isAvailable },
-                      })
-                    }
-                    style={[
-                      styles.toggleSwitch,
-                      formData.availability.isAvailable ? styles.availableToggle : styles.inactiveToggle,
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.toggleThumb,
-                        formData.availability.isAvailable ? styles.activeThumb : styles.inactiveThumb,
-                      ]}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={styles.modalSection}>
-                <Text style={styles.sectionTitle}>Cancellation Policy</Text>
-                <View style={styles.policyOptions}>
-                  {['flexible', 'moderate', 'strict'].map((policy) => (
-                    <TouchableOpacity
-                      key={policy}
-                      style={[
-                        styles.policyOption,
-                        formData.cancellationPolicy === policy ? styles.activePolicyOption : styles.inactivePolicyOption,
-                      ]}
-                      onPress={() => setFormData({ ...formData, cancellationPolicy: policy })}
-                    >
-                      <Text
-                        style={[
-                          styles.policyOptionText,
-                          formData.cancellationPolicy === policy ? styles.activePolicyText : styles.inactivePolicyText,
-                        ]}
-                      >
-                        {policy.charAt(0).toUpperCase() + policy.slice(1)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                {renderFormField({ label: 'Cancellation Details', name: 'cancellationDetails', type: 'text', placeholder: 'Additional cancellation terms', multiline: true })}
-              </View>
-
-              <View style={styles.modalActions}>
-                <Button
-                  title="Cancel"
-                  variant="outline"
-                  onPress={() => setShowEditModal(false)}
-                  style={styles.modalButton}
-                />
-                <Button
-                  title={isSubmitting ? 'Saving...' : 'Update Service'}
-                  onPress={handleSubmit}
-                  disabled={isSubmitting}
-                  style={styles.modalButton}
-                />
-              </View>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-    </View>
+              <ServiceForm />
+            </SafeAreaView>
+          </KeyboardAvoidingView>
+        </Modal>
+      ))}
+    </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  headerTitle: {
-    color: '#1f2937',
-    fontSize: 18,
-    fontWeight: 'bold',
-    flex: 1,
-    marginLeft: 16,
-  },
-  addButton: {
-    marginRight: 16,
-  },
-  errorContainer: {
-    marginHorizontal: 16,
-    marginTop: 12,
-  },
-  filterContainer: {
-    backgroundColor: 'white',
-    padding: 12,
-    margin: 12,
-    borderRadius: 8,
-  },
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    marginBottom: 12,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: 8,
-    marginLeft: 8,
-    color: '#1f2937',
-  },
-  filterRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
-  },
-  filterLabel: {
-    color: '#1f2937',
-    fontSize: 14,
-    fontWeight: '500',
-    alignSelf: 'center',
-    marginRight: 8,
-  },
-  filterChip: {
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 9999,
-    borderWidth: 1,
-  },
-  activeFilterChip: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
-  },
-  inactiveFilterChip: {
-    backgroundColor: 'white',
-    borderColor: '#d1d5db',
-  },
-  filterChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  activeFilterChipText: {
-    color: 'white',
-  },
-  inactiveFilterChipText: {
-    color: '#1f2937',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 12,
-    marginTop: 12,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#eff6ff',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-  },
-  statCardActive: {
-    flex: 1,
-    backgroundColor: '#f0fdf4',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#bbf7d0',
-  },
-  statCardFeatured: {
-    flex: 1,
-    backgroundColor: '#fefce8',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#fef08a',
-  },
-  statLabel: {
-    color: '#1d4ed8',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  statLabelActive: {
-    color: '#166534',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  statLabelFeatured: {
-    color: '#a16207',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  statValue: {
-    color: '#1e3a8a',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 4,
-  },
-  statValueActive: {
-    color: '#14532d',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 4,
-  },
-  statValueFeatured: {
-    color: '#854d0e',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 4,
-  },
-  listContent: {
-    padding: 12,
-    paddingTop: 12,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 32,
-  },
-  emptyText: {
-    color: '#6b7280',
-    marginTop: 12,
-    fontWeight: '600',
-  },
-  emptySubtext: {
-    color: '#9ca3af',
-    fontSize: 14,
-    marginTop: 4,
-  },
-  serviceCard: {
-    backgroundColor: 'white',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    backgroundColor: '#16a34a',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  cardContent: {
-    flex: 1,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  serviceName: {
-    color: '#1f2937',
-    fontWeight: '600',
-    flex: 1,
-    marginRight: 8,
-  },
-  badgeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  featuredBadge: {
-    backgroundColor: '#fef3c7',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 9999,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  featuredText: {
-    color: '#b45309',
-    fontSize: 10,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 9999,
-  },
-  activeBadge: {
-    backgroundColor: '#dcfce7',
-  },
-  inactiveBadge: {
-    backgroundColor: '#fee2e2',
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  activeText: {
-    color: '#166534',
-  },
-  inactiveText: {
-    color: '#b91c1c',
-  },
-  providerText: {
-    color: '#6b7280',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  serviceType: {
-    color: '#9ca3af',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  priceText: {
-    color: '#16a34a',
-    fontWeight: '600',
-    fontSize: 14,
-    marginTop: 4,
-  },
-  additionalInfo: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  infoLabel: {
-    color: '#6b7280',
-    fontSize: 12,
-  },
-  infoValue: {
-    color: '#1f2937',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  descriptionContainer: {
-    marginBottom: 8,
-  },
-  descriptionLabel: {
-    color: '#6b7280',
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  descriptionText: {
-    color: '#374151',
-    fontSize: 12,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
-  },
-  actionButton: {
-    flex: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  featuredAction: {
-    backgroundColor: '#fef3c7',
-  },
-  defaultAction: {
-    backgroundColor: '#f3f4f6',
-  },
-  deactivateAction: {
-    backgroundColor: '#fee2e2',
-  },
-  activateAction: {
-    backgroundColor: '#dcfce7',
-  },
-  editAction: {
-    borderWidth: 1,
-    borderColor: '#16a34a',
-  },
-  deleteAction: {
-    backgroundColor: '#fee2e2',
-  },
-  actionButtonText: {
-    fontSize: 10,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  featuredActionText: {
-    color: '#b45309',
-  },
-  defaultActionText: {
-    color: '#374151',
-  },
-  deactivateActionText: {
-    color: '#b91c1c',
-  },
-  activateActionText: {
-    color: '#166534',
-  },
-  editActionText: {
-    color: '#16a34a',
-  },
-  deleteActionText: {
-    color: '#b91c1c',
-  },
-  formField: {
-    marginBottom: 12,
-  },
-  formLabel: {
-    color: '#1f2937',
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  textInput: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    color: '#1f2937',
-  },
-  errorText: {
-    color: '#ef4444',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  modalTitle: {
-    color: '#1f2937',
-    fontSize: 18,
-    fontWeight: 'bold',
-    flex: 1,
-    textAlign: 'center',
-  },
-  modalHeaderSpacer: {
-    width: 40,
-  },
-  modalContent: {
-    flex: 1,
-    padding: 16,
-  },
-  modalSection: {
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    color: '#1f2937',
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  pricingRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  pricingField: {
-    flex: 1,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-    padding: 12,
-    backgroundColor: '#f9fafb',
-    borderRadius: 8,
-  },
-  toggleLabel: {
-    color: '#1f2937',
-  },
-  toggleSwitch: {
-    width: 48,
-    height: 28,
-    borderRadius: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  activeToggle: {
-    backgroundColor: '#16a34a',
-  },
-  featuredToggle: {
-    backgroundColor: '#f59e0b',
-  },
-  availableToggle: {
-    backgroundColor: '#10b981',
-  },
-  inactiveToggle: {
-    backgroundColor: '#d1d5db',
-  },
-  toggleThumb: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: 'white',
-    marginLeft: 4,
-  },
-  activeThumb: {
-    marginLeft: 24,
-  },
-  inactiveThumb: {
-    marginLeft: 4,
-  },
-  policyOptions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
-  },
-  policyOption: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  activePolicyOption: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
-  },
-  inactivePolicyOption: {
-    backgroundColor: 'white',
-    borderColor: '#d1d5db',
-  },
-  policyOptionText: {
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  activePolicyText: {
-    color: 'white',
-  },
-  inactivePolicyText: {
-    color: '#1f2937',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
-  },
-  modalButton: {
-    flex: 1,
-  },
-});
 
 export default ManageServicesScreen;

@@ -299,14 +299,18 @@ export default function BottomTabNavigator() {
 
   const isAdmin = user?.role === 'admin';
 
-  const tabItems = [
-    { name: 'Home', component: HomeStack, label: 'Home' },
-    { name: 'Search', component: SearchStack, label: 'Search' },
-    { name: 'Bookings', component: BookingsStack, label: 'Bookings' },
-    ...(isProvider ? [{ name: 'Services', component: ProviderServicesStack, label: 'Services' }] : []),
-    ...(isAdmin ? [{ name: 'Admin', component: AdminStack, label: 'Admin' }] : []),
-    { name: 'Profile', component: ProfileStack, label: 'Profile' },
-  ];
+  const tabItems = isAdmin
+    ? [
+        { name: 'Admin', component: AdminStack, label: 'Admin' },
+        { name: 'Profile', component: ProfileStack, label: 'Profile' },
+      ]
+    : [
+        { name: 'Home', component: HomeStack, label: 'Home' },
+        { name: 'Search', component: SearchStack, label: 'Search' },
+        { name: 'Bookings', component: BookingsStack, label: 'Bookings' },
+        ...(isProvider ? [{ name: 'Services', component: ProviderServicesStack, label: 'Services' }] : []),
+        { name: 'Profile', component: ProfileStack, label: 'Profile' },
+      ];
 
   return (
     <Tab.Navigator

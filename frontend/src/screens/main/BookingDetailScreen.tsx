@@ -278,6 +278,23 @@ const BookingDetailScreen = () => {
             <Text className="text-dark font-semibold ml-8">
               {service.name || 'Service'}
             </Text>
+            {service.serviceType ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6, marginLeft: 32 }}>
+                <View style={{ backgroundColor: '#ecfdf3', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+                  <Text style={{ color: '#1f7a4d', fontSize: 11, fontWeight: '700' }}>{service.serviceType}</Text>
+                </View>
+                {service.category ? (
+                  <View style={{ backgroundColor: '#f1f5f9', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+                    <Text style={{ color: '#475569', fontSize: 11, fontWeight: '700' }}>{service.category}</Text>
+                  </View>
+                ) : null}
+                {service.subCategory ? (
+                  <View style={{ backgroundColor: '#f1f5f9', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+                    <Text style={{ color: '#475569', fontSize: 11, fontWeight: '700' }}>{service.subCategory}</Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
           </View>
 
           <View className="mb-4 pb-4 border-b border-gray-200">
@@ -360,7 +377,9 @@ const BookingDetailScreen = () => {
 
           <View className="flex-row justify-between mb-2">
             <Text className="text-gray-600">Base Price</Text>
-            <Text className="text-dark font-semibold">{formatCurrency(basePrice)}</Text>
+            <Text className="text-dark font-semibold">
+              {formatCurrency(basePrice)}{service.pricing?.unit ? ` / ${service.pricing.unit.replace('_', ' ')}` : ''}
+            </Text>
           </View>
 
           <View className="flex-row justify-between mb-2">

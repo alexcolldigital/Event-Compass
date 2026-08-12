@@ -51,7 +51,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             <View style={authStyles.brandBadge}>
               <MaterialCommunityIcons name="calendar-check" size={54} color="white" />
             </View>
-            <Text style={authStyles.title}>Event Compass</Text>
+            <Text style={authStyles.title}>Event Compass by Checcas</Text>
             <Text style={authStyles.subtitle}>Book premium event services instantly</Text>
           </View>
 
@@ -104,24 +104,14 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             <View style={authStyles.dividerLine} />
           </View>
 
-          <View style={authStyles.buttonStack}>
-            <Button
-              title="Create Client Account"
-              onPress={() => navigation.navigate('Register')}
-              variant="outline"
-              fullWidth
-              size="md"
-              leftIcon="account-plus-outline"
-            />
-            <Button
-              title="Join as Service Provider"
-              onPress={() => navigation.navigate('RegisterProvider')}
-              variant="secondary"
-              fullWidth
-              size="md"
-              leftIcon="briefcase-plus-outline"
-            />
-          </View>
+          <Button
+            title="Create Client Account"
+            onPress={() => navigation.navigate('Register')}
+            variant="outline"
+            fullWidth
+            size="md"
+            leftIcon="account-plus-outline"
+          />
 
           <Text style={authStyles.terms}>
             By signing in, you agree to our Terms of Service and Privacy Policy

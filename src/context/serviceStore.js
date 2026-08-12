@@ -34,7 +34,7 @@ export const useServiceStore = create((set, get) => ({
 
       return response;
     } catch (error) {
-      set({ error: error.message, isLoading: false });
+      set({ error: error?.message || error?.error || 'Failed to load services', isLoading: false });
       throw error;
     }
   },
@@ -52,7 +52,7 @@ export const useServiceStore = create((set, get) => ({
 
       return response;
     } catch (error) {
-      set({ error: error.message, isLoading: false });
+      set({ error: error?.message || error?.error || 'Failed to load service', isLoading: false });
       throw error;
     }
   },

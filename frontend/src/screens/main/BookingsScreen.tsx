@@ -61,6 +61,27 @@ export default function BookingsScreen({ navigation }) {
         </View>
         <Text style={[styles.cardTitle, { color: colors.text }]}>{item.service?.name || item.venue?.name || 'Booking'}</Text>
         <Text style={[styles.cardMeta, { color: colors.muted }]}>{item.bookingNumber || 'No reference'}</Text>
+        {(item.service?.serviceType || item.service?.category) && (
+          <View style={styles.tagRow}>
+            {item.service?.serviceType ? (
+              <View style={[styles.tag, { backgroundColor: colors.surfaceAlt }]}>
+                <MaterialCommunityIcons name="briefcase-outline" size={12} color={colors.primary} />
+                <Text style={[styles.tagText, { color: colors.primary }]}>{item.service.serviceType}</Text>
+              </View>
+            ) : null}
+            {item.service?.category ? (
+              <View style={[styles.tag, { backgroundColor: colors.surfaceAlt }]}>
+                <MaterialCommunityIcons name="tag-outline" size={12} color={colors.muted} />
+                <Text style={[styles.tagText, { color: colors.muted }]}>{item.service.category}</Text>
+              </View>
+            ) : null}
+            {item.service?.subCategory ? (
+              <View style={[styles.tag, { backgroundColor: colors.surfaceAlt }]}>
+                <Text style={[styles.tagText, { color: colors.muted }]}>{item.service.subCategory}</Text>
+              </View>
+            ) : null}
+          </View>
+        )}
         <View style={styles.detailRow}>
           <MaterialCommunityIcons name="calendar" size={18} color={colors.primary} />
           <Text style={[styles.detailText, { color: colors.text }]}>{new Date(item.eventDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
@@ -71,7 +92,7 @@ export default function BookingsScreen({ navigation }) {
         </View>
         <View style={styles.detailRow}>
           <MaterialCommunityIcons name="cash" size={18} color={colors.primary} />
-          <Text style={[styles.detailText, { color: colors.text }]}>₦{item.pricing?.totalAmount?.toLocaleString() || '0'}</Text>
+          <Text style={[styles.detailText, { color: colors.text }]}>₦{item.pricing?.totalAmount?.toLocaleString() || '0'} {item.service?.pricing?.unit ? `/ ${item.service.pricing.unit.replace('_', ' ')}` : ''}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -133,7 +154,10 @@ const styles = StyleSheet.create({
   statusPill: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 10 },
   statusText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.8 },
   cardTitle: { fontSize: 16, fontWeight: '800', marginBottom: 4 },
-  cardMeta: { fontSize: 12, marginBottom: 10 },
+  cardMeta: { fontSize: 12, marginBottom: 6 },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
+  tag: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  tagText: { fontSize: 11, fontWeight: '700' },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
   detailText: { fontSize: 13, fontWeight: '600' },
   emptyState: { borderRadius: 22, borderWidth: 1, padding: 24, alignItems: 'center' },

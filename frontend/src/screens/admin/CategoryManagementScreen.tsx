@@ -1,15 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Alert, TextInput, Modal, ScrollView } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Alert, TextInput, Modal, SafeAreaView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { adminAPI } from '../../services/api.js';
 import Loading from '../../components/Loading.jsx';
-import { COLORS } from '../../utils/constants.js';
+import { useTheme } from '../../context/ThemeContext';
+import adminStyles, { getColors, appFont } from '../../styles/adminStyles.js';
 
 const EMPTY_FORM = { name: '', description: '', icon: '', sortOrder: '0' };
 
 export default function CategoryManagementScreen() {
   const navigation = useNavigation();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const C = getColors(isDark);
+
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -29,7 +34,11 @@ export default function CategoryManagementScreen() {
   };
 
   const openCreate = () => { setEditingId(null); setForm(EMPTY_FORM); setModalVisible(true); };
-  const openEdit = (cat) => { setEditingId(cat._id); setForm({ name: cat.name, description: cat.description || '', icon: cat.icon || '', sortOrder: String(cat.sortOrder || 0) }); setModalVisible(true); };
+  const openEdit = (cat) => {
+    setEditingId(cat._id);
+    setForm({ name: cat.name, description: cat.description || '', icon: cat.icon || '', sortOrder: String(cat.sortOrder || 0) });
+    setModalVisible(true);
+  };
 
   const handleSave = async () => {
     if (!form.name.trim()) return Alert.alert('Error', 'Name is required');
@@ -63,36 +72,43 @@ export default function CategoryManagementScreen() {
   };
 
   const CategoryCard = ({ item }) => (
-    <View className="bg-white rounded-xl p-4 mb-3 border border-gray-200 flex-row items-center">
-      <View className="w-10 h-10 bg-indigo-100 rounded-lg items-center justify-center mr-3">
-        <MaterialCommunityIcons name={item.icon || 'shape'} size={22} color="#6366f1" />
+    <View style={[adminStyles.listItem, { backgroundColor: C.surface, borderColor: C.border }]}>
+      <View style={[adminStyles.listItemIcon, { backgroundColor: '#6366f118' }]}>
+        <MaterialCommunityIcons name={(item.icon || 'shape') as any} size={22} color="#6366f1" />
       </View>
-      <View className="flex-1">
-        <Text className="font-semibold text-gray-800">{item.name}</Text>
-        {item.description ? <Text className="text-gray-500 text-xs mt-0.5" numberOfLines={1}>{item.description}</Text> : null}
-        <Text className="text-gray-400 text-xs mt-0.5">{item.serviceCount || 0} services · Order: {item.sortOrder}</Text>
+      <View style={{ flex: 1, marginLeft: 12 }}>
+        <Text style={{ color: C.text, fontWeight: '700', fontSize: 14, fontFamily: appFont }}>{item.name}</Text>
+        {item.description ? <Text style={{ color: C.muted, fontSize: 12, marginTop: 2, fontFamily: appFont }} numberOfLines={1}>{item.description}</Text> : null}
+        <Text style={{ color: C.muted, fontSize: 11, marginTop: 2, fontFamily: appFont }}>{item.serviceCount || 0} services · Order: {item.sortOrder}</Text>
       </View>
-      <View className={`px-2 py-1 rounded-full mr-2 ${item.isActive ? 'bg-green-100' : 'bg-gray-100'}`}>
-        <Text className={`text-xs font-semibold ${item.isActive ? 'text-green-700' : 'text-gray-500'}`}>{item.isActive ? 'Active' : 'Inactive'}</Text>
+      <View style={[adminStyles.badge, { backgroundColor: item.isActive ? '#dcfce7' : C.surfaceAlt, marginRight: 8 }]}>
+        <Text style={[adminStyles.badgeText, { color: item.isActive ? '#166534' : C.muted, fontFamily: appFont }]}>{item.isActive ? 'Active' : 'Inactive'}</Text>
       </View>
-      <TouchableOpacity onPress={() => openEdit(item)} className="mr-2">
-        <MaterialCommunityIcons name="pencil" size={18} color={COLORS.primary} />
+      <TouchableOpacity onPress={() => openEdit(item)} style={{ marginRight: 10 }}>
+        <MaterialCommunityIcons name="pencil" size={18} color={C.primary} />
       </TouchableOpacity>
       <TouchableOpacity onPress={() => handleDelete(item)}>
-        <MaterialCommunityIcons name="delete-outline" size={18} color={COLORS.danger} />
+        <MaterialCommunityIcons name="delete-outline" size={18} color={C.danger} />
       </TouchableOpacity>
     </View>
   );
 
+  const FORM_FIELDS = [
+    { label: 'Name *', key: 'name', placeholder: 'Category name' },
+    { label: 'Description', key: 'description', placeholder: 'Optional description' },
+    { label: 'Icon (MaterialCommunityIcons name)', key: 'icon', placeholder: 'e.g. music, camera, food' },
+    { label: 'Sort Order', key: 'sortOrder', placeholder: '0', keyboardType: 'number-pad' },
+  ];
+
   return (
-    <View className="flex-1 bg-light">
-      <View className="flex-row items-center p-4 bg-white border-b border-gray-200">
+    <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
+      <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.dark} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />
         </TouchableOpacity>
-        <Text className="text-dark text-lg font-bold flex-1 ml-4">Category Management</Text>
-        <TouchableOpacity onPress={openCreate} className="bg-primary px-3 py-1.5 rounded-lg">
-          <Text className="text-white font-semibold text-sm">+ Add</Text>
+        <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>Category Management</Text>
+        <TouchableOpacity onPress={openCreate} style={[adminStyles.badge, { backgroundColor: C.primary, paddingHorizontal: 12, paddingVertical: 6 }]}>
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13, fontFamily: appFont }}>+ Add</Text>
         </TouchableOpacity>
       </View>
 
@@ -101,39 +117,45 @@ export default function CategoryManagementScreen() {
           data={categories}
           keyExtractor={(i) => i._id}
           renderItem={({ item }) => <CategoryCard item={item} />}
-          contentContainerStyle={{ padding: 12 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <View className="items-center py-12">
-              <MaterialCommunityIcons name="shape-outline" size={48} color={COLORS.gray[300]} />
-              <Text className="text-gray-500 mt-3">No categories yet</Text>
+            <View style={adminStyles.emptyState}>
+              <MaterialCommunityIcons name="shape-outline" size={48} color={C.muted} />
+              <Text style={[adminStyles.emptyText, { color: C.muted, fontFamily: appFont }]}>No categories yet</Text>
             </View>
           }
         />
       )}
 
       <Modal visible={modalVisible} animationType="slide" transparent>
-        <View className="flex-1 justify-end bg-black/40">
-          <View className="bg-white rounded-t-2xl p-6">
-            <Text className="text-dark text-lg font-bold mb-4">{editingId ? 'Edit Category' : 'New Category'}</Text>
-            <Text className="text-gray-600 text-sm mb-1">Name *</Text>
-            <TextInput className="border border-gray-300 rounded-lg px-3 py-2 mb-3 text-dark" value={form.name} onChangeText={(v) => setForm((f) => ({ ...f, name: v }))} placeholder="Category name" />
-            <Text className="text-gray-600 text-sm mb-1">Description</Text>
-            <TextInput className="border border-gray-300 rounded-lg px-3 py-2 mb-3 text-dark" value={form.description} onChangeText={(v) => setForm((f) => ({ ...f, description: v }))} placeholder="Optional description" />
-            <Text className="text-gray-600 text-sm mb-1">Icon (MaterialCommunityIcons name)</Text>
-            <TextInput className="border border-gray-300 rounded-lg px-3 py-2 mb-3 text-dark" value={form.icon} onChangeText={(v) => setForm((f) => ({ ...f, icon: v }))} placeholder="e.g. music, camera, food" />
-            <Text className="text-gray-600 text-sm mb-1">Sort Order</Text>
-            <TextInput className="border border-gray-300 rounded-lg px-3 py-2 mb-4 text-dark" value={form.sortOrder} onChangeText={(v) => setForm((f) => ({ ...f, sortOrder: v }))} keyboardType="number-pad" />
-            <View className="flex-row gap-3">
-              <TouchableOpacity className="flex-1 border border-gray-300 py-3 rounded-lg" onPress={() => setModalVisible(false)}>
-                <Text className="text-dark font-semibold text-center">Cancel</Text>
+        <View style={adminStyles.modalOverlay}>
+          <View style={[adminStyles.modalSheet, { backgroundColor: C.surface }]}>
+            <Text style={[adminStyles.modalTitle, { color: C.text, fontFamily: appFont }]}>{editingId ? 'Edit Category' : 'New Category'}</Text>
+            {FORM_FIELDS.map((f) => (
+              <View key={f.key} style={adminStyles.formField}>
+                <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>{f.label}</Text>
+                <TextInput
+                  style={[adminStyles.formInput, { color: C.text, borderColor: C.inputBorder, backgroundColor: C.surfaceAlt, fontFamily: appFont }]}
+                  value={form[f.key]}
+                  onChangeText={(v) => setForm((prev) => ({ ...prev, [f.key]: v }))}
+                  placeholder={f.placeholder}
+                  placeholderTextColor={C.muted}
+                  keyboardType={f.keyboardType || 'default'}
+                />
+              </View>
+            ))}
+            <View style={adminStyles.modalActions}>
+              <TouchableOpacity style={[adminStyles.modalBtn, { borderWidth: 1, borderColor: C.inputBorder }]} onPress={() => setModalVisible(false)}>
+                <Text style={[adminStyles.modalBtnText, { color: C.text, fontFamily: appFont }]}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity className="flex-1 bg-primary py-3 rounded-lg" onPress={handleSave} disabled={isSaving}>
-                <Text className="text-white font-semibold text-center">{isSaving ? 'Saving...' : 'Save'}</Text>
+              <TouchableOpacity style={[adminStyles.modalBtn, { backgroundColor: C.primary }]} onPress={handleSave} disabled={isSaving}>
+                <Text style={[adminStyles.modalBtnText, { color: '#fff', fontFamily: appFont }]}>{isSaving ? 'Saving...' : 'Save'}</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }

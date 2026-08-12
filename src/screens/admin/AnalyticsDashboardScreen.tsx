@@ -1,131 +1,99 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { adminAPI } from '../../services/api.js';
 import Loading from '../../components/Loading.jsx';
-import { COLORS } from '../../utils/constants.js';
+import { useTheme } from '../../context/ThemeContext';
+import { getColors, adminStyles, font } from '../../styles/adminStyles';
 import { formatCurrency } from '../../utils/helpers.js';
 
-const PERIODS = [
-  { key: '7d', label: '7 Days' },
-  { key: '30d', label: '30 Days' },
-  { key: '90d', label: '90 Days' },
-  { key: '1y', label: '1 Year' },
-];
+const PERIODS = [{ key: '7d', label: '7 Days' }, { key: '30d', label: '30 Days' }, { key: '90d', label: '90 Days' }, { key: '1y', label: '1 Year' }];
+const statusColor = (s) => ({ completed: '#10b981', pending: '#f59e0b', cancelled: '#dc2626', confirmed: '#2563eb' }[s] || '#6b7280');
+const roleColor = (r) => ({ client: '#2563eb', service_provider: '#10b981', admin: '#7c3aed' }[r] || '#6b7280');
 
 export default function AnalyticsDashboardScreen() {
   const navigation = useNavigation();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const c = getColors(isDark);
+
   const [period, setPeriod] = useState('30d');
   const [analytics, setAnalytics] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => { loadAnalytics(); }, [period]);
+  useEffect(() => { load(); }, [period]);
 
-  const loadAnalytics = async () => {
+  const load = async () => {
     setIsLoading(true);
-    try {
-      const res = await adminAPI.getAnalyticsDashboard({ period });
-      setAnalytics(res.analytics);
-    } catch (_) {}
-    finally { setIsLoading(false); }
+    try { const r = await adminAPI.getAnalyticsDashboard({ period }); setAnalytics(r.analytics); }
+    catch (_) {} finally { setIsLoading(false); }
   };
 
-  const statusColor = (s) => ({ completed: '#10b981', pending: '#f59e0b', cancelled: '#ef4444', confirmed: '#3b82f6' }[s] || '#6b7280');
-  const roleColor = (r) => ({ client: '#3b82f6', service_provider: '#10b981', admin: '#6366f1' }[r] || '#6b7280');
-
-  const maxRevenue = analytics?.dailyRevenue?.length ? Math.max(...analytics.dailyRevenue.map((d) => d.revenue), 1) : 1;
+  const maxRevenue = analytics?.dailyRevenue?.length ? Math.max(...analytics.dailyRevenue.map(d => d.revenue), 1) : 1;
 
   return (
-    <View className="flex-1 bg-light">
-      <View className="flex-row items-center p-4 bg-white border-b border-gray-200">
+    <SafeAreaView style={[adminStyles.screen, { backgroundColor: c.bg }]}>
+      <View style={[adminStyles.header, { backgroundColor: c.surface, borderBottomColor: c.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.dark} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={c.text} />
         </TouchableOpacity>
-        <Text className="text-dark text-lg font-bold flex-1 ml-4">Analytics Dashboard</Text>
+        <Text style={[adminStyles.headerTitle, { color: c.text, fontFamily: font }]}>Analytics Dashboard</Text>
       </View>
 
-      {/* Period Selector */}
-      <View className="flex-row bg-white border-b border-gray-200 px-3 py-2">
-        {PERIODS.map((p) => (
-          <TouchableOpacity
-            key={p.key}
-            className={`mr-2 px-3 py-1.5 rounded-full border ${period === p.key ? 'bg-primary border-primary' : 'border-gray-300'}`}
-            onPress={() => setPeriod(p.key)}
-          >
-            <Text className={`text-xs font-semibold ${period === p.key ? 'text-white' : 'text-dark'}`}>{p.label}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[{ backgroundColor: c.surface, borderBottomWidth: 1, borderBottomColor: c.border }]} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}>
+        {PERIODS.map(p => (
+          <TouchableOpacity key={p.key} style={[adminStyles.chip, { backgroundColor: period === p.key ? c.primary : 'transparent', borderColor: period === p.key ? c.primary : c.inputBorder }]} onPress={() => setPeriod(p.key)}>
+            <Text style={[adminStyles.chipText, { color: period === p.key ? '#fff' : c.muted, fontFamily: font }]}>{p.label}</Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       {isLoading ? <Loading /> : !analytics ? null : (
-        <ScrollView className="flex-1 p-4">
-          {/* KPI Cards */}
-          <View className="flex-row gap-3 mb-4">
-            <View className="flex-1 bg-blue-50 rounded-xl p-4 border border-blue-200">
-              <MaterialCommunityIcons name="account-plus" size={24} color="#3b82f6" />
-              <Text className="text-2xl font-bold text-blue-800 mt-2">{analytics.newUsers}</Text>
-              <Text className="text-blue-600 text-xs mt-1">New Users</Text>
-            </View>
-            <View className="flex-1 bg-green-50 rounded-xl p-4 border border-green-200">
-              <MaterialCommunityIcons name="calendar-plus" size={24} color="#10b981" />
-              <Text className="text-2xl font-bold text-green-800 mt-2">{analytics.newBookings}</Text>
-              <Text className="text-green-600 text-xs mt-1">New Bookings</Text>
-            </View>
-          </View>
-          <View className="flex-row gap-3 mb-4">
-            <View className="flex-1 bg-orange-50 rounded-xl p-4 border border-orange-200">
-              <MaterialCommunityIcons name="currency-usd" size={24} color="#f97316" />
-              <Text className="text-xl font-bold text-orange-800 mt-2">{formatCurrency(analytics.revenue)}</Text>
-              <Text className="text-orange-600 text-xs mt-1">Revenue</Text>
-            </View>
-            <View className="flex-1 bg-purple-50 rounded-xl p-4 border border-purple-200">
-              <MaterialCommunityIcons name="percent" size={24} color="#a855f7" />
-              <Text className="text-xl font-bold text-purple-800 mt-2">{formatCurrency(analytics.platformFees)}</Text>
-              <Text className="text-purple-600 text-xs mt-1">Platform Fees</Text>
-            </View>
-          </View>
-
-          {/* Bookings by Status */}
-          <View className="bg-white rounded-xl p-4 mb-4 border border-gray-200">
-            <Text className="font-bold text-gray-800 mb-3">Bookings by Status</Text>
-            {(analytics.bookingsByStatus || []).map((b) => (
-              <View key={b._id} className="flex-row items-center justify-between mb-2">
-                <View className="flex-row items-center">
-                  <View className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: statusColor(b._id) }} />
-                  <Text className="text-gray-700 capitalize">{b._id}</Text>
-                </View>
-                <Text className="font-bold text-gray-800">{b.count}</Text>
+        <ScrollView contentContainerStyle={{ padding: 16 }}>
+          <View style={[adminStyles.statsRow, { flexWrap: 'wrap' }]}>
+            {[{ icon: 'account-plus', label: 'New Users', value: analytics.newUsers, bg: '#eff6ff', color: '#2563eb' }, { icon: 'calendar-plus', label: 'New Bookings', value: analytics.newBookings, bg: '#f0fdf4', color: '#15803d' }, { icon: 'currency-usd', label: 'Revenue', value: formatCurrency(analytics.revenue), bg: '#fffbeb', color: '#d97706' }, { icon: 'percent', label: 'Platform Fees', value: formatCurrency(analytics.platformFees), bg: '#faf5ff', color: '#7c3aed' }].map(item => (
+              <View key={item.label} style={[adminStyles.statCard, { width: '47%', backgroundColor: item.bg, borderColor: item.color + '30' }]}>
+                <MaterialCommunityIcons name={item.icon as any} size={22} color={item.color} />
+                <Text style={[adminStyles.statValue, { color: item.color, fontFamily: font, fontSize: 18 }]}>{item.value}</Text>
+                <Text style={[adminStyles.statLabel, { color: item.color, fontFamily: font }]}>{item.label}</Text>
               </View>
             ))}
           </View>
 
-          {/* Users by Role */}
-          <View className="bg-white rounded-xl p-4 mb-4 border border-gray-200">
-            <Text className="font-bold text-gray-800 mb-3">Users by Role</Text>
-            {(analytics.usersByRole || []).map((u) => (
-              <View key={u._id} className="flex-row items-center justify-between mb-2">
-                <View className="flex-row items-center">
-                  <View className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: roleColor(u._id) }} />
-                  <Text className="text-gray-700 capitalize">{u._id?.replace(/_/g, ' ')}</Text>
-                </View>
-                <Text className="font-bold text-gray-800">{u.count}</Text>
+          <View style={[adminStyles.card, { backgroundColor: c.surface, borderColor: c.border }]}>
+            <Text style={[adminStyles.sectionTitle, { color: c.text, fontFamily: font }]}>Bookings by Status</Text>
+            {(analytics.bookingsByStatus || []).map(b => (
+              <View key={b._id} style={[s.row, { borderBottomColor: c.border }]}>
+                <View style={[s.dot, { backgroundColor: statusColor(b._id) }]} />
+                <Text style={[s.rowLabel, { color: c.text, fontFamily: font, textTransform: 'capitalize' }]}>{b._id}</Text>
+                <Text style={[s.rowValue, { color: c.text, fontFamily: font }]}>{b.count}</Text>
               </View>
             ))}
           </View>
 
-          {/* Daily Revenue Chart */}
+          <View style={[adminStyles.card, { backgroundColor: c.surface, borderColor: c.border }]}>
+            <Text style={[adminStyles.sectionTitle, { color: c.text, fontFamily: font }]}>Users by Role</Text>
+            {(analytics.usersByRole || []).map(u => (
+              <View key={u._id} style={[s.row, { borderBottomColor: c.border }]}>
+                <View style={[s.dot, { backgroundColor: roleColor(u._id) }]} />
+                <Text style={[s.rowLabel, { color: c.text, fontFamily: font, textTransform: 'capitalize' }]}>{u._id?.replace(/_/g, ' ')}</Text>
+                <Text style={[s.rowValue, { color: c.text, fontFamily: font }]}>{u.count}</Text>
+              </View>
+            ))}
+          </View>
+
           {analytics.dailyRevenue?.length > 0 && (
-            <View className="bg-white rounded-xl p-4 mb-4 border border-gray-200">
-              <Text className="font-bold text-gray-800 mb-3">Daily Revenue</Text>
-              {analytics.dailyRevenue.slice(-14).map((d) => (
-                <View key={d._id} className="mb-2">
-                  <View className="flex-row justify-between mb-1">
-                    <Text className="text-gray-600 text-xs">{d._id}</Text>
-                    <Text className="text-primary text-xs font-semibold">{formatCurrency(d.revenue)}</Text>
+            <View style={[adminStyles.card, { backgroundColor: c.surface, borderColor: c.border }]}>
+              <Text style={[adminStyles.sectionTitle, { color: c.text, fontFamily: font }]}>Daily Revenue</Text>
+              {analytics.dailyRevenue.slice(-14).map(d => (
+                <View key={d._id} style={{ marginBottom: 10 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <Text style={[s.chartLabel, { color: c.muted, fontFamily: font }]}>{d._id}</Text>
+                    <Text style={[s.chartValue, { color: c.primary, fontFamily: font }]}>{formatCurrency(d.revenue)}</Text>
                   </View>
-                  <View className="w-full bg-gray-100 rounded-full h-2">
-                    <View className="bg-primary h-2 rounded-full" style={{ width: `${(d.revenue / maxRevenue) * 100}%` }} />
+                  <View style={[s.barBg, { backgroundColor: c.border }]}>
+                    <View style={[s.barFill, { width: `${(d.revenue / maxRevenue) * 100}%` as any, backgroundColor: c.primary }]} />
                   </View>
                 </View>
               ))}
@@ -133,6 +101,17 @@ export default function AnalyticsDashboardScreen() {
           )}
         </ScrollView>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
+
+const s = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1 },
+  dot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
+  rowLabel: { flex: 1, fontSize: 13, fontWeight: '600' },
+  rowValue: { fontSize: 15, fontWeight: '800' },
+  chartLabel: { fontSize: 11, fontWeight: '600' },
+  chartValue: { fontSize: 11, fontWeight: '800' },
+  barBg: { height: 6, borderRadius: 999, overflow: 'hidden' },
+  barFill: { height: 6, borderRadius: 999 },
+});

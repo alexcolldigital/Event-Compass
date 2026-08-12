@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuthStore } from '../../context/authStore.js';
 import Button from '../../components/Button.jsx';
@@ -122,7 +121,7 @@ export default function NotificationsScreen({ navigation }: { navigation: any })
   }, [user]);
 
   const registerForPushNotifications = async () => {
-    if (!Device.isDevice) return;
+    if (Platform.OS === 'web') return;
     const { status: existing } = await Notifications.getPermissionsAsync();
     let finalStatus = existing;
     if (existing !== 'granted') {

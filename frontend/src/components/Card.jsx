@@ -3,8 +3,8 @@
  * Lightweight, native React Native cards for the updated marketplace UI.
  */
 
-import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Platform, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 /** @typedef {import('react-native').StyleProp<import('react-native').ViewStyle>} StyleProp */
@@ -82,18 +82,62 @@ export const Card = ({
   );
 };
 
-export const MarketplaceCard = ({ image, title, subtitle, rating, reviewCount, price, unit = 'booking', category, badge, onPress, onAddToCart, style }) => {
+export const MarketplaceCard = ({ image, images, title, subtitle, rating, reviewCount, price, unit = 'booking', category, badge, onPress, onAddToCart, style }) => {
   const surface = getSurfaceColors(style);
   const titleColor = surface.isDark ? '#f8fafc' : '#111827';
   const subtitleColor = surface.isDark ? '#cbd5e1' : '#64748b';
+  const [activeIndex, setActiveIndex] = useState(0);
+  const scrollRef = useRef(null);
+  const [cardWidth, setCardWidth] = useState(Dimensions.get('window').width - 32);
+
+  // Build image list: prefer `images` array, fall back to single `image`
+  const imageList = images && images.length > 0
+    ? images.map((img) => (typeof img === 'string' ? img : img?.url)).filter(Boolean)
+    : image ? [image] : [];
+
+  const handleScroll = (e) => {
+    const idx = Math.round(e.nativeEvent.contentOffset.x / cardWidth);
+    setActiveIndex(Math.max(0, Math.min(idx, imageList.length - 1)));
+  };
 
   return (
-    <Card variant="elevated" interactive onPress={onPress} style={[styles.marketplaceCard, style]}>
+    <Card variant="elevated" interactive onPress={onPress} style={[styles.marketplaceCard, style]}
+      onLayout={(e) => setCardWidth(e.nativeEvent.layout.width)}
+    >
       <View style={styles.imageWrap}>
-        {image ? <Image source={{ uri: image }} style={styles.image} resizeMode="cover" /> : <View style={styles.imagePlaceholder}><MaterialCommunityIcons name="image-outline" size={44} color="#cbd5e1" /></View>}
+        {imageList.length > 1 ? (
+          <>
+            <ScrollView
+              ref={scrollRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={handleScroll}
+              style={{ width: cardWidth, height: '100%' }}
+              decelerationRate="fast"
+            >
+              {imageList.map((uri, i) => (
+                <Image key={i} source={{ uri }} style={[styles.image, { width: cardWidth }]} resizeMode="cover" />
+              ))}
+            </ScrollView>
+            <View style={styles.dotsRow}>
+              {imageList.map((_, i) => (
+                <View key={i} style={[styles.dot, i === activeIndex && styles.dotActive]} />
+              ))}
+            </View>
+            <View style={styles.imageCountBadge}>
+              <MaterialCommunityIcons name="image-multiple" size={11} color="#fff" />
+              <Text style={styles.imageCountText}>{activeIndex + 1}/{imageList.length}</Text>
+            </View>
+          </>
+        ) : imageList.length === 1 ? (
+          <Image source={{ uri: imageList[0] }} style={styles.image} resizeMode="cover" />
+        ) : (
+          <View style={styles.imagePlaceholder}><MaterialCommunityIcons name="image-outline" size={44} color="#cbd5e1" /></View>
+        )}
         {category ? <View style={styles.badgeTopLeft}><Text style={styles.badgeText}>{category}</Text></View> : null}
-        {badge ? <View style={styles.badgeTopRight}><Text style={styles.badgeTextWhite}>{badge}</Text></View> : null}
-        <View style={styles.favoriteButton}><MaterialCommunityIcons name="heart-outline" size={18} color="#64748b" /></View>
+        {badge ? <View style={[styles.badgeTopRight, imageList.length > 1 && { right: 52 }]}><Text style={styles.badgeTextWhite}>{badge}</Text></View> : null}
+        {imageList.length <= 1 ? <View style={styles.favoriteButton}><MaterialCommunityIcons name="heart-outline" size={18} color="#64748b" /></View> : null}
       </View>
       <View style={styles.cardBody}>
         <View style={styles.titleRow}>
@@ -204,7 +248,7 @@ const styles = StyleSheet.create({
   card: { borderRadius: 24, borderWidth: 1, overflow: 'hidden' },
   inner: { flex: 1 },
   marketplaceCard: { overflow: 'hidden' },
-  imageWrap: { height: 176, backgroundColor: '#eef2eb' },
+  imageWrap: { height: 210, backgroundColor: '#eef2eb' },
   image: { width: '100%', height: '100%' },
   imagePlaceholder: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: '#eef2eb' },
   badgeTopLeft: { position: 'absolute', top: 12, left: 12, backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
@@ -212,6 +256,11 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 11, fontWeight: '700', color: '#334155' },
   badgeTextWhite: { fontSize: 11, fontWeight: '700', color: '#ffffff' },
   favoriteButton: { position: 'absolute', top: 12, right: 12, backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 999, width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
+  dotsRow: { position: 'absolute', bottom: 8, alignSelf: 'center', flexDirection: 'row', gap: 5 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.5)' },
+  dotActive: { backgroundColor: '#ffffff', width: 18 },
+  imageCountBadge: { position: 'absolute', top: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  imageCountText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   cardBody: { padding: 16 },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   title: { fontSize: 16, fontWeight: '800', color: '#111827', marginBottom: 4 },

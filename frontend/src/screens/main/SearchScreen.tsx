@@ -17,17 +17,34 @@ import { normalizeCartItem } from '../../utils/cartUtils';
 const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
 const SERVICE_CATEGORIES = [
-  { id: 1, name: 'Catering', icon: 'silverware-fork-knife' },
-  { id: 2, name: 'DJ/Music', icon: 'music' },
-  { id: 3, name: 'Decor', icon: 'palette' },
-  { id: 4, name: 'Photography', icon: 'camera' },
-  { id: 5, name: 'Venues', icon: 'home-city' },
+  { id: 1,  name: 'Canopies and Tent',                              icon: 'tent',                    subcategories: ['12 by 12 Canopy', '12 by 24 Canopy', '20 by 40 Tent', '30 by 60 Tent', '40 by 80 Tent'] },
+  { id: 2,  name: 'Chairs',                                         icon: 'seat',                    subcategories: ['Plastic Chair', 'Chivalry Chair', 'Bridal Chair'] },
+  { id: 3,  name: 'Tables',                                         icon: 'table-furniture',         subcategories: ['Plastic Table', 'Banquet Table'] },
+  { id: 4,  name: 'Event Planners and Managers',                    icon: 'clipboard-list',          subcategories: [] },
+  { id: 5,  name: 'Events Services Providers and Vendors',          icon: 'store',                   subcategories: [] },
+  { id: 6,  name: 'Events Facilitators and Agents',                 icon: 'handshake',               subcategories: [] },
+  { id: 7,  name: 'Special Events Hosts and Organizers',            icon: 'account-star',            subcategories: [] },
+  { id: 8,  name: 'Events Venues',                                  icon: 'home-city',               subcategories: [] },
+  { id: 9,  name: 'Event Decorators',                               icon: 'palette',                 subcategories: [] },
+  { id: 10, name: 'Make-up Artists',                                icon: 'face-woman-shimmer',      subcategories: [] },
+  { id: 11, name: 'Ushers',                                         icon: 'account-tie',             subcategories: [] },
+  { id: 12, name: 'Bouncers',                                       icon: 'shield-account',          subcategories: [] },
+  { id: 13, name: 'Events Facilities Rental and Hiring Companies',  icon: 'warehouse',               subcategories: [] },
+  { id: 14, name: 'Ice Chilling Services',                          icon: 'snowflake',               subcategories: [] },
+  { id: 15, name: 'Refrigerated Vans/Cooling Vans Providers',       icon: 'truck-snowflake',         subcategories: [] },
+  { id: 16, name: 'Food Caterers',                                  icon: 'silverware-fork-knife',   subcategories: [] },
+  { id: 17, name: 'Drinks Suppliers',                               icon: 'bottle-wine',             subcategories: [] },
+  { id: 18, name: 'Music (D-J and Live Performances)',              icon: 'music',                   subcategories: [] },
+  { id: 19, name: 'MCs and Compares',                               icon: 'microphone',              subcategories: [] },
+  { id: 20, name: 'Comedians and Entertainers',                     icon: 'emoticon-happy',          subcategories: [] },
 ];
 
 export default function SearchScreen({ navigation }: { navigation: any }) {
   const route = useRoute();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const { services, getAllServices, searchServices, isLoading, error } = useServiceStore();
   const { addItem } = useCartStore();
   const { theme } = useTheme();
@@ -80,20 +97,37 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
     }
   };
 
-  const handleCategorySelect = async (categoryName: string | null) => {
-    const nextCategory = categoryName === null ? null : selectedCategory === categoryName ? null : categoryName;
-    setSelectedCategory(nextCategory);
-    setSearchQuery('');
-    if (nextCategory) {
-      await fetchServices({ category: nextCategory });
-    } else {
+  const handleCategorySelect = async (category: { name: string; subcategories: string[] }) => {
+    if (selectedCategory === category.name) {
+      setSelectedCategory(null);
+      setExpandedCategory(null);
+      setSelectedSubcategory(null);
+      setSearchQuery('');
       await fetchServices();
+      return;
     }
+    setSelectedCategory(category.name);
+    setSelectedSubcategory(null);
+    setSearchQuery('');
+    if (category.subcategories.length > 0) {
+      setExpandedCategory(category.name);
+    } else {
+      setExpandedCategory(null);
+      await fetchServices({ category: category.name });
+    }
+  };
+
+  const handleSubcategorySelect = async (sub: string) => {
+    const next = selectedSubcategory === sub ? null : sub;
+    setSelectedSubcategory(next);
+    await fetchServices({ keyword: next || selectedCategory || undefined, category: selectedCategory || undefined });
   };
 
   const clearFilters = async () => {
     setSearchQuery('');
     setSelectedCategory(null);
+    setExpandedCategory(null);
+    setSelectedSubcategory(null);
     await fetchServices();
   };
 
@@ -151,18 +185,52 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
             {SERVICE_CATEGORIES.map((category) => {
               const isActive = selectedCategory === category.name;
               return (
-                <TouchableOpacity key={category.id} onPress={() => handleCategorySelect(isActive ? null : category.name)} style={[styles.chip, isActive ? { backgroundColor: colors.primary } : { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+                <TouchableOpacity
+                  key={category.id}
+                  onPress={() => handleCategorySelect(category)}
+                  style={[styles.chip, isActive ? { backgroundColor: colors.primary } : { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
                   <MaterialCommunityIcons name={category.icon as any} size={18} color={isActive ? '#fff' : colors.primary} />
                   <Text style={[styles.chipText, isActive ? { color: '#fff' } : { color: colors.text }]}>{category.name}</Text>
+                  {category.subcategories.length > 0 && (
+                    <MaterialCommunityIcons
+                      name={expandedCategory === category.name ? 'chevron-up' : 'chevron-down'}
+                      size={14}
+                      color={isActive ? '#fff' : colors.muted}
+                    />
+                  )}
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
+
+          {expandedCategory && (() => {
+            const cat = SERVICE_CATEGORIES.find(c => c.name === expandedCategory);
+            if (!cat || cat.subcategories.length === 0) return null;
+            return (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.chipsRow, styles.subChipsRow]}>
+                {cat.subcategories.map((sub) => {
+                  const isSubActive = selectedSubcategory === sub;
+                  return (
+                    <TouchableOpacity
+                      key={sub}
+                      onPress={() => handleSubcategorySelect(sub)}
+                      style={[styles.subChip, isSubActive ? { backgroundColor: colors.primary } : { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
+                    >
+                      <Text style={[styles.subChipText, isSubActive ? { color: '#fff' } : { color: colors.text }]}>{sub}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            );
+          })()}
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>{selectedCategory ? `${selectedCategory} services` : searchQuery ? 'Search results' : 'Featured services'}</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {selectedSubcategory ? selectedSubcategory : selectedCategory ? `${selectedCategory} services` : searchQuery ? 'Search results' : 'Featured services'}
+            </Text>
             {displayedServices.length > 0 ? <Text style={[styles.resultText, { color: colors.primary }]}>{displayedServices.length} results</Text> : null}
           </View>
           {isLoading ? (
@@ -172,7 +240,7 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
           ) : displayedServices.length > 0 ? (
             <View style={styles.marketplaceGrid}>
               {displayedServices.map((service: any) => (
-                <MarketplaceCard key={service._id} image={service.images?.[0]?.url} title={service.name} subtitle={service.serviceType} rating={service.averageRating || 4.5} reviewCount={service.totalReviews || 0} price={service.pricing?.basePrice || 0} unit={service.unit || 'booking'} category={service.serviceType} badge={service.availability?.isAvailable === false ? 'Unavailable' : 'Available'} onPress={() => navigation.navigate('ServiceDetail', { serviceId: service._id })} onAddToCart={() => handleAddToCart(service)} style={{ backgroundColor: colors.surface, borderColor: colors.border }} />
+                <MarketplaceCard key={service._id} image={service.images?.[0]?.url} images={service.images} title={service.name} subtitle={service.serviceType} rating={service.averageRating || 4.5} reviewCount={service.totalReviews || 0} price={service.pricing?.basePrice || 0} unit={service.unit || 'booking'} category={service.serviceType} badge={service.availability?.isAvailable === false ? 'Unavailable' : 'Available'} onPress={() => navigation.navigate('ServiceDetail', { serviceId: service._id })} onAddToCart={() => handleAddToCart(service)} style={{ backgroundColor: colors.surface, borderColor: colors.border }} />
               ))}
             </View>
           ) : (
@@ -207,4 +275,7 @@ const styles = StyleSheet.create({
   emptyState: { borderRadius: 22, borderWidth: 1, padding: 24, alignItems: 'center' },
   emptyTitle: { fontSize: 16, fontWeight: '800', marginTop: 12, fontFamily: appFont },
   emptyCopy: { fontSize: 13, marginTop: 6, textAlign: 'center', fontFamily: appFont },
+  subChipsRow: { marginTop: 8 },
+  subChip: { borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6 },
+  subChipText: { fontSize: 12, fontWeight: '600', fontFamily: appFont },
 });

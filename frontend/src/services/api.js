@@ -89,11 +89,13 @@ export const authAPI = {
   getDevices: () => apiClient.get('/auth/devices'),
   addDevice: (deviceId, deviceName) => apiClient.post('/auth/devices', { deviceId, deviceName }),
   removeDevice: (deviceId) => apiClient.delete(`/auth/devices/${deviceId}`),
+  saveFcmToken: (fcmToken) => apiClient.post('/auth/fcm-token', { fcmToken }),
 };
 
 // Service API calls
 export const serviceAPI = {
   getAllServices: (query) => apiClient.get('/services', { params: query }),
+  getPublicStats: () => apiClient.get('/services/stats'),
   getServiceById: (id) => apiClient.get(`/services/${id}`),
   getMyServices: () => apiClient.get('/services/provider/my-services'),
   createService: (data) => apiClient.post('/services', data),
@@ -101,6 +103,7 @@ export const serviceAPI = {
     apiClient.post(`/services/${id}/upload-media`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
+  deleteServiceImage: (id, publicId) => apiClient.delete(`/services/${id}/images/${publicId}`),
   updateService: (id, data) => apiClient.put(`/services/${id}`, data),
   deleteService: (id) => apiClient.delete(`/services/${id}`),
   searchServices: (query) => apiClient.get('/services/search', { params: query }),
@@ -138,6 +141,20 @@ export const adminAPI = {
   blockUser: (id, data) => apiClient.patch(`/admin/users/${id}/block`, data),
   verifyProvider: (id) => apiClient.patch(`/admin/users/${id}/verify`),
   getUserAnalytics: () => apiClient.get('/admin/users/analytics/breakdown'),
+
+  // Services (admin)
+  getAllServices: (query) => apiClient.get('/admin/services', { params: query }),
+  getServiceById: (id) => apiClient.get(`/admin/services/${id}`),
+  createService: (data) => apiClient.post('/admin/services', data),
+  updateService: (id, data) => apiClient.put(`/admin/services/${id}`, data),
+  deleteService: (id) => apiClient.delete(`/admin/services/${id}`),
+  toggleFeatured: (id) => apiClient.patch(`/admin/services/${id}/toggle-featured`),
+  toggleActive: (id) => apiClient.patch(`/admin/services/${id}/toggle-active`),
+  uploadServiceMedia: (id, formData) =>
+    apiClient.post(`/admin/services/${id}/upload-media`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  deleteServiceImage: (id, publicId) => apiClient.delete(`/admin/services/${id}/images/${publicId}`),
 
   // Bookings
   getAllBookings: (query) => apiClient.get('/admin/bookings', { params: query }),
@@ -206,7 +223,7 @@ export const adminAPI = {
   getAuditLogs: (query) => apiClient.get('/admin/audit-logs', { params: query }),
 };
 
-// Message/Conversation API calls
+// Message API calls
 export const messageAPI = {
   getConversations: () => apiClient.get('/messages/conversations'),
   getMessages: (conversationId) => apiClient.get(`/messages/conversations/${conversationId}`),

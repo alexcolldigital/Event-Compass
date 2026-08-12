@@ -1,14 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, TextInput, SafeAreaView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { adminAPI } from '../../services/api.js';
 import Loading from '../../components/Loading.jsx';
-import { COLORS } from '../../utils/constants.js';
 import { formatCurrency } from '../../utils/helpers.js';
+import { useTheme } from '../../context/ThemeContext';
+import adminStyles, { getColors, appFont } from '../../styles/adminStyles.js';
 
 export default function CommissionManagementScreen() {
   const navigation = useNavigation();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const C = getColors(isDark);
+
   const [settings, setSettings] = useState(null);
   const [breakdown, setBreakdown] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,83 +54,80 @@ export default function CommissionManagementScreen() {
 
   if (isLoading) return <Loading fullScreen />;
 
+  const BREAKDOWN_CARDS = breakdown ? [
+    { label: 'Total Revenue', value: formatCurrency(breakdown.totalRevenue || 0), accent: '#2563eb', bg: isDark ? '#1e3a5f' : '#eff6ff', border: isDark ? '#1e40af' : '#bfdbfe' },
+    { label: 'Platform Fees', value: formatCurrency(breakdown.totalPlatformFees || 0), accent: '#d97706', bg: isDark ? '#451a03' : '#fff7ed', border: isDark ? '#92400e' : '#fed7aa' },
+    { label: 'Provider Payouts', value: formatCurrency(breakdown.totalPayouts || 0), accent: '#1f7a4d', bg: isDark ? '#14532d' : '#f0fdf4', border: isDark ? '#166534' : '#bbf7d0' },
+    { label: 'Transactions', value: breakdown.count || 0, accent: '#7c3aed', bg: isDark ? '#2d1b69' : '#f5f3ff', border: isDark ? '#5b21b6' : '#ddd6fe' },
+  ] : [];
+
+  const FORM_FIELDS = [
+    { label: 'Commission Rate (%)', key: 'commissionRate', placeholder: 'e.g. 10' },
+    { label: 'Minimum Commission (₦)', key: 'minCommission', placeholder: 'e.g. 500' },
+    { label: 'Maximum Commission (₦, optional)', key: 'maxCommission', placeholder: 'Leave blank for no cap' },
+  ];
+
   return (
-    <View className="flex-1 bg-light">
-      <View className="flex-row items-center p-4 bg-white border-b border-gray-200">
+    <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
+      <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.dark} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />
         </TouchableOpacity>
-        <Text className="text-dark text-lg font-bold flex-1 ml-4">Commission Management</Text>
+        <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>Commission Management</Text>
       </View>
 
-      <ScrollView className="flex-1 p-4">
-        {/* Breakdown Summary */}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}>
+        <View style={[adminStyles.hero, { backgroundColor: C.primary, marginTop: 12 }]}>
+          <Text style={[adminStyles.heroEyebrow, { fontFamily: appFont }]}>ADMIN</Text>
+          <Text style={[adminStyles.heroTitle, { fontFamily: appFont }]}>Commission Management</Text>
+          <Text style={[adminStyles.heroSubtitle, { fontFamily: appFont }]}>
+            Current rate: {settings?.commissionRate || 10}%
+          </Text>
+        </View>
+
+        {/* Breakdown */}
         {breakdown && (
-          <View className="bg-white rounded-xl p-4 mb-4 border border-gray-200">
-            <Text className="font-bold text-gray-800 mb-3">Revenue Breakdown (All Time)</Text>
-            <View className="flex-row gap-3">
-              <View className="flex-1 bg-blue-50 p-3 rounded-lg">
-                <Text className="text-xs text-blue-700">Total Revenue</Text>
-                <Text className="font-bold text-blue-900 mt-1">{formatCurrency(breakdown.totalRevenue || 0)}</Text>
-              </View>
-              <View className="flex-1 bg-orange-50 p-3 rounded-lg">
-                <Text className="text-xs text-orange-700">Platform Fees</Text>
-                <Text className="font-bold text-orange-900 mt-1">{formatCurrency(breakdown.totalPlatformFees || 0)}</Text>
-              </View>
+          <>
+            <Text style={[adminStyles.sectionTitle, { color: C.text, fontFamily: appFont, marginBottom: 12 }]}>Revenue Breakdown</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
+              {BREAKDOWN_CARDS.map((s) => (
+                <View key={s.label} style={[adminStyles.statCard, { backgroundColor: s.bg, borderColor: s.border }]}>
+                  <Text style={[adminStyles.statLabel, { color: s.accent, fontFamily: appFont }]}>{s.label}</Text>
+                  <Text style={[{ fontSize: 16, fontWeight: '800', marginTop: 6, fontFamily: appFont }, { color: s.accent }]}>{s.value}</Text>
+                </View>
+              ))}
             </View>
-            <View className="flex-row gap-3 mt-3">
-              <View className="flex-1 bg-green-50 p-3 rounded-lg">
-                <Text className="text-xs text-green-700">Provider Payouts</Text>
-                <Text className="font-bold text-green-900 mt-1">{formatCurrency(breakdown.totalPayouts || 0)}</Text>
-              </View>
-              <View className="flex-1 bg-purple-50 p-3 rounded-lg">
-                <Text className="text-xs text-purple-700">Transactions</Text>
-                <Text className="font-bold text-purple-900 mt-1">{breakdown.count || 0}</Text>
-              </View>
-            </View>
-          </View>
+          </>
         )}
 
         {/* Settings Form */}
-        <View className="bg-white rounded-xl p-4 mb-4 border border-gray-200">
-          <Text className="font-bold text-gray-800 mb-4">Commission Settings</Text>
-
-          <Text className="text-gray-600 text-sm mb-1">Commission Rate (%)</Text>
-          <TextInput
-            className="border border-gray-300 rounded-lg px-3 py-2 mb-4 text-dark"
-            value={form.commissionRate}
-            onChangeText={(v) => setForm((f) => ({ ...f, commissionRate: v }))}
-            keyboardType="decimal-pad"
-            placeholder="e.g. 10"
-          />
-
-          <Text className="text-gray-600 text-sm mb-1">Minimum Commission (₦)</Text>
-          <TextInput
-            className="border border-gray-300 rounded-lg px-3 py-2 mb-4 text-dark"
-            value={form.minCommission}
-            onChangeText={(v) => setForm((f) => ({ ...f, minCommission: v }))}
-            keyboardType="decimal-pad"
-            placeholder="e.g. 500"
-          />
-
-          <Text className="text-gray-600 text-sm mb-1">Maximum Commission (₦, optional)</Text>
-          <TextInput
-            className="border border-gray-300 rounded-lg px-3 py-2 mb-4 text-dark"
-            value={form.maxCommission}
-            onChangeText={(v) => setForm((f) => ({ ...f, maxCommission: v }))}
-            keyboardType="decimal-pad"
-            placeholder="Leave blank for no cap"
-          />
+        <Text style={[adminStyles.sectionTitle, { color: C.text, fontFamily: appFont, marginBottom: 12 }]}>Commission Settings</Text>
+        <View style={[adminStyles.card, { backgroundColor: C.surface, borderColor: C.border }]}>
+          {FORM_FIELDS.map((f) => (
+            <View key={f.key} style={adminStyles.formField}>
+              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>{f.label}</Text>
+              <TextInput
+                style={[adminStyles.formInput, { color: C.text, borderColor: C.inputBorder, backgroundColor: C.surfaceAlt, fontFamily: appFont }]}
+                value={form[f.key]}
+                onChangeText={(v) => setForm((prev) => ({ ...prev, [f.key]: v }))}
+                keyboardType="decimal-pad"
+                placeholder={f.placeholder}
+                placeholderTextColor={C.muted}
+              />
+            </View>
+          ))}
 
           <TouchableOpacity
-            className="bg-primary rounded-lg py-3 items-center"
+            style={[adminStyles.actionBtn, { backgroundColor: C.primary, marginTop: 4 }]}
             onPress={handleSave}
             disabled={isSaving}
           >
-            <Text className="text-white font-bold">{isSaving ? 'Saving...' : 'Save Settings'}</Text>
+            <Text style={[adminStyles.actionBtnText, { color: '#fff', fontSize: 14, fontFamily: appFont }]}>
+              {isSaving ? 'Saving...' : 'Save Settings'}
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }

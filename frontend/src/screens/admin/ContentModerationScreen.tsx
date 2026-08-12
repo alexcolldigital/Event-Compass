@@ -1,16 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Alert, SafeAreaView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { adminAPI } from '../../services/api.js';
 import Loading from '../../components/Loading.jsx';
-import { COLORS } from '../../utils/constants.js';
 import { formatDate } from '../../utils/helpers.js';
+import { useTheme } from '../../context/ThemeContext';
+import adminStyles, { getColors, appFont } from '../../styles/adminStyles.js';
 
 const TABS = ['reviews', 'services'];
 
 export default function ContentModerationScreen() {
   const navigation = useNavigation();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const C = getColors(isDark);
+
   const [tab, setTab] = useState('reviews');
   const [reviews, setReviews] = useState([]);
   const [services, setServices] = useState([]);
@@ -33,7 +38,8 @@ export default function ContentModerationScreen() {
   };
 
   const handleModerateReview = (item, action) => {
-    Alert.alert(action === 'remove' ? 'Remove Review' : 'Approve Review',
+    Alert.alert(
+      action === 'remove' ? 'Remove Review' : 'Approve Review',
       action === 'remove' ? 'Remove this review from the platform?' : 'Clear flag and approve this review?',
       [
         { text: 'Cancel' },
@@ -50,7 +56,8 @@ export default function ContentModerationScreen() {
   };
 
   const handleModerateService = (item, action) => {
-    Alert.alert(action === 'suspend' ? 'Suspend Service' : 'Approve Service',
+    Alert.alert(
+      action === 'suspend' ? 'Suspend Service' : 'Approve Service',
       action === 'suspend' ? 'Deactivate this service?' : 'Clear flag and activate this service?',
       [
         { text: 'Cancel' },
@@ -67,39 +74,39 @@ export default function ContentModerationScreen() {
   };
 
   const ReviewCard = ({ item }) => (
-    <View className="bg-white rounded-xl p-4 mb-3 border border-gray-200">
-      <View className="flex-row justify-between mb-1">
-        <Text className="font-semibold text-gray-800">{item.reviewer?.firstName} {item.reviewer?.lastName}</Text>
-        <View className="flex-row">
-          {[1,2,3,4,5].map((s) => (
+    <View style={[adminStyles.card, { backgroundColor: C.surface, borderColor: C.border }]}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <Text style={{ color: C.text, fontWeight: '700', fontSize: 14, fontFamily: appFont }}>{item.reviewer?.firstName} {item.reviewer?.lastName}</Text>
+        <View style={{ flexDirection: 'row' }}>
+          {[1, 2, 3, 4, 5].map((s) => (
             <MaterialCommunityIcons key={s} name={s <= item.rating ? 'star' : 'star-outline'} size={14} color="#f59e0b" />
           ))}
         </View>
       </View>
-      <Text className="text-gray-600 text-sm mb-1">{item.comment}</Text>
-      <Text className="text-gray-400 text-xs">Service: {item.service?.name} · {formatDate(item.createdAt)}</Text>
-      <View className="flex-row gap-2 mt-3">
-        <TouchableOpacity className="flex-1 bg-green-100 py-2 rounded-lg" onPress={() => handleModerateReview(item, 'approve')}>
-          <Text className="text-green-700 font-semibold text-center text-sm">Approve</Text>
+      <Text style={{ color: C.muted, fontSize: 13, marginBottom: 6, fontFamily: appFont }}>{item.comment}</Text>
+      <Text style={{ color: C.muted, fontSize: 11, fontFamily: appFont }}>Service: {item.service?.name} · {formatDate(item.createdAt)}</Text>
+      <View style={adminStyles.actionRow}>
+        <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: isDark ? '#14532d' : '#dcfce7' }]} onPress={() => handleModerateReview(item, 'approve')}>
+          <Text style={[adminStyles.actionBtnText, { color: '#166534', fontFamily: appFont }]}>Approve</Text>
         </TouchableOpacity>
-        <TouchableOpacity className="flex-1 bg-red-100 py-2 rounded-lg" onPress={() => handleModerateReview(item, 'remove')}>
-          <Text className="text-red-700 font-semibold text-center text-sm">Remove</Text>
+        <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: isDark ? '#450a0a' : '#fee2e2' }]} onPress={() => handleModerateReview(item, 'remove')}>
+          <Text style={[adminStyles.actionBtnText, { color: '#b91c1c', fontFamily: appFont }]}>Remove</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
   const ServiceCard = ({ item }) => (
-    <View className="bg-white rounded-xl p-4 mb-3 border border-gray-200">
-      <Text className="font-semibold text-gray-800">{item.name}</Text>
-      <Text className="text-gray-500 text-xs mt-1">{item.provider?.businessName || `${item.provider?.firstName} ${item.provider?.lastName}`}</Text>
-      <Text className="text-gray-400 text-xs mt-1">{item.serviceType} · {formatDate(item.createdAt)}</Text>
-      <View className="flex-row gap-2 mt-3">
-        <TouchableOpacity className="flex-1 bg-green-100 py-2 rounded-lg" onPress={() => handleModerateService(item, 'approve')}>
-          <Text className="text-green-700 font-semibold text-center text-sm">Approve</Text>
+    <View style={[adminStyles.card, { backgroundColor: C.surface, borderColor: C.border }]}>
+      <Text style={{ color: C.text, fontWeight: '700', fontSize: 14, marginBottom: 4, fontFamily: appFont }}>{item.name}</Text>
+      <Text style={{ color: C.muted, fontSize: 12, fontFamily: appFont }}>{item.provider?.businessName || `${item.provider?.firstName} ${item.provider?.lastName}`}</Text>
+      <Text style={{ color: C.muted, fontSize: 11, marginTop: 2, fontFamily: appFont }}>{item.serviceType} · {formatDate(item.createdAt)}</Text>
+      <View style={adminStyles.actionRow}>
+        <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: isDark ? '#14532d' : '#dcfce7' }]} onPress={() => handleModerateService(item, 'approve')}>
+          <Text style={[adminStyles.actionBtnText, { color: '#166534', fontFamily: appFont }]}>Approve</Text>
         </TouchableOpacity>
-        <TouchableOpacity className="flex-1 bg-red-100 py-2 rounded-lg" onPress={() => handleModerateService(item, 'suspend')}>
-          <Text className="text-red-700 font-semibold text-center text-sm">Suspend</Text>
+        <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: isDark ? '#450a0a' : '#fee2e2' }]} onPress={() => handleModerateService(item, 'suspend')}>
+          <Text style={[adminStyles.actionBtnText, { color: '#b91c1c', fontFamily: appFont }]}>Suspend</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -108,23 +115,23 @@ export default function ContentModerationScreen() {
   const data = tab === 'reviews' ? reviews : services;
 
   return (
-    <View className="flex-1 bg-light">
-      <View className="flex-row items-center p-4 bg-white border-b border-gray-200">
+    <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
+      <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.dark} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />
         </TouchableOpacity>
-        <Text className="text-dark text-lg font-bold flex-1 ml-4">Content Moderation</Text>
+        <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>Content Moderation</Text>
       </View>
 
       {/* Tabs */}
-      <View className="flex-row bg-white border-b border-gray-200">
+      <View style={[adminStyles.tabBar, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
         {TABS.map((t) => (
           <TouchableOpacity
             key={t}
-            className={`flex-1 py-3 border-b-2 ${tab === t ? 'border-primary' : 'border-transparent'}`}
+            style={[adminStyles.tab, { borderBottomColor: tab === t ? C.primary : 'transparent' }]}
             onPress={() => setTab(t)}
           >
-            <Text className={`text-center font-semibold capitalize text-sm ${tab === t ? 'text-primary' : 'text-gray-500'}`}>{t}</Text>
+            <Text style={[adminStyles.tabText, { color: tab === t ? C.primary : C.muted, fontFamily: appFont }]}>{t}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -134,15 +141,16 @@ export default function ContentModerationScreen() {
           data={data}
           keyExtractor={(i) => i._id}
           renderItem={({ item }) => tab === 'reviews' ? <ReviewCard item={item} /> : <ServiceCard item={item} />}
-          contentContainerStyle={{ padding: 12 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <View className="items-center py-12">
-              <MaterialCommunityIcons name="flag-checkered" size={48} color={COLORS.gray[300]} />
-              <Text className="text-gray-500 mt-3">No flagged {tab}</Text>
+            <View style={adminStyles.emptyState}>
+              <MaterialCommunityIcons name="flag-checkered" size={48} color={C.muted} />
+              <Text style={[adminStyles.emptyText, { color: C.muted, fontFamily: appFont }]}>No flagged {tab}</Text>
             </View>
           }
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }

@@ -1,300 +1,139 @@
-/**
- * Revenue Analytics Screen
- * Admin screen for viewing financial reports and revenue data
- */
-
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  Dimensions,
-} from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import Loading from '../../components/Loading.jsx';
-import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { adminAPI } from '../../services/api.js';
-import { COLORS } from '../../utils/constants.js';
-import { formatCurrency, formatDate } from '../../utils/helpers.js';
+import Loading from '../../components/Loading.jsx';
+import { useTheme } from '../../context/ThemeContext';
+import { getColors, adminStyles, font } from '../../styles/adminStyles';
+import { formatCurrency } from '../../utils/helpers.js';
 
-const { width } = Dimensions.get('window');
+const PERIODS = [{ key: 'daily', label: 'Daily' }, { key: 'weekly', label: 'Weekly' }, { key: 'monthly', label: 'Monthly' }, { key: 'yearly', label: 'Yearly' }];
 
-const RevenueAnalyticsScreen = () => {
+export default function RevenueAnalyticsScreen() {
   const navigation = useNavigation();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const c = getColors(isDark);
 
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [timePeriod, setTimePeriod] = useState('monthly');
-  const [revenueData, setRevenueData] = useState(null);
+  const [period, setPeriod] = useState('monthly');
+  const [data, setData] = useState(null);
 
-  useEffect(() => {
-    loadRevenueData();
-  }, [timePeriod]);
+  useEffect(() => { load(); }, [period]);
 
-  const loadRevenueData = async () => {
+  const load = async () => {
     setIsLoading(true);
     try {
-      const response = await adminAPI.getRevenueAnalytics({ period: timePeriod });
-      const rows = response.revenues || [];
-      const data = rows.map((row) => ({
-        date: timePeriod === 'daily' ? row._id : undefined,
-        week: timePeriod === 'weekly' ? row._id : undefined,
-        month: timePeriod === 'monthly' ? row._id : undefined,
-        year: timePeriod === 'yearly' ? row._id : undefined,
-        amount: row.totalRevenue || 0,
-        bookings: row.transactionCount || 0,
-      }));
-      const totalRevenue = rows.reduce((sum, row) => sum + (row.totalRevenue || 0), 0);
-      const platformFees = rows.reduce((sum, row) => sum + (row.platformFees || 0), 0);
-
-      setRevenueData({
-        totalRevenue,
-        platformFees,
-        providerPayouts: Math.max(totalRevenue - platformFees, 0),
-        data,
-      });
-      setError(null);
-    } catch (err) {
-      setError(err.message || 'Failed to load revenue data');
-    } finally {
-      setIsLoading(false);
-    }
+      const r = await adminAPI.getRevenueAnalytics({ period });
+      const rows = r.revenues || [];
+      const totalRevenue = rows.reduce((s, row) => s + (row.totalRevenue || 0), 0);
+      const platformFees = rows.reduce((s, row) => s + (row.platformFees || 0), 0);
+      setData({ totalRevenue, platformFees, providerPayouts: Math.max(totalRevenue - platformFees, 0), rows });
+    } catch (_) {} finally { setIsLoading(false); }
   };
 
-  const ChartBar = ({ amount, maxAmount, label, bookings }) => {
-    const percentage = (amount / maxAmount) * 100;
+  if (isLoading) return <Loading fullScreen />;
 
-    return (
-      <View className="mb-4">
-        <View className="flex-row justify-between mb-1">
-          <Text className="text-dark font-semibold text-sm">{label}</Text>
-          <Text className="text-primary font-bold text-sm">{formatCurrency(amount)}</Text>
-        </View>
-        <View className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-          <View
-            className="bg-primary h-3 rounded-full"
-            style={{ width: `${percentage}%` }}
-          />
-        </View>
-        <Text className="text-gray-500 text-xs mt-1">{bookings} bookings</Text>
-      </View>
-    );
-  };
-
-  if (isLoading) {
-    return <Loading fullScreen message="Loading analytics..." />;
-  }
-
-  if (!revenueData) {
-    return (
-      <View className="flex-1 bg-light p-4">
-        <ErrorMessage error={error || 'No data available'} />
-      </View>
-    );
-  }
-
-  const maxAmount = Math.max(...revenueData.data.map((d) => d.amount), 1);
-  const totalBookings = revenueData.data.reduce((sum, d) => sum + d.bookings, 0);
-  const averageTransaction = totalBookings > 0 ? revenueData.totalRevenue / totalBookings : 0;
-  const commissionRate =
-    revenueData.totalRevenue > 0
-      ? (revenueData.platformFees / revenueData.totalRevenue) * 100
-      : 0;
+  const maxAmount = data?.rows?.length ? Math.max(...data.rows.map(r => r.totalRevenue || 0), 1) : 1;
+  const totalBookings = data?.rows?.reduce((s, r) => s + (r.transactionCount || 0), 0) || 0;
+  const commissionRate = data?.totalRevenue > 0 ? (data.platformFees / data.totalRevenue) * 100 : 0;
 
   return (
-    <View className="flex-1 bg-light">
-      {/* Header */}
-      <View className="flex-row items-center p-4 bg-white border-b border-gray-200">
+    <SafeAreaView style={[adminStyles.screen, { backgroundColor: c.bg }]}>
+      <View style={[adminStyles.header, { backgroundColor: c.surface, borderBottomColor: c.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.dark} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={c.text} />
         </TouchableOpacity>
-        <Text className="text-dark text-lg font-bold flex-1 ml-4">Revenue Analytics</Text>
+        <Text style={[adminStyles.headerTitle, { color: c.text, fontFamily: font }]}>Revenue Analytics</Text>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
-        {/* Time Period Selector */}
-        <View className="flex-row gap-2 px-3 mt-3 mb-3">
-          {['daily', 'weekly', 'monthly', 'yearly'].map((period) => (
-            <TouchableOpacity
-              key={period}
-              className={`flex-1 py-2 rounded-lg border ${
-                timePeriod === period
-                  ? 'bg-primary border-primary'
-                  : 'bg-white border-gray-300'
-              }`}
-              onPress={() => setTimePeriod(period)}
-            >
-              <Text
-                className={`text-xs font-semibold text-center capitalize ${
-                  timePeriod === period ? 'text-white' : 'text-dark'
-                }`}
-              >
-                {period}
-              </Text>
-            </TouchableOpacity>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[{ backgroundColor: c.surface, borderBottomWidth: 1, borderBottomColor: c.border }]} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}>
+        {PERIODS.map(p => (
+          <TouchableOpacity key={p.key} style={[adminStyles.chip, { backgroundColor: period === p.key ? c.primary : 'transparent', borderColor: period === p.key ? c.primary : c.inputBorder }]} onPress={() => setPeriod(p.key)}>
+            <Text style={[adminStyles.chipText, { color: period === p.key ? '#fff' : c.muted, fontFamily: font }]}>{p.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        {/* Hero revenue card */}
+        <View style={[s.heroCard, { backgroundColor: c.primary }]}>
+          <Text style={[s.heroLabel, { fontFamily: font }]}>Total Revenue</Text>
+          <Text style={[s.heroValue, { fontFamily: font }]}>{formatCurrency(data?.totalRevenue || 0)}</Text>
+          <Text style={[s.heroSub, { fontFamily: font }]}>From all completed transactions</Text>
+        </View>
+
+        {/* Breakdown */}
+        <View style={adminStyles.statsRow}>
+          <View style={[adminStyles.statCard, { backgroundColor: '#fffbeb', borderColor: '#fde68a' }]}>
+            <MaterialCommunityIcons name="percent" size={20} color="#d97706" />
+            <Text style={[adminStyles.statValue, { color: '#92400e', fontFamily: font }]}>{formatCurrency(data?.platformFees || 0)}</Text>
+            <Text style={[adminStyles.statLabel, { color: '#d97706', fontFamily: font }]}>Platform Fees ({commissionRate.toFixed(1)}%)</Text>
+          </View>
+          <View style={[adminStyles.statCard, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }]}>
+            <MaterialCommunityIcons name="wallet" size={20} color="#15803d" />
+            <Text style={[adminStyles.statValue, { color: '#14532d', fontFamily: font }]}>{formatCurrency(data?.providerPayouts || 0)}</Text>
+            <Text style={[adminStyles.statLabel, { color: '#15803d', fontFamily: font }]}>Provider Payouts</Text>
+          </View>
+        </View>
+
+        {/* Key metrics */}
+        <View style={[adminStyles.card, { backgroundColor: c.surface, borderColor: c.border }]}>
+          <Text style={[adminStyles.sectionTitle, { color: c.text, fontFamily: font }]}>Key Metrics</Text>
+          {[{ icon: 'chart-line', label: 'Avg Transaction', value: formatCurrency(totalBookings > 0 ? (data?.totalRevenue || 0) / totalBookings : 0), color: '#2563eb' }, { icon: 'calendar-check', label: 'Total Bookings', value: totalBookings, color: '#15803d' }, { icon: 'trending-up', label: 'Commission Rate', value: `${commissionRate.toFixed(1)}%`, color: c.primary }].map(m => (
+            <View key={m.label} style={[s.metricRow, { borderBottomColor: c.border }]}>
+              <View style={[adminStyles.listIcon, { backgroundColor: `${m.color}18` }]}>
+                <MaterialCommunityIcons name={m.icon as any} size={20} color={m.color} />
+              </View>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={[s.metricLabel, { color: c.muted, fontFamily: font }]}>{m.label}</Text>
+                <Text style={[s.metricValue, { color: c.text, fontFamily: font }]}>{m.value}</Text>
+              </View>
+            </View>
           ))}
         </View>
 
-        {/* Revenue Summary */}
-        <View className="bg-white mx-3 p-4 rounded-lg mb-3">
-          <Text className="text-dark text-lg font-bold mb-4">
-            {timePeriod.charAt(0).toUpperCase() + timePeriod.slice(1)} Revenue Summary
-          </Text>
-
-          {/* Total Revenue Card */}
-          <View className="bg-gradient-to-r rounded-lg p-4 mb-3" style={{ backgroundColor: COLORS.primary }}>
-            <View className="flex-row items-center mb-2">
-              <MaterialCommunityIcons name="currency-usd" size={20} color="white" />
-              <Text className="text-white text-sm ml-2 font-semibold">Total Revenue</Text>
+        {/* Chart */}
+        <View style={[adminStyles.card, { backgroundColor: c.surface, borderColor: c.border }]}>
+          <Text style={[adminStyles.sectionTitle, { color: c.text, fontFamily: font }]}>Revenue by Period</Text>
+          {data?.rows?.length === 0 ? (
+            <View style={adminStyles.empty}>
+              <MaterialCommunityIcons name="chart-line" size={48} color={c.muted} />
+              <Text style={[adminStyles.emptyText, { color: c.muted, fontFamily: font }]}>No revenue data yet</Text>
             </View>
-            <Text className="text-white text-3xl font-bold">
-              {formatCurrency(revenueData.totalRevenue)}
-            </Text>
-            <Text className="text-white text-xs mt-1 opacity-80">
-              From all bookings and transactions
-            </Text>
-          </View>
-
-          {/* Revenue Breakdown */}
-          <View className="flex-row gap-3">
-            {/* Platform Fees */}
-            <View className="flex-1 bg-orange-50 p-3 rounded-lg border border-orange-200">
-              <View className="flex-row items-center mb-2">
-                <MaterialCommunityIcons name="percent" size={16} color={COLORS.warning} />
-                <Text className="text-warning text-xs ml-1 font-semibold">Platform Fees</Text>
+          ) : data?.rows?.map((row, i) => {
+            const pct = ((row.totalRevenue || 0) / maxAmount) * 100;
+            return (
+              <View key={i} style={{ marginBottom: 12 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <Text style={[s.chartLabel, { color: c.muted, fontFamily: font }]}>{row._id}</Text>
+                  <Text style={[s.chartValue, { color: c.primary, fontFamily: font }]}>{formatCurrency(row.totalRevenue || 0)}</Text>
+                </View>
+                <View style={[s.barBg, { backgroundColor: c.border }]}>
+                  <View style={[s.barFill, { width: `${pct}%` as any, backgroundColor: c.primary }]} />
+                </View>
+                <Text style={[s.chartSub, { color: c.muted, fontFamily: font }]}>{row.transactionCount || 0} transactions</Text>
               </View>
-              <Text className="text-orange-900 font-bold text-lg">
-                {formatCurrency(revenueData.platformFees)}
-              </Text>
-              <Text className="text-orange-700 text-xs mt-1">
-                {commissionRate.toFixed(1)}%
-              </Text>
-            </View>
-
-            {/* Provider Payouts */}
-            <View className="flex-1 bg-green-50 p-3 rounded-lg border border-green-200">
-              <View className="flex-row items-center mb-2">
-                <MaterialCommunityIcons name="wallet" size={16} color={COLORS.success} />
-                <Text className="text-success text-xs ml-1 font-semibold">Provider Payouts</Text>
-              </View>
-              <Text className="text-green-900 font-bold text-lg">
-                {formatCurrency(revenueData.providerPayouts)}
-              </Text>
-              <Text className="text-green-700 text-xs mt-1">
-                {(100 - commissionRate).toFixed(1)}%
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Chart Title */}
-        <View className="px-3 mb-2">
-          <Text className="text-dark font-semibold">
-            Revenue by {timePeriod === 'daily' ? 'Day' : timePeriod === 'weekly' ? 'Week' : timePeriod === 'monthly' ? 'Month' : 'Year'}
-          </Text>
-        </View>
-
-        {/* Revenue Chart */}
-        <View className="bg-white mx-3 p-4 rounded-lg mb-3">
-          {revenueData.data.map((item, index) => (
-            <ChartBar
-              key={index}
-              amount={item.amount}
-              maxAmount={maxAmount}
-              label={item.date || item.week || item.month || item.year}
-              bookings={item.bookings}
-            />
-          ))}
-          {revenueData.data.length === 0 && (
-            <View className="items-center justify-center py-8">
-              <MaterialCommunityIcons name="chart-line" size={48} color={COLORS.gray[300]} />
-              <Text className="text-gray-500 mt-3 font-semibold">No revenue yet</Text>
-              <Text className="text-gray-400 text-sm mt-1">Completed payments will appear here</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Additional Metrics */}
-        <View className="bg-white mx-3 p-4 rounded-lg mb-3">
-          <Text className="text-dark font-semibold mb-3">Key Metrics</Text>
-
-          <View className="flex-row items-center justify-between pb-3 border-b border-gray-200 mb-3">
-            <View className="flex-row items-center flex-1">
-              <View className="w-10 h-10 bg-blue-100 rounded-full justify-center items-center">
-                <MaterialCommunityIcons name="chart-line" size={20} color={COLORS.info} />
-              </View>
-              <View className="ml-3">
-                <Text className="text-gray-600 text-xs">Average Transaction</Text>
-                <Text className="text-dark font-bold text-sm mt-1">
-                  {formatCurrency(averageTransaction)}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <View className="flex-row items-center justify-between pb-3 border-b border-gray-200 mb-3">
-            <View className="flex-row items-center flex-1">
-              <View className="w-10 h-10 bg-green-100 rounded-full justify-center items-center">
-                <MaterialCommunityIcons name="calendar-check" size={20} color={COLORS.success} />
-              </View>
-              <View className="ml-3">
-                <Text className="text-gray-600 text-xs">Total Bookings</Text>
-                <Text className="text-dark font-bold text-sm mt-1">
-                  {totalBookings}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center flex-1">
-              <View className="w-10 h-10 bg-purple-100 rounded-full justify-center items-center">
-                <MaterialCommunityIcons name="trending-up" size={20} color={COLORS.primary} />
-              </View>
-              <View className="ml-3">
-                <Text className="text-gray-600 text-xs">Commission Rate</Text>
-                <Text className="text-dark font-bold text-sm mt-1">
-                  {commissionRate.toFixed(1)}%
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Export Options */}
-        <View className="bg-white mx-3 p-4 rounded-lg mb-6">
-          <Text className="text-dark font-semibold mb-3">Export Data</Text>
-
-          <View className="flex-row gap-2">
-            <TouchableOpacity className="flex-1 border border-primary rounded-lg py-2">
-              <View className="flex-row items-center justify-center">
-                <MaterialCommunityIcons name="file-document-outline" size={18} color={COLORS.primary} />
-                <Text className="text-primary font-semibold ml-2 text-sm">PDF</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity className="flex-1 border border-primary rounded-lg py-2">
-              <View className="flex-row items-center justify-center">
-                <MaterialCommunityIcons name="file-excel" size={18} color={COLORS.primary} />
-                <Text className="text-primary font-semibold ml-2 text-sm">Excel</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity className="flex-1 border border-primary rounded-lg py-2">
-              <View className="flex-row items-center justify-center">
-                <MaterialCommunityIcons name="share-variant" size={18} color={COLORS.primary} />
-                <Text className="text-primary font-semibold ml-2 text-sm">Share</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
+            );
+          })}
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
-};
+}
 
-export default RevenueAnalyticsScreen;
+const s = StyleSheet.create({
+  heroCard: { borderRadius: 24, padding: 24, marginBottom: 16 },
+  heroLabel: { color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '700' },
+  heroValue: { color: '#fff', fontSize: 32, fontWeight: '800', marginTop: 4 },
+  heroSub: { color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 4 },
+  metricRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1 },
+  metricLabel: { fontSize: 12, fontWeight: '600' },
+  metricValue: { fontSize: 15, fontWeight: '800', marginTop: 2 },
+  chartLabel: { fontSize: 12, fontWeight: '600' },
+  chartValue: { fontSize: 12, fontWeight: '800' },
+  barBg: { height: 8, borderRadius: 999, overflow: 'hidden' },
+  barFill: { height: 8, borderRadius: 999 },
+  chartSub: { fontSize: 11, marginTop: 2 },
+});

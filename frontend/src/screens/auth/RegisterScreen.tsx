@@ -75,7 +75,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
             <View style={authStyles.brandBadge}>
               <MaterialCommunityIcons name="account-plus" size={54} color="white" />
             </View>
-            <Text style={authStyles.title}>Join Event Compass</Text>
+            <Text style={authStyles.title}>Join Event Compass by Checcas</Text>
             <Text style={authStyles.subtitle}>Discover premium event services in just a few steps</Text>
           </View>
 
@@ -150,16 +150,6 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
             fullWidth
             variant="primary"
             size="lg"
-          />
-
-          <Button
-            title="Register as Service Provider"
-            onPress={() => navigation.navigate('RegisterProvider')}
-            fullWidth
-            variant="secondary"
-            size="md"
-            leftIcon="briefcase-plus-outline"
-            style={{ marginTop: 12 }}
           />
 
           <Text style={authStyles.terms}>

@@ -182,16 +182,37 @@ function BookingsStack() {
 // Provider services stack
 function ProviderServicesStack() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen
         name="ProviderServices"
         component={ProviderServicesScreen}
         options={{ animation: 'slide_from_right' }}
       />
+    </Stack.Navigator>
+  );
+}
+
+// Admin stack
+function AdminStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="AdminDashboardScreen" component={AdminDashboardScreen} />
+      <Stack.Screen name="ManageUsers" component={ManageUsersScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="ManageBookings" component={ManageBookingsScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="ManageServices" component={ManageServicesScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="RevenueAnalytics" component={RevenueAnalyticsScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="CommissionManagement" component={CommissionManagementScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="PaymentMonitoring" component={PaymentMonitoringScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="RefundApproval" component={RefundApprovalScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="ContentModeration" component={ContentModerationScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="ReportsManagement" component={ReportsManagementScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="CategoryManagement" component={CategoryManagementScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="CouponManagement" component={CouponManagementScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="PromotionsManagement" component={PromotionsManagementScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="AnalyticsDashboard" component={AnalyticsDashboardScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="NotificationManagement" component={NotificationManagementScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="CMSManagement" component={CMSManagementScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="AuditLogs" component={AuditLogsScreen} options={{ animation: 'slide_from_right' }} />
     </Stack.Navigator>
   );
 }
@@ -250,86 +271,6 @@ function ProfileStack() {
         component={ChatScreen}
         options={{ animation: 'slide_from_right' }}
       />
-      <Stack.Screen
-        name="ManageUsers"
-        component={ManageUsersScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="ManageBookings"
-        component={ManageBookingsScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="RevenueAnalytics"
-        component={RevenueAnalyticsScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="ManageServices"
-        component={ManageServicesScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="CommissionManagement"
-        component={CommissionManagementScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="PaymentMonitoring"
-        component={PaymentMonitoringScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="RefundApproval"
-        component={RefundApprovalScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="ContentModeration"
-        component={ContentModerationScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="ReportsManagement"
-        component={ReportsManagementScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="CategoryManagement"
-        component={CategoryManagementScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="CouponManagement"
-        component={CouponManagementScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="PromotionsManagement"
-        component={PromotionsManagementScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="AnalyticsDashboard"
-        component={AnalyticsDashboardScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="NotificationManagement"
-        component={NotificationManagementScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="CMSManagement"
-        component={CMSManagementScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="AuditLogs"
-        component={AuditLogsScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
     </Stack.Navigator>
   );
 }
@@ -356,13 +297,20 @@ export default function BottomTabNavigator() {
         shadow: 'rgba(15, 23, 42, 0.16)',
       };
 
-  const tabItems = [
-    { name: 'Home', component: HomeStack, label: 'Home' },
-    { name: 'Search', component: SearchStack, label: 'Search' },
-    { name: 'Bookings', component: BookingsStack, label: 'Bookings' },
-    ...(isProvider ? [{ name: 'Services', component: ProviderServicesStack, label: 'Services' }] : []),
-    { name: 'Profile', component: ProfileStack, label: 'Profile' },
-  ];
+  const isAdmin = user?.role === 'admin';
+
+  const tabItems = isAdmin
+    ? [
+        { name: 'Admin', component: AdminStack, label: 'Admin' },
+        { name: 'Profile', component: ProfileStack, label: 'Profile' },
+      ]
+    : [
+        { name: 'Home', component: HomeStack, label: 'Home' },
+        { name: 'Search', component: SearchStack, label: 'Search' },
+        { name: 'Bookings', component: BookingsStack, label: 'Bookings' },
+        ...(isProvider ? [{ name: 'Services', component: ProviderServicesStack, label: 'Services' }] : []),
+        { name: 'Profile', component: ProfileStack, label: 'Profile' },
+      ];
 
   return (
     <Tab.Navigator
@@ -379,6 +327,8 @@ export default function BottomTabNavigator() {
             iconName = focused ? 'calendar-check' : 'calendar-outline';
           } else if (route.name === 'Services') {
             iconName = focused ? 'briefcase' : 'briefcase-outline';
+          } else if (route.name === 'Admin') {
+            iconName = focused ? 'view-dashboard' : 'view-dashboard-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'account' : 'account-outline';
           }

@@ -13,26 +13,34 @@ import Loading from '../../components/Loading.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { MarketplaceCard, FeatureCard, StatCard } from '../../components/Card.jsx';
 import { useTheme } from '../../context/ThemeContext';
+import { serviceAPI } from '../../services/api.js';
 
 const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
 const featureCategories = [
-  { icon: <MaterialCommunityIcons name="castle" size={24} color="#2f855a" />, title: 'Venues', description: 'Stunning, curated locations', count: 450, variant: 'primary' },
-  { icon: <MaterialCommunityIcons name="silverware-fork-knife" size={24} color="#4c51bf" />, title: 'Catering', description: 'Premium culinary experiences', count: 320, variant: 'secondary' },
-  { icon: <MaterialCommunityIcons name="music-note" size={24} color="#d97706" />, title: 'Entertainment', description: 'Live bands and DJs', count: 280, variant: 'accent' },
-  { icon: <MaterialCommunityIcons name="flower" size={24} color="#db2777" />, title: 'Decor', description: 'Floral and ambient styling', count: 380, variant: 'gradient' },
-  { icon: <MaterialCommunityIcons name="camera" size={24} color="#0f766e" />, title: 'Photography', description: 'Modern content capture', count: 190, variant: 'primary' },
-  { icon: <MaterialCommunityIcons name="car" size={24} color="#2563eb" />, title: 'Transport', description: 'Reliable guest mobility', count: 160, variant: 'secondary' },
-  { icon: <MaterialCommunityIcons name="cake-variant" size={24} color="#b45309" />, title: 'Desserts', description: 'Custom celebration cakes', count: 120, variant: 'accent' },
-  { icon: <MaterialCommunityIcons name="lightbulb-on" size={24} color="#7c3aed" />, title: 'AV & Light', description: 'Sound and lighting setup', count: 95, variant: 'gradient' },
+  { icon: <MaterialCommunityIcons name="tent" size={24} color="#2f855a" />, title: 'Canopies and Tent', description: 'Canopies, tents & marquees', count: 210, variant: 'primary' },
+  { icon: <MaterialCommunityIcons name="seat" size={24} color="#4c51bf" />, title: 'Chairs', description: 'Plastic, chivalry & bridal chairs', count: 340, variant: 'secondary' },
+  { icon: <MaterialCommunityIcons name="table-furniture" size={24} color="#d97706" />, title: 'Tables', description: 'Plastic & banquet tables', count: 280, variant: 'accent' },
+  { icon: <MaterialCommunityIcons name="clipboard-list" size={24} color="#db2777" />, title: 'Event Planners and Managers', description: 'Full-service event planning', count: 180, variant: 'gradient' },
+  { icon: <MaterialCommunityIcons name="store" size={24} color="#0f766e" />, title: 'Events Services Providers and Vendors', description: 'All-in-one event vendors', count: 420, variant: 'primary' },
+  { icon: <MaterialCommunityIcons name="handshake" size={24} color="#2563eb" />, title: 'Events Facilitators and Agents', description: 'Coordination & logistics', count: 95, variant: 'secondary' },
+  { icon: <MaterialCommunityIcons name="account-star" size={24} color="#b45309" />, title: 'Special Events Hosts and Organizers', description: 'Hosts for special occasions', count: 110, variant: 'accent' },
+  { icon: <MaterialCommunityIcons name="home-city" size={24} color="#7c3aed" />, title: 'Events Venues', description: 'Halls, grounds & spaces', count: 450, variant: 'gradient' },
+  { icon: <MaterialCommunityIcons name="palette" size={24} color="#db2777" />, title: 'Event Decorators', description: 'Floral & ambient styling', count: 380, variant: 'primary' },
+  { icon: <MaterialCommunityIcons name="face-woman-shimmer" size={24} color="#ec4899" />, title: 'Make-up Artists', description: 'Bridal & event make-up', count: 260, variant: 'secondary' },
+  { icon: <MaterialCommunityIcons name="account-tie" size={24} color="#0f766e" />, title: 'Ushers', description: 'Professional event ushers', count: 140, variant: 'accent' },
+  { icon: <MaterialCommunityIcons name="shield-account" size={24} color="#374151" />, title: 'Bouncers', description: 'Security & crowd control', count: 90, variant: 'gradient' },
+  { icon: <MaterialCommunityIcons name="warehouse" size={24} color="#b45309" />, title: 'Events Facilities Rental and Hiring Companies', description: 'Equipment & facility hire', count: 175, variant: 'primary' },
+  { icon: <MaterialCommunityIcons name="snowflake" size={24} color="#2563eb" />, title: 'Ice Chilling Services', description: 'Ice & chilling solutions', count: 60, variant: 'secondary' },
+  { icon: <MaterialCommunityIcons name="truck-snowflake" size={24} color="#0f766e" />, title: 'Refrigerated Vans/Cooling Vans Providers', description: 'Cold chain transport', count: 45, variant: 'accent' },
+  { icon: <MaterialCommunityIcons name="silverware-fork-knife" size={24} color="#4c51bf" />, title: 'Food Caterers', description: 'Premium culinary experiences', count: 320, variant: 'gradient' },
+  { icon: <MaterialCommunityIcons name="bottle-wine" size={24} color="#7c3aed" />, title: 'Drinks Suppliers', description: 'Beverages for every event', count: 150, variant: 'primary' },
+  { icon: <MaterialCommunityIcons name="music" size={24} color="#d97706" />, title: 'Music (D-J and Live Performances)', description: 'DJs & live bands', count: 280, variant: 'secondary' },
+  { icon: <MaterialCommunityIcons name="microphone" size={24} color="#db2777" />, title: 'MCs and Compares', description: 'Masters of ceremony', count: 120, variant: 'accent' },
+  { icon: <MaterialCommunityIcons name="emoticon-happy" size={24} color="#b45309" />, title: 'Comedians and Entertainers', description: 'Comedy & live entertainment', count: 85, variant: 'gradient' },
 ];
 
-const stats = [
-  { value: '15K+', label: 'Events Completed', icon: <MaterialCommunityIcons name="calendar-check" size={22} color="#1f7a4d" />, trend: '+12%', trendUp: true },
-  { value: '2.5K+', label: 'Verified Vendors', icon: <MaterialCommunityIcons name="shield-check" size={22} color="#2563eb" />, trend: '+8%', trendUp: true },
-  { value: '50K+', label: 'Happy Customers', icon: <MaterialCommunityIcons name="account-group" size={22} color="#d97706" />, trend: '+15%', trendUp: true },
-  { value: '4.9/5', label: 'Average Rating', icon: <MaterialCommunityIcons name="star-circle" size={22} color="#db2777" />, trend: '+0.1', trendUp: true },
-];
+
 
 export default function HomeScreen({ navigation }: { navigation: any }) {
   const { user } = useAuthStore();
@@ -41,6 +49,8 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === 'dark';
   const [searchInput, setSearchInput] = useState('');
+  const [platformStats, setPlatformStats] = useState<{ completedBookings: number; verifiedVendors: number; totalClients: number; averageRating: string } | null>(null);
+  const [categoryCountMap, setCategoryCountMap] = useState<Record<string, number>>({});
 
   const colors = {
     bg: isDark ? '#050816' : '#f5f7f2',
@@ -54,6 +64,10 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
 
   useEffect(() => {
     getAllServices({ limit: 8 }).catch(() => {});
+    serviceAPI.getPublicStats().then((res: any) => {
+      setPlatformStats(res.stats);
+      setCategoryCountMap(res.categoryCountMap || {});
+    }).catch(() => {});
   }, []);
 
   const handleTabNavigate = (routeName: string, params?: Record<string, unknown>) => {
@@ -175,9 +189,10 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Highlights</Text>
           <View style={styles.statsGrid}>
-            {stats.map((stat, index) => (
-              <StatCard key={index} value={stat.value} label={stat.label} icon={stat.icon} trend={stat.trend} trendUp={stat.trendUp} />
-            ))}
+            <StatCard value={platformStats ? (platformStats.completedBookings >= 1000 ? `${(platformStats.completedBookings / 1000).toFixed(1)}K+` : `${platformStats.completedBookings}+`) : '—'} label="Events Completed" icon={<MaterialCommunityIcons name="calendar-check" size={22} color="#1f7a4d" />} />
+            <StatCard value={platformStats ? `${platformStats.verifiedVendors}+` : '—'} label="Verified Vendors" icon={<MaterialCommunityIcons name="shield-check" size={22} color="#2563eb" />} />
+            <StatCard value={platformStats ? (platformStats.totalClients >= 1000 ? `${(platformStats.totalClients / 1000).toFixed(1)}K+` : `${platformStats.totalClients}+`) : '—'} label="Happy Customers" icon={<MaterialCommunityIcons name="account-group" size={22} color="#d97706" />} />
+            <StatCard value={platformStats ? `${platformStats.averageRating}/5` : '—'} label="Average Rating" icon={<MaterialCommunityIcons name="star-circle" size={22} color="#db2777" />} />
           </View>
         </View>
 
@@ -189,8 +204,8 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
             </TouchableOpacity>
           </View>
           <View style={styles.categoryGrid}>
-            {featureCategories.map((category, index) => (
-              <FeatureCard key={index} icon={category.icon} title={category.title} description={category.description} count={category.count} variant={category.variant} onPress={() => handleCategoryPress(category.title)} style={{ backgroundColor: colors.surface, borderColor: colors.border }} />
+            {featureCategories.slice(0, 5).map((category, index) => (
+              <FeatureCard key={index} icon={category.icon} title={category.title} description={category.description} count={categoryCountMap[category.title] ?? categoryCountMap[category.title.toLowerCase()] ?? category.count} variant={category.variant} onPress={() => handleCategoryPress(category.title)} style={{ backgroundColor: colors.surface, borderColor: colors.border }} />
             ))}
           </View>
         </View>

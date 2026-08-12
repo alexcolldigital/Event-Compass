@@ -1,352 +1,186 @@
-/**
- * Manage Bookings Screen
- * Admin screen for viewing and managing all system bookings
- */
-
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  ScrollView,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  TextInput,
-} from 'react-native';
+import { View, Text, SafeAreaView, FlatList, TouchableOpacity, Alert, TextInput, ScrollView, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import Button from '../../components/Button.jsx';
-import Loading from '../../components/Loading.jsx';
-import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { adminAPI } from '../../services/api.js';
-import { COLORS, BOOKING_STATUS, PAYMENT_STATUS } from '../../utils/constants.js';
-import { formatDate, formatDateTime, formatCurrency, getStatusColor } from '../../utils/helpers.js';
+import Loading from '../../components/Loading.jsx';
+import { useTheme } from '../../context/ThemeContext';
+import { getColors, adminStyles, font } from '../../styles/adminStyles';
+import { formatDate, formatDateTime, formatCurrency } from '../../utils/helpers.js';
 
-const ManageBookingsScreen = () => {
+const STATUS_FILTERS = ['all', 'pending', 'confirmed', 'completed', 'cancelled'];
+const statusColor = (s) => ({ pending: '#f59e0b', confirmed: '#2563eb', completed: '#10b981', cancelled: '#dc2626' }[s] || '#6b7280');
+
+export default function ManageBookingsScreen() {
   const navigation = useNavigation();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const c = getColors(isDark);
 
   const [bookings, setBookings] = useState([]);
-  const [filteredBookings, setFilteredBookings] = useState([]);
+  const [filtered, setFiltered] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchText, setSearchText] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('all');
+  const [expanded, setExpanded] = useState(null);
 
-  useEffect(() => {
-    loadBookings();
-  }, []);
+  useEffect(() => { load(); }, []);
+  useEffect(() => { filter(); }, [search, status, bookings]);
 
-  useEffect(() => {
-    filterBookings();
-  }, [searchText, filterStatus, bookings]);
-
-  const loadBookings = async () => {
+  const load = async () => {
     setIsLoading(true);
-    try {
-      const response = await adminAPI.getAllBookings({ limit: 100 });
-      setBookings(response.bookings || []);
-      setError(null);
-    } catch (err) {
-      setError(err.message || 'Failed to load bookings');
-    } finally {
-      setIsLoading(false);
-    }
+    try { const r = await adminAPI.getAllBookings({ limit: 100 }); setBookings(r.bookings || []); }
+    catch (_) {} finally { setIsLoading(false); }
   };
 
-  const filterBookings = () => {
-    let filtered = bookings;
-
-    // Filter by search text
-    if (searchText.trim()) {
-      filtered = filtered.filter(
-        (booking) => {
-          const client = booking.clientId || booking.client || {};
-          const service = booking.serviceId || booking.service || booking.venue || {};
-          const text = searchText.toLowerCase();
-
-          return (
-            (booking.bookingNumber || '').toLowerCase().includes(text) ||
-            (client.email || '').toLowerCase().includes(text) ||
-            (service.name || '').toLowerCase().includes(text)
-          );
-        }
-      );
+  const filter = () => {
+    let f = bookings;
+    if (search.trim()) {
+      const t = search.toLowerCase();
+      f = f.filter(b => {
+        const client = b.client || b.clientId || {};
+        const svc = b.service || b.serviceId || {};
+        return (b.bookingNumber || '').toLowerCase().includes(t) || (client.email || '').toLowerCase().includes(t) || (svc.name || '').toLowerCase().includes(t);
+      });
     }
-
-    // Filter by status
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter((booking) => booking.status === filterStatus);
-    }
-
-    setFilteredBookings(filtered);
+    if (status !== 'all') f = f.filter(b => b.status === status);
+    setFiltered(f);
   };
 
-  const BookingCard = ({ booking }) => {
-    const statusColor = getStatusColor(booking.status);
-    const client = booking.clientId || booking.client || {};
-    const provider = booking.serviceProviderId || booking.serviceProvider || {};
-    const service = booking.serviceId || booking.service || booking.venue || {};
-    const totalAmount = booking.totalAmount || booking.pricing?.totalAmount || 0;
-    const paymentStatus = booking.paymentStatus || booking.payment?.status || PAYMENT_STATUS.PENDING;
+  const handleAction = (booking, action) => {
+    Alert.alert(`${action.charAt(0).toUpperCase() + action.slice(1)} Booking`, `${action} booking ${booking.bookingNumber}?`, [
+      { text: 'Cancel' },
+      { text: 'Confirm', onPress: async () => {
+        try {
+          let r;
+          if (action === 'confirm') r = await adminAPI.confirmBooking(booking._id);
+          else if (action === 'complete') r = await adminAPI.completeBooking(booking._id);
+          else r = await adminAPI.cancelBooking(booking._id, { reason: 'Cancelled by admin' });
+          setBookings(prev => prev.map(b => b._id === booking._id ? r.booking : b));
+          setExpanded(null);
+          Alert.alert('Success', `Booking ${action}ed`);
+        } catch (e) { Alert.alert('Error', e.message); }
+      }},
+    ]);
+  };
+
+  if (isLoading) return <Loading fullScreen />;
+
+  const BookingCard = ({ item }) => {
+    const open = expanded === item._id;
+    const client = item.client || item.clientId || {};
+    const provider = item.serviceProvider || item.serviceProviderId || {};
+    const svc = item.service || item.serviceId || item.venue || {};
+    const amount = item.totalAmount || item.pricing?.totalAmount || 0;
+    const sc = statusColor(item.status);
 
     return (
-      <TouchableOpacity
-        onPress={() =>
-          setSelectedBooking(selectedBooking?._id === booking._id ? null : booking)
-        }
-        className="bg-white p-3 rounded-lg mb-3 border border-gray-200"
-      >
-        <View className="flex-row items-start justify-between">
-          <View className="flex-1">
-            <View className="flex-row items-center justify-between mb-1">
-              <Text className="text-dark font-semibold">{booking.bookingNumber}</Text>
-              <View className="px-2 py-1 rounded-full" style={{ backgroundColor: statusColor + '20' }}>
-                <Text
-                  className="text-xs font-semibold text-center capitalize"
-                  style={{ color: statusColor }}
-                >
-                  {booking.status}
-                </Text>
-              </View>
-            </View>
-
-            <Text className="text-gray-600 text-sm">{service.name || 'Booked service'}</Text>
-            <Text className="text-gray-500 text-xs mt-1">
-              {client.firstName} {client.lastName}
-            </Text>
-
-            <View className="flex-row items-center justify-between mt-2 pt-2 border-t border-gray-100">
-              <View className="flex-row items-center">
-                <MaterialCommunityIcons name="calendar" size={14} color={COLORS.gray[400]} />
-                <Text className="text-gray-600 text-xs ml-1">
-                  {formatDate(booking.eventDate)}
-                </Text>
-              </View>
-              <Text className="text-primary font-semibold text-sm">
-                {formatCurrency(totalAmount)}
-              </Text>
+      <View>
+        <TouchableOpacity onPress={() => setExpanded(open ? null : item._id)} style={[adminStyles.card, { backgroundColor: c.surface, borderColor: c.border }]}>
+          <View style={adminStyles.cardRow}>
+            <Text style={[s.bookingNum, { color: c.text, fontFamily: font }]}>{item.bookingNumber}</Text>
+            <View style={[adminStyles.badge, { backgroundColor: sc + '20' }]}>
+              <Text style={[adminStyles.badgeText, { color: sc, fontFamily: font, textTransform: 'capitalize' }]}>{item.status}</Text>
             </View>
           </View>
-        </View>
-
-        {/* Expanded Details */}
-        {selectedBooking?._id === booking._id && (
-          <View className="mt-3 pt-3 border-t border-gray-200">
-            {/* Client Info */}
-            <View className="mb-3 pb-3 border-b border-gray-100">
-              <Text className="text-gray-600 text-xs font-semibold mb-2">Client</Text>
-              <View className="flex-row items-center mb-2">
-                <MaterialCommunityIcons name="account" size={16} color={COLORS.primary} />
-                <Text className="text-dark text-sm ml-2 font-semibold">
-                  {client.firstName} {client.lastName}
-                </Text>
-              </View>
-              <View className="flex-row items-center">
-                <MaterialCommunityIcons name="email" size={16} color={COLORS.gray[400]} />
-                <Text className="text-gray-600 text-xs ml-2">{client.email || 'No email'}</Text>
-              </View>
+          <Text style={[s.svcName, { color: c.muted, fontFamily: font }]}>{svc.name || 'Booked service'}</Text>
+          <Text style={[s.clientName, { color: c.muted, fontFamily: font }]}>{client.firstName} {client.lastName}</Text>
+          <View style={[adminStyles.cardRow, { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: c.border }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <MaterialCommunityIcons name="calendar" size={14} color={c.muted} />
+              <Text style={[s.dateText, { color: c.muted, fontFamily: font }]}> {formatDate(item.eventDate)}</Text>
             </View>
+            <Text style={[s.amount, { color: c.primary, fontFamily: font }]}>{formatCurrency(amount)}</Text>
+          </View>
+        </TouchableOpacity>
 
-            {/* Service Provider Info */}
-            <View className="mb-3 pb-3 border-b border-gray-100">
-              <Text className="text-gray-600 text-xs font-semibold mb-2">Service Provider</Text>
-              <View className="flex-row items-center mb-2">
-                <MaterialCommunityIcons name="briefcase" size={16} color={COLORS.primary} />
-                <Text className="text-dark text-sm ml-2 font-semibold">
-                  {provider.businessName || `${provider.firstName || ''} ${provider.lastName || ''}`.trim() || 'Provider'}
-                </Text>
+        {open && (
+          <View style={[s.expandedCard, { backgroundColor: c.surfaceAlt, borderColor: c.border }]}>
+            {[['Client', `${client.firstName} ${client.lastName}`], ['Email', client.email || 'N/A'], ['Provider', provider.businessName || `${provider.firstName || ''} ${provider.lastName || ''}`.trim() || 'N/A'], ['Event Date', formatDateTime(item.eventDate)], ['Guests', item.numberOfGuests || 'N/A'], ['Amount', formatCurrency(amount)], ['Payment', item.paymentStatus || item.payment?.status || 'pending']].map(([k, v]) => (
+              <View key={k} style={s.infoRow}>
+                <Text style={[s.infoKey, { color: c.muted, fontFamily: font }]}>{k}</Text>
+                <Text style={[s.infoVal, { color: c.text, fontFamily: font }]}>{v}</Text>
               </View>
-              <View className="flex-row items-center">
-                <MaterialCommunityIcons name="email" size={16} color={COLORS.gray[400]} />
-                <Text className="text-gray-600 text-xs ml-2">
-                  {provider.email || 'No email'}
-                </Text>
-              </View>
-            </View>
-
-            {/* Booking Details */}
-            <View className="mb-3 pb-3 border-b border-gray-100">
-              <Text className="text-gray-600 text-xs font-semibold mb-2">Details</Text>
-              <View className="flex-row justify-between mb-1">
-                <Text className="text-gray-600 text-xs">Event Date</Text>
-                <Text className="text-dark text-xs font-semibold">
-                  {formatDateTime(booking.eventDate)}
-                </Text>
-              </View>
-              <View className="flex-row justify-between mb-1">
-                <Text className="text-gray-600 text-xs">Guests</Text>
-                <Text className="text-dark text-xs font-semibold">{booking.numberOfGuests}</Text>
-              </View>
-              <View className="flex-row justify-between">
-                <Text className="text-gray-600 text-xs">Booking Date</Text>
-                <Text className="text-dark text-xs font-semibold">
-                  {formatDate(booking.createdAt)}
-                </Text>
-              </View>
-            </View>
-
-            {/* Payment Info */}
-            <View className="mb-3 pb-3 border-b border-gray-100">
-              <Text className="text-gray-600 text-xs font-semibold mb-2">Payment</Text>
-              <View className="flex-row justify-between">
-                <Text className="text-gray-600 text-xs">Amount</Text>
-                <Text className="text-dark text-xs font-semibold">
-                  {formatCurrency(totalAmount)}
-                </Text>
-              </View>
-              <View className="flex-row justify-between items-center mt-1">
-                <Text className="text-gray-600 text-xs">Status</Text>
-                <View
-                  className="px-2 py-1 rounded"
-                  style={{
-                    backgroundColor:
-                      paymentStatus === PAYMENT_STATUS.COMPLETED
-                        ? '#dcfce7'
-                        : paymentStatus === PAYMENT_STATUS.PENDING
-                        ? '#fef3c7'
-                        : '#fee2e2',
-                  }}
-                >
-                  <Text
-                    className="text-xs font-semibold capitalize"
-                    style={{
-                      color:
-                        paymentStatus === PAYMENT_STATUS.COMPLETED
-                          ? '#15803d'
-                          : paymentStatus === PAYMENT_STATUS.PENDING
-                          ? '#92400e'
-                          : '#991b1b',
-                    }}
-                  >
-                    {paymentStatus}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Action Buttons */}
-            <View className="flex-row gap-2">
-              <TouchableOpacity className="flex-1 bg-primary px-3 py-2 rounded-lg">
-                <Text className="text-white text-xs font-semibold text-center">Details</Text>
-              </TouchableOpacity>
-              <TouchableOpacity className="flex-1 border border-gray-300 px-3 py-2 rounded-lg">
-                <Text className="text-dark text-xs font-semibold text-center">Contact</Text>
-              </TouchableOpacity>
+            ))}
+            <View style={adminStyles.actionRow}>
+              {item.status === 'pending' && (
+                <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: '#eff6ff' }]} onPress={() => handleAction(item, 'confirm')}>
+                  <Text style={[adminStyles.actionBtnText, { color: '#2563eb', fontFamily: font }]}>Confirm</Text>
+                </TouchableOpacity>
+              )}
+              {item.status === 'confirmed' && (
+                <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: '#f0fdf4' }]} onPress={() => handleAction(item, 'complete')}>
+                  <Text style={[adminStyles.actionBtnText, { color: '#15803d', fontFamily: font }]}>Complete</Text>
+                </TouchableOpacity>
+              )}
+              {item.status !== 'cancelled' && item.status !== 'completed' && (
+                <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: '#fff1f2' }]} onPress={() => handleAction(item, 'cancel')}>
+                  <Text style={[adminStyles.actionBtnText, { color: '#dc2626', fontFamily: font }]}>Cancel</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         )}
-      </TouchableOpacity>
+      </View>
     );
   };
 
-  if (isLoading) {
-    return <Loading fullScreen message="Loading bookings..." />;
-  }
-
   return (
-    <View className="flex-1 bg-light">
-      {/* Header */}
-      <View className="flex-row items-center p-4 bg-white border-b border-gray-200">
+    <SafeAreaView style={[adminStyles.screen, { backgroundColor: c.bg }]}>
+      <View style={[adminStyles.header, { backgroundColor: c.surface, borderBottomColor: c.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.dark} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={c.text} />
         </TouchableOpacity>
-        <Text className="text-dark text-lg font-bold flex-1 ml-4">Manage Bookings</Text>
+        <Text style={[adminStyles.headerTitle, { color: c.text, fontFamily: font }]}>Manage Bookings</Text>
       </View>
 
-      {error && (
-        <View className="mx-4 mt-3">
-          <ErrorMessage error={error} />
-        </View>
-      )}
-
-      {/* Search and Filter */}
-      <View className="bg-white p-3 mx-3 mt-3 rounded-lg">
-        {/* Search Input */}
-        <View className="flex-row items-center border border-gray-300 rounded-lg px-3 mb-3">
-          <MaterialCommunityIcons name="magnify" size={20} color={COLORS.gray[400]} />
-          <TextInput
-            placeholder="Search by booking number, client, service..."
-            value={searchText}
-            onChangeText={setSearchText}
-            className="flex-1 py-2 ml-2 text-dark"
-            placeholderTextColor={COLORS.gray[400]}
-          />
-          {searchText !== '' && (
-            <TouchableOpacity onPress={() => setSearchText('')}>
-              <MaterialCommunityIcons name="close-circle" size={18} color={COLORS.gray[400]} />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Status Filter */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-2">
-          {[
-            { label: 'All', value: 'all' },
-            { label: 'Pending', value: BOOKING_STATUS.PENDING },
-            { label: 'Confirmed', value: BOOKING_STATUS.CONFIRMED },
-            { label: 'Completed', value: BOOKING_STATUS.COMPLETED },
-            { label: 'Cancelled', value: BOOKING_STATUS.CANCELLED },
-          ].map((filter) => (
-            <TouchableOpacity
-              key={filter.value}
-              className={`py-2 px-3 rounded-lg border ${
-                filterStatus === filter.value
-                  ? 'bg-primary border-primary'
-                  : 'bg-white border-gray-300'
-              }`}
-              onPress={() => setFilterStatus(filter.value)}
-            >
-              <Text
-                className={`text-xs font-semibold ${
-                  filterStatus === filter.value ? 'text-white' : 'text-dark'
-                }`}
-              >
-                {filter.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+      <View style={[adminStyles.statsRow, { paddingHorizontal: 16, marginTop: 12 }]}>
+        {[{ label: 'Total', value: bookings.length, bg: '#eff6ff', color: '#2563eb' }, { label: 'Pending', value: bookings.filter(b => b.status === 'pending').length, bg: '#fffbeb', color: '#d97706' }, { label: 'Completed', value: bookings.filter(b => b.status === 'completed').length, bg: '#f0fdf4', color: '#15803d' }].map(st => (
+          <View key={st.label} style={[adminStyles.statCard, { backgroundColor: st.bg, borderColor: st.color + '30' }]}>
+            <Text style={[adminStyles.statLabel, { color: st.color, fontFamily: font }]}>{st.label}</Text>
+            <Text style={[adminStyles.statValue, { color: st.color, fontFamily: font }]}>{st.value}</Text>
+          </View>
+        ))}
       </View>
 
-      {/* Booking Stats */}
-      <View className="flex-row gap-3 px-3 mt-3 mb-3">
-        <View className="flex-1 bg-blue-50 p-3 rounded-lg border border-blue-200">
-          <Text className="text-blue-700 text-xs font-semibold">Total</Text>
-          <Text className="text-blue-900 text-2xl font-bold mt-1">{bookings.length}</Text>
-        </View>
-        <View className="flex-1 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-          <Text className="text-yellow-700 text-xs font-semibold">Pending</Text>
-          <Text className="text-yellow-900 text-2xl font-bold mt-1">
-            {bookings.filter((b) => b.status === BOOKING_STATUS.PENDING).length}
-          </Text>
-        </View>
-        <View className="flex-1 bg-green-50 p-3 rounded-lg border border-green-200">
-          <Text className="text-green-700 text-xs font-semibold">Completed</Text>
-          <Text className="text-green-900 text-2xl font-bold mt-1">
-            {bookings.filter((b) => b.status === BOOKING_STATUS.COMPLETED).length}
-          </Text>
-        </View>
+      <View style={[adminStyles.searchBar, { backgroundColor: c.surface, borderColor: c.inputBorder }]}>
+        <MaterialCommunityIcons name="magnify" size={20} color={c.muted} />
+        <TextInput style={[adminStyles.searchInput, { color: c.text, fontFamily: font }]} placeholder="Search booking, client..." placeholderTextColor={c.muted} value={search} onChangeText={setSearch} />
+        {search ? <TouchableOpacity onPress={() => setSearch('')}><MaterialCommunityIcons name="close-circle" size={18} color={c.muted} /></TouchableOpacity> : null}
       </View>
 
-      {/* Bookings List */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[{ backgroundColor: c.surface, borderBottomWidth: 1, borderBottomColor: c.border }]} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}>
+        {STATUS_FILTERS.map(f => (
+          <TouchableOpacity key={f} style={[adminStyles.chip, { backgroundColor: status === f ? c.primary : 'transparent', borderColor: status === f ? c.primary : c.inputBorder }]} onPress={() => setStatus(f)}>
+            <Text style={[adminStyles.chipText, { color: status === f ? '#fff' : c.muted, fontFamily: font, textTransform: 'capitalize' }]}>{f}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
       <FlatList
-        data={filteredBookings}
-        keyExtractor={(item) => item._id}
-        renderItem={({ item }) => <BookingCard booking={item} />}
-        contentContainerStyle={{ padding: 12 }}
+        data={filtered}
+        keyExtractor={i => i._id}
+        contentContainerStyle={{ padding: 16 }}
+        renderItem={({ item }) => <BookingCard item={item} />}
         ListEmptyComponent={
-          <View className="items-center justify-center py-8">
-            <MaterialCommunityIcons name="calendar-blank" size={48} color={COLORS.gray[300]} />
-            <Text className="text-gray-500 mt-3 font-semibold">No bookings found</Text>
-            <Text className="text-gray-400 text-sm mt-1">Try adjusting your filters</Text>
+          <View style={adminStyles.empty}>
+            <MaterialCommunityIcons name="calendar-blank" size={48} color={c.muted} />
+            <Text style={[adminStyles.emptyText, { color: c.muted, fontFamily: font }]}>No bookings found</Text>
           </View>
         }
-        scrollEnabled={true}
       />
-    </View>
+    </SafeAreaView>
   );
-};
+}
 
-export default ManageBookingsScreen;
+const s = StyleSheet.create({
+  bookingNum: { fontSize: 14, fontWeight: '800' },
+  svcName: { fontSize: 13, fontWeight: '600', marginTop: 4 },
+  clientName: { fontSize: 12, fontWeight: '500', marginTop: 2 },
+  dateText: { fontSize: 12, fontWeight: '600' },
+  amount: { fontSize: 14, fontWeight: '800' },
+  expandedCard: { borderRadius: 16, borderWidth: 1, padding: 14, marginTop: -8, marginBottom: 10 },
+  infoRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  infoKey: { fontSize: 12, fontWeight: '600' },
+  infoVal: { fontSize: 12, fontWeight: '700' },
+});

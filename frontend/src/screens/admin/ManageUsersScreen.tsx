@@ -1,30 +1,20 @@
-/**
- * Manage Users Screen
- * Admin screen for managing users, blocking, and verification
- */
-
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  ScrollView,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  TextInput,
-} from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Alert, TextInput, SafeAreaView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import Button from '../../components/Button.jsx';
 import Loading from '../../components/Loading.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { adminAPI } from '../../services/api.js';
-import { COLORS, USER_ROLES } from '../../utils/constants.js';
+import { USER_ROLES } from '../../utils/constants.js';
 import { formatDate } from '../../utils/helpers.js';
+import { useTheme } from '../../context/ThemeContext';
+import adminStyles, { getColors, appFont } from '../../styles/adminStyles.js';
 
 const ManageUsersScreen = () => {
   const navigation = useNavigation();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const C = getColors(isDark);
 
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -34,13 +24,8 @@ const ManageUsersScreen = () => {
   const [filterRole, setFilterRole] = useState('all');
   const [selectedUser, setSelectedUser] = useState(null);
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
-  useEffect(() => {
-    filterUsers();
-  }, [searchText, filterRole, users]);
+  useEffect(() => { loadUsers(); }, []);
+  useEffect(() => { filterUsers(); }, [searchText, filterRole, users]);
 
   const loadUsers = async () => {
     setIsLoading(true);
@@ -57,23 +42,15 @@ const ManageUsersScreen = () => {
 
   const filterUsers = () => {
     let filtered = users;
-
-    // Filter by search text
     if (searchText.trim()) {
-      filtered = filtered.filter(
-        (user) =>
-          user.firstName.toLowerCase().includes(searchText.toLowerCase()) ||
-          user.lastName.toLowerCase().includes(searchText.toLowerCase()) ||
-          user.email.toLowerCase().includes(searchText.toLowerCase()) ||
-          (user.phoneNumber || user.phone || '').includes(searchText)
+      filtered = filtered.filter((u) =>
+        u.firstName.toLowerCase().includes(searchText.toLowerCase()) ||
+        u.lastName.toLowerCase().includes(searchText.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchText.toLowerCase()) ||
+        (u.phoneNumber || u.phone || '').includes(searchText)
       );
     }
-
-    // Filter by role
-    if (filterRole !== 'all') {
-      filtered = filtered.filter((user) => user.role === filterRole);
-    }
-
+    if (filterRole !== 'all') filtered = filtered.filter((u) => u.role === filterRole);
     setFilteredUsers(filtered);
   };
 
@@ -82,27 +59,18 @@ const ManageUsersScreen = () => {
       user.isBlocked ? 'Unblock User' : 'Block User',
       user.isBlocked
         ? `Unblock ${user.firstName} ${user.lastName}?`
-        : user.businessName
-        ? `Block ${user.businessName}?`
-        : `Block ${user.firstName} ${user.lastName}?`,
+        : `Block ${user.businessName || `${user.firstName} ${user.lastName}`}?`,
       [
-        { text: 'Cancel', onPress: () => {} },
+        { text: 'Cancel' },
         {
           text: 'Confirm',
           onPress: async () => {
             try {
-              const response = await adminAPI.blockUser(user._id, {
-                reason: user.isBlocked ? undefined : 'Blocked by admin',
-              });
-              const updatedUsers = users.map((u) =>
-                u._id === user._id ? response.user : u
-              );
-              setUsers(updatedUsers);
+              const response = await adminAPI.blockUser(user._id, { reason: user.isBlocked ? undefined : 'Blocked by admin' });
+              setUsers(users.map((u) => u._id === user._id ? response.user : u));
               setSelectedUser(null);
               Alert.alert('Success', `User ${user.isBlocked ? 'unblocked' : 'blocked'} successfully`);
-            } catch (err) {
-              Alert.alert('Error', err.message || 'Failed to update user');
-            }
+            } catch (err) { Alert.alert('Error', err.message || 'Failed to update user'); }
           },
         },
       ]
@@ -110,138 +78,111 @@ const ManageUsersScreen = () => {
   };
 
   const handleVerifyUser = (user) => {
-    Alert.alert(
-      'Verify Provider',
-      `Verify ${user.businessName} as a service provider?`,
-      [
-        { text: 'Cancel', onPress: () => {} },
-        {
-          text: 'Verify',
-          onPress: async () => {
-            try {
-              const response = await adminAPI.verifyProvider(user._id);
-              const updatedUsers = users.map((u) =>
-                u._id === user._id ? response.user : u
-              );
-              setUsers(updatedUsers);
-              setSelectedUser(null);
-              Alert.alert('Success', 'Provider verified successfully');
-            } catch (err) {
-              Alert.alert('Error', err.message || 'Failed to verify provider');
-            }
-          },
+    Alert.alert('Verify Provider', `Verify ${user.businessName} as a service provider?`, [
+      { text: 'Cancel' },
+      {
+        text: 'Verify',
+        onPress: async () => {
+          try {
+            const response = await adminAPI.verifyProvider(user._id);
+            setUsers(users.map((u) => u._id === user._id ? response.user : u));
+            setSelectedUser(null);
+            Alert.alert('Success', 'Provider verified successfully');
+          } catch (err) { Alert.alert('Error', err.message || 'Failed to verify provider'); }
         },
-      ]
-    );
+      },
+    ]);
   };
+
+  const ROLE_FILTERS = [
+    { label: 'All', value: 'all' },
+    { label: 'Clients', value: USER_ROLES.CLIENT },
+    { label: 'Providers', value: USER_ROLES.SERVICE_PROVIDER },
+  ];
+
+  const STAT_CARDS = [
+    { label: 'Total', value: users.length, accent: '#2563eb', bg: isDark ? '#1e3a5f' : '#eff6ff', border: isDark ? '#1e40af' : '#bfdbfe' },
+    { label: 'Active', value: users.filter((u) => !u.isBlocked).length, accent: '#1f7a4d', bg: isDark ? '#14532d' : '#f0fdf4', border: isDark ? '#166534' : '#bbf7d0' },
+    { label: 'Blocked', value: users.filter((u) => u.isBlocked).length, accent: '#dc2626', bg: isDark ? '#450a0a' : '#fff1f2', border: isDark ? '#991b1b' : '#fecaca' },
+  ];
 
   const UserCard = ({ user }) => {
     const isProvider = user.role === USER_ROLES.SERVICE_PROVIDER;
-
+    const expanded = selectedUser?._id === user._id;
     return (
       <TouchableOpacity
-        onPress={() => setSelectedUser(selectedUser?._id === user._id ? null : user)}
-        className="bg-white p-3 rounded-lg mb-3 border border-gray-200"
+        onPress={() => setSelectedUser(expanded ? null : user)}
+        style={[adminStyles.card, { backgroundColor: C.surface, borderColor: C.border }]}
+        activeOpacity={0.85}
       >
-        <View className="flex-row items-start justify-between">
-          <View className="flex-row items-start flex-1">
-            <View className="w-12 h-12 bg-primary rounded-full justify-center items-center mr-3">
-              <MaterialCommunityIcons name="account" size={24} color="white" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-dark font-semibold">
-                {user.firstName} {user.lastName}
-              </Text>
-              {isProvider && (
-                <Text className="text-gray-600 text-xs mt-1">{user.businessName}</Text>
-              )}
-              <Text className="text-gray-500 text-xs mt-1">{user.email}</Text>
-            </View>
+        <View style={adminStyles.cardRow}>
+          <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: C.primary + '22', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+            <MaterialCommunityIcons name="account" size={22} color={C.primary} />
           </View>
-
-          {/* Status Badge */}
-          <View className="ml-2">
-            {user.isBlocked ? (
-              <View className="bg-red-100 px-2 py-1 rounded-full">
-                <Text className="text-red-700 text-xs font-semibold">Blocked</Text>
-              </View>
-            ) : (
-              <View className="bg-green-100 px-2 py-1 rounded-full">
-                <Text className="text-green-700 text-xs font-semibold">Active</Text>
-              </View>
-            )}
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14, fontFamily: appFont }}>
+              {user.firstName} {user.lastName}
+            </Text>
+            {isProvider && <Text style={{ color: C.muted, fontSize: 12, marginTop: 2, fontFamily: appFont }}>{user.businessName}</Text>}
+            <Text style={{ color: C.muted, fontSize: 12, marginTop: 1, fontFamily: appFont }}>{user.email}</Text>
+          </View>
+          <View style={[adminStyles.badge, { backgroundColor: user.isBlocked ? '#fee2e2' : '#dcfce7' }]}>
+            <Text style={[adminStyles.badgeText, { color: user.isBlocked ? '#b91c1c' : '#166534' }]}>
+              {user.isBlocked ? 'Blocked' : 'Active'}
+            </Text>
           </View>
         </View>
 
-        {/* Additional Info */}
-        {selectedUser?._id === user._id && (
-          <View className="mt-3 pt-3 border-t border-gray-200">
-            <View className="flex-row justify-between mb-2">
-              <Text className="text-gray-600 text-xs">Role</Text>
-              <Text className="text-dark text-xs font-semibold capitalize">{user.role}</Text>
-            </View>
-
-            <View className="flex-row justify-between mb-2">
-              <Text className="text-gray-600 text-xs">Phone</Text>
-              <Text className="text-dark text-xs font-semibold">{user.phoneNumber || user.phone || 'Not provided'}</Text>
-            </View>
-
-            <View className="flex-row justify-between mb-2">
-              <Text className="text-gray-600 text-xs">Total Bookings</Text>
-              <Text className="text-dark text-xs font-semibold">{user.totalBookings}</Text>
-            </View>
-
-            <View className="flex-row justify-between mb-2">
-              <Text className="text-gray-600 text-xs">Joined</Text>
-              <Text className="text-dark text-xs font-semibold">
-                {formatDate(user.createdAt)}
-              </Text>
-            </View>
+        {expanded && (
+          <View style={{ marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: C.border }}>
+            {[
+              { label: 'Role', value: user.role },
+              { label: 'Phone', value: user.phoneNumber || user.phone || 'Not provided' },
+              { label: 'Bookings', value: user.totalBookings },
+              { label: 'Joined', value: formatDate(user.createdAt) },
+            ].map((row) => (
+              <View key={row.label} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Text style={{ color: C.muted, fontSize: 12, fontFamily: appFont }}>{row.label}</Text>
+                <Text style={{ color: C.text, fontSize: 12, fontWeight: '700', fontFamily: appFont, textTransform: 'capitalize' }}>{row.value}</Text>
+              </View>
+            ))}
 
             {user.isBlocked && user.blockReason && (
-              <View className="bg-red-50 p-2 rounded mt-2 mb-2">
-                <Text className="text-gray-600 text-xs font-semibold mb-1">Block Reason</Text>
-                <Text className="text-red-700 text-xs">{user.blockReason}</Text>
+              <View style={{ backgroundColor: isDark ? '#450a0a' : '#fff1f2', borderRadius: 10, padding: 10, marginBottom: 10 }}>
+                <Text style={{ color: C.muted, fontSize: 11, fontWeight: '700', marginBottom: 2, fontFamily: appFont }}>Block Reason</Text>
+                <Text style={{ color: '#dc2626', fontSize: 12, fontFamily: appFont }}>{user.blockReason}</Text>
               </View>
             )}
 
             {isProvider && (
-              <View className="flex-row gap-2 mt-2">
+              <View style={{ marginBottom: 10 }}>
                 {user.isBusinessVerified || user.businessVerified ? (
-                  <View className="flex-row items-center flex-1 bg-green-50 p-2 rounded">
-                    <MaterialCommunityIcons name="check-circle" size={14} color={COLORS.success} />
-                    <Text className="text-green-700 text-xs ml-1 font-semibold">Verified</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#14532d' : '#f0fdf4', padding: 10, borderRadius: 10 }}>
+                    <MaterialCommunityIcons name="check-circle" size={14} color={C.success} />
+                    <Text style={{ color: '#166534', fontSize: 12, marginLeft: 6, fontWeight: '700', fontFamily: appFont }}>Verified Provider</Text>
                   </View>
                 ) : (
                   <TouchableOpacity
-                    className="flex-1 bg-blue-50 p-2 rounded"
+                    style={{ backgroundColor: isDark ? '#1e3a5f' : '#eff6ff', padding: 10, borderRadius: 10, alignItems: 'center' }}
                     onPress={() => handleVerifyUser(user)}
                   >
-                    <Text className="text-blue-700 text-xs font-semibold text-center">Verify</Text>
+                    <Text style={{ color: '#2563eb', fontSize: 12, fontWeight: '700', fontFamily: appFont }}>Verify Provider</Text>
                   </TouchableOpacity>
                 )}
               </View>
             )}
 
-            {/* Action Buttons */}
-            <View className="flex-row gap-2 mt-3">
+            <View style={adminStyles.actionRow}>
               <TouchableOpacity
-                className={`flex-1 px-3 py-2 rounded-lg ${
-                  user.isBlocked ? 'bg-green-100' : 'bg-red-100'
-                }`}
+                style={[adminStyles.actionBtn, { backgroundColor: user.isBlocked ? '#dcfce7' : '#fee2e2' }]}
                 onPress={() => handleBlockUser(user)}
               >
-                <Text
-                  className={`text-xs font-semibold text-center ${
-                    user.isBlocked ? 'text-green-700' : 'text-red-700'
-                  }`}
-                >
+                <Text style={[adminStyles.actionBtnText, { color: user.isBlocked ? '#166534' : '#b91c1c' }]}>
                   {user.isBlocked ? 'Unblock' : 'Block'}
                 </Text>
               </TouchableOpacity>
-
-              <TouchableOpacity className="flex-1 px-3 py-2 rounded-lg border border-primary">
-                <Text className="text-primary text-xs font-semibold text-center">Details</Text>
+              <TouchableOpacity style={[adminStyles.actionBtn, { borderWidth: 1, borderColor: C.primary }]}>
+                <Text style={[adminStyles.actionBtnText, { color: C.primary }]}>Details</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -250,119 +191,87 @@ const ManageUsersScreen = () => {
     );
   };
 
-  if (isLoading) {
-    return <Loading fullScreen message="Loading users..." />;
-  }
+  if (isLoading) return <Loading fullScreen message="Loading users..." />;
 
   return (
-    <View className="flex-1 bg-light">
+    <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
       {/* Header */}
-      <View className="flex-row items-center p-4 bg-white border-b border-gray-200">
+      <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.dark} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />
         </TouchableOpacity>
-        <Text className="text-dark text-lg font-bold flex-1 ml-4">Manage Users</Text>
+        <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>Manage Users</Text>
       </View>
 
-      {error && (
-        <View className="mx-4 mt-3">
-          <ErrorMessage error={error} />
-        </View>
-      )}
-
-      {/* Search and Filter */}
-      <View className="bg-white p-3 mx-3 mt-3 rounded-lg">
-        {/* Search Input */}
-        <View className="flex-row items-center border border-gray-300 rounded-lg px-3 mb-3">
-          <MaterialCommunityIcons name="magnify" size={20} color={COLORS.gray[400]} />
-          <TextInput
-            placeholder="Search by name, email, phone..."
-            value={searchText}
-            onChangeText={setSearchText}
-            className="flex-1 py-2 ml-2 text-dark"
-            placeholderTextColor={COLORS.gray[400]}
-          />
-          {searchText !== '' && (
-            <TouchableOpacity onPress={() => setSearchText('')}>
-              <MaterialCommunityIcons name="close-circle" size={18} color={COLORS.gray[400]} />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Role Filter */}
-        <View className="flex-row gap-2">
-          {[
-            { label: 'All', value: 'all' },
-            { label: 'Clients', value: USER_ROLES.CLIENT },
-            { label: 'Providers', value: USER_ROLES.SERVICE_PROVIDER },
-          ].map((filter) => (
-            <TouchableOpacity
-              key={filter.value}
-              className={`flex-1 py-2 px-3 rounded-lg border ${
-                filterRole === filter.value
-                  ? 'bg-primary border-primary'
-                  : 'bg-white border-gray-300'
-              }`}
-              onPress={() => setFilterRole(filter.value)}
-            >
-              <Text
-                className={`text-xs font-semibold text-center ${
-                  filterRole === filter.value ? 'text-white' : 'text-dark'
-                }`}
-              >
-                {filter.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* User Stats */}
-      <View className="flex-row gap-3 px-3 mt-3">
-        <View className="flex-1 bg-blue-50 p-3 rounded-lg border border-blue-200">
-          <Text className="text-blue-700 text-xs font-semibold">Total Users</Text>
-          <Text className="text-blue-900 text-2xl font-bold mt-1">{users.length}</Text>
-        </View>
-        <View className="flex-1 bg-green-50 p-3 rounded-lg border border-green-200">
-          <Text className="text-green-700 text-xs font-semibold">Active</Text>
-          <Text className="text-green-900 text-2xl font-bold mt-1">
-            {users.filter((u) => !u.isBlocked).length}
-          </Text>
-        </View>
-        <View className="flex-1 bg-red-50 p-3 rounded-lg border border-red-200">
-          <Text className="text-red-700 text-xs font-semibold">Blocked</Text>
-          <Text className="text-red-900 text-2xl font-bold mt-1">
-            {users.filter((u) => u.isBlocked).length}
-          </Text>
-        </View>
-      </View>
-
-      {/* Users List */}
       <FlatList
         data={filteredUsers}
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => <UserCard user={item} />}
-        contentContainerStyle={{ padding: 12, paddingTop: 12 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <>
+            {/* Hero */}
+            <View style={[adminStyles.hero, { backgroundColor: C.primary, marginTop: 12 }]}>
+              <Text style={[adminStyles.heroEyebrow, { fontFamily: appFont }]}>ADMIN</Text>
+              <Text style={[adminStyles.heroTitle, { fontFamily: appFont }]}>User Management</Text>
+              <Text style={[adminStyles.heroSubtitle, { fontFamily: appFont }]}>{users.length} registered users</Text>
+            </View>
+
+            {error && <View style={{ marginBottom: 12 }}><ErrorMessage error={error} /></View>}
+
+            {/* Search */}
+            <View style={[adminStyles.searchBar, { backgroundColor: C.surface, borderColor: C.inputBorder }]}>
+              <MaterialCommunityIcons name="magnify" size={20} color={C.muted} />
+              <TextInput
+                placeholder="Search by name, email, phone..."
+                value={searchText}
+                onChangeText={(t) => { setSearchText(t); }}
+                style={[adminStyles.searchInput, { color: C.text, fontFamily: appFont }]}
+                placeholderTextColor={C.muted}
+              />
+              {searchText !== '' && (
+                <TouchableOpacity onPress={() => setSearchText('')}>
+                  <MaterialCommunityIcons name="close-circle" size={18} color={C.muted} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Role Filter */}
+            <View style={adminStyles.filterRow}>
+              {ROLE_FILTERS.map((f) => (
+                <TouchableOpacity
+                  key={f.value}
+                  style={[adminStyles.filterChip, { flex: 1, alignItems: 'center', backgroundColor: filterRole === f.value ? C.primary : C.surface, borderColor: filterRole === f.value ? C.primary : C.inputBorder }]}
+                  onPress={() => setFilterRole(f.value)}
+                >
+                  <Text style={[adminStyles.filterChipText, { color: filterRole === f.value ? '#fff' : C.text, fontFamily: appFont }]}>{f.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Stats */}
+            <View style={adminStyles.statsGrid}>
+              {STAT_CARDS.map((s) => (
+                <View key={s.label} style={[adminStyles.statCard, { backgroundColor: s.bg, borderColor: s.border }]}>
+                  <Text style={[adminStyles.statLabel, { color: s.accent, fontFamily: appFont }]}>{s.label}</Text>
+                  <Text style={[adminStyles.statValue, { color: s.accent, fontFamily: appFont }]}>{s.value}</Text>
+                </View>
+              ))}
+            </View>
+
+            <Text style={[adminStyles.sectionTitle, { color: C.text, fontFamily: appFont }]}>Users</Text>
+          </>
+        }
         ListEmptyComponent={
-          <View className="items-center justify-center py-8">
-            <MaterialCommunityIcons name="account-off" size={48} color={COLORS.gray[300]} />
-            <Text className="text-gray-500 mt-3 font-semibold">No users found</Text>
-            <Text className="text-gray-400 text-sm mt-1">Try adjusting your filters</Text>
+          <View style={adminStyles.emptyState}>
+            <MaterialCommunityIcons name="account-off" size={48} color={C.muted} />
+            <Text style={[adminStyles.emptyText, { color: C.muted, fontFamily: appFont }]}>No users found</Text>
+            <Text style={[adminStyles.emptySubtext, { color: C.muted, fontFamily: appFont }]}>Try adjusting your filters</Text>
           </View>
         }
-        scrollEnabled={true}
       />
-
-      {/* Action Bar */}
-      <View className="bg-white border-t border-gray-200 p-3 flex-row gap-2">
-        <TouchableOpacity className="flex-1 border border-gray-300 rounded-lg py-2">
-          <Text className="text-dark font-semibold text-center">Export</Text>
-        </TouchableOpacity>
-        <TouchableOpacity className="flex-1 border border-gray-300 rounded-lg py-2">
-          <Text className="text-dark font-semibold text-center">Filter</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+    </SafeAreaView>
   );
 };
 

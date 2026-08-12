@@ -1,26 +1,35 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Alert, TextInput, Modal, ScrollView } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Alert, TextInput, ScrollView, SafeAreaView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { adminAPI } from '../../services/api.js';
 import Loading from '../../components/Loading.jsx';
-import { COLORS } from '../../utils/constants.js';
 import { formatDate } from '../../utils/helpers.js';
+import { useTheme } from '../../context/ThemeContext';
+import adminStyles, { getColors, appFont } from '../../styles/adminStyles.js';
 
 const PAGE_TYPES = ['page', 'faq', 'policy', 'blog'];
 const STATUSES = ['draft', 'published', 'archived'];
 const EMPTY_FORM = { title: '', content: '', excerpt: '', type: 'page', status: 'draft', metaTitle: '', metaDescription: '' };
 
+const STATUS_COLORS = { published: '#10b981', draft: '#f59e0b', archived: '#6b7280' };
+const TYPE_COLORS = { page: '#6366f1', faq: '#3b82f6', policy: '#f59e0b', blog: '#10b981' };
+
 export default function CMSManagementScreen() {
   const navigation = useNavigation();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const C = getColors(isDark);
+
   const [pages, setPages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterType, setFilterType] = useState('all');
   const [editingPage, setEditingPage] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [isSaving, setIsSaving] = useState(false);
+  const isEditing = editingPage !== null || form.title !== '' || form.content !== '';
 
-  useEffect(() => { loadPages(); }, [filterType]);
+  useEffect(() => { if (!isEditing) loadPages(); }, [filterType, isEditing]);
 
   const loadPages = async () => {
     setIsLoading(true);
@@ -69,114 +78,138 @@ export default function CMSManagementScreen() {
     ]);
   };
 
-  const statusColor = (s) => ({ published: '#10b981', draft: '#f59e0b', archived: '#6b7280' }[s] || '#6b7280');
-  const typeColor = (t) => ({ page: '#6366f1', faq: '#3b82f6', policy: '#f59e0b', blog: '#10b981' }[t] || '#6b7280');
+  const ChipRow = ({ options, value, onChange }) => (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+      {options.map((o) => (
+        <TouchableOpacity
+          key={o}
+          style={[{ marginRight: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1 }, value === o ? { backgroundColor: C.primary, borderColor: C.primary } : { backgroundColor: C.surfaceAlt, borderColor: C.inputBorder }]}
+          onPress={() => onChange(o)}
+        >
+          <Text style={{ color: value === o ? '#fff' : C.text, fontSize: 12, fontWeight: '700', textTransform: 'capitalize', fontFamily: appFont }}>{o}</Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
+  );
 
-  // Show editor if creating/editing
-  if (editingPage !== null || form.title !== '' || form.content !== '') {
+  // Editor view
+  if (isEditing) {
     return (
-      <View className="flex-1 bg-light">
-        <View className="flex-row items-center p-4 bg-white border-b border-gray-200">
+      <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
+        <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
           <TouchableOpacity onPress={() => { setEditingPage(null); setForm(EMPTY_FORM); }}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.dark} />
+            <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />
           </TouchableOpacity>
-          <Text className="text-dark text-lg font-bold flex-1 ml-4">{editingPage ? 'Edit Page' : 'New Page'}</Text>
-          <TouchableOpacity onPress={handleSave} disabled={isSaving} className="bg-primary px-3 py-1.5 rounded-lg">
-            <Text className="text-white font-semibold text-sm">{isSaving ? 'Saving...' : 'Save'}</Text>
+          <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>{editingPage ? 'Edit Page' : 'New Page'}</Text>
+          <TouchableOpacity onPress={handleSave} disabled={isSaving} style={[adminStyles.badge, { backgroundColor: C.primary, paddingHorizontal: 12, paddingVertical: 6 }]}>
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13, fontFamily: appFont }}>{isSaving ? 'Saving...' : 'Save'}</Text>
           </TouchableOpacity>
         </View>
-        <ScrollView className="flex-1 p-4">
-          <Text className="text-gray-600 text-sm mb-1">Title *</Text>
-          <TextInput className="border border-gray-300 rounded-lg px-3 py-2 mb-3 text-dark bg-white" value={form.title} onChangeText={(v) => setForm((f) => ({ ...f, title: v }))} placeholder="Page title" />
-          <Text className="text-gray-600 text-sm mb-1">Type</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3">
-            {PAGE_TYPES.map((t) => (
-              <TouchableOpacity key={t} className={`mr-2 px-3 py-2 rounded-lg border ${form.type === t ? 'bg-primary border-primary' : 'border-gray-300 bg-white'}`} onPress={() => setForm((f) => ({ ...f, type: t }))}>
-                <Text className={`text-xs font-semibold capitalize ${form.type === t ? 'text-white' : 'text-dark'}`}>{t}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          <Text className="text-gray-600 text-sm mb-1">Status</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3">
-            {STATUSES.map((s) => (
-              <TouchableOpacity key={s} className={`mr-2 px-3 py-2 rounded-lg border ${form.status === s ? 'bg-primary border-primary' : 'border-gray-300 bg-white'}`} onPress={() => setForm((f) => ({ ...f, status: s }))}>
-                <Text className={`text-xs font-semibold capitalize ${form.status === s ? 'text-white' : 'text-dark'}`}>{s}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          <Text className="text-gray-600 text-sm mb-1">Excerpt</Text>
-          <TextInput className="border border-gray-300 rounded-lg px-3 py-2 mb-3 text-dark bg-white" value={form.excerpt} onChangeText={(v) => setForm((f) => ({ ...f, excerpt: v }))} placeholder="Short summary" multiline numberOfLines={2} />
-          <Text className="text-gray-600 text-sm mb-1">Content *</Text>
-          <TextInput className="border border-gray-300 rounded-lg px-3 py-2 mb-3 text-dark bg-white" value={form.content} onChangeText={(v) => setForm((f) => ({ ...f, content: v }))} placeholder="Page content (HTML or plain text)" multiline numberOfLines={10} style={{ minHeight: 200, textAlignVertical: 'top' }} />
-          <Text className="text-gray-600 text-sm mb-1">Meta Title (SEO)</Text>
-          <TextInput className="border border-gray-300 rounded-lg px-3 py-2 mb-3 text-dark bg-white" value={form.metaTitle} onChangeText={(v) => setForm((f) => ({ ...f, metaTitle: v }))} placeholder="SEO title" />
-          <Text className="text-gray-600 text-sm mb-1">Meta Description (SEO)</Text>
-          <TextInput className="border border-gray-300 rounded-lg px-3 py-2 mb-6 text-dark bg-white" value={form.metaDescription} onChangeText={(v) => setForm((f) => ({ ...f, metaDescription: v }))} placeholder="SEO description" multiline numberOfLines={2} />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+          <View style={adminStyles.formField}>
+            <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>Title *</Text>
+            <TextInput style={[adminStyles.formInput, { color: C.text, borderColor: C.inputBorder, backgroundColor: C.surface, fontFamily: appFont }]} value={form.title} onChangeText={(v) => setForm((f) => ({ ...f, title: v }))} placeholder="Page title" placeholderTextColor={C.muted} />
+          </View>
+          <View style={adminStyles.formField}>
+            <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>Type</Text>
+            <ChipRow options={PAGE_TYPES} value={form.type} onChange={(v) => setForm((f) => ({ ...f, type: v }))} />
+          </View>
+          <View style={adminStyles.formField}>
+            <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>Status</Text>
+            <ChipRow options={STATUSES} value={form.status} onChange={(v) => setForm((f) => ({ ...f, status: v }))} />
+          </View>
+          <View style={adminStyles.formField}>
+            <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>Excerpt</Text>
+            <TextInput style={[adminStyles.formInputMultiline, { color: C.text, borderColor: C.inputBorder, backgroundColor: C.surface, fontFamily: appFont, minHeight: 60 }]} value={form.excerpt} onChangeText={(v) => setForm((f) => ({ ...f, excerpt: v }))} placeholder="Short summary" placeholderTextColor={C.muted} multiline numberOfLines={2} />
+          </View>
+          <View style={adminStyles.formField}>
+            <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>Content *</Text>
+            <TextInput style={[adminStyles.formInputMultiline, { color: C.text, borderColor: C.inputBorder, backgroundColor: C.surface, fontFamily: appFont, minHeight: 200 }]} value={form.content} onChangeText={(v) => setForm((f) => ({ ...f, content: v }))} placeholder="Page content (HTML or plain text)" placeholderTextColor={C.muted} multiline numberOfLines={10} />
+          </View>
+          <View style={adminStyles.formField}>
+            <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>Meta Title (SEO)</Text>
+            <TextInput style={[adminStyles.formInput, { color: C.text, borderColor: C.inputBorder, backgroundColor: C.surface, fontFamily: appFont }]} value={form.metaTitle} onChangeText={(v) => setForm((f) => ({ ...f, metaTitle: v }))} placeholder="SEO title" placeholderTextColor={C.muted} />
+          </View>
+          <View style={adminStyles.formField}>
+            <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>Meta Description (SEO)</Text>
+            <TextInput style={[adminStyles.formInputMultiline, { color: C.text, borderColor: C.inputBorder, backgroundColor: C.surface, fontFamily: appFont, minHeight: 60 }]} value={form.metaDescription} onChangeText={(v) => setForm((f) => ({ ...f, metaDescription: v }))} placeholder="SEO description" placeholderTextColor={C.muted} multiline numberOfLines={2} />
+          </View>
         </ScrollView>
-      </View>
+      </SafeAreaView>
     );
   }
 
-  const PageCard = ({ item }) => (
-    <View className="bg-white rounded-xl p-4 mb-3 border border-gray-200">
-      <View className="flex-row justify-between items-start mb-1">
-        <Text className="font-bold text-gray-800 flex-1 mr-2">{item.title}</Text>
-        <View className="flex-row gap-1">
-          <View className="px-2 py-0.5 rounded-full" style={{ backgroundColor: typeColor(item.type) + '20' }}>
-            <Text className="text-xs font-semibold capitalize" style={{ color: typeColor(item.type) }}>{item.type}</Text>
-          </View>
-          <View className="px-2 py-0.5 rounded-full" style={{ backgroundColor: statusColor(item.status) + '20' }}>
-            <Text className="text-xs font-semibold capitalize" style={{ color: statusColor(item.status) }}>{item.status}</Text>
+  const PageCard = ({ item }) => {
+    const typeColor = TYPE_COLORS[item.type] || '#6b7280';
+    const statusColor = STATUS_COLORS[item.status] || '#6b7280';
+    return (
+      <View style={[adminStyles.card, { backgroundColor: C.surface, borderColor: C.border }]}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+          <Text style={{ color: C.text, fontWeight: '700', fontSize: 14, flex: 1, marginRight: 8, fontFamily: appFont }}>{item.title}</Text>
+          <View style={{ flexDirection: 'row', gap: 4 }}>
+            <View style={[adminStyles.badge, { backgroundColor: typeColor + '20' }]}>
+              <Text style={[adminStyles.badgeText, { color: typeColor, textTransform: 'capitalize', fontFamily: appFont }]}>{item.type}</Text>
+            </View>
+            <View style={[adminStyles.badge, { backgroundColor: statusColor + '20' }]}>
+              <Text style={[adminStyles.badgeText, { color: statusColor, textTransform: 'capitalize', fontFamily: appFont }]}>{item.status}</Text>
+            </View>
           </View>
         </View>
+        <Text style={{ color: C.muted, fontSize: 12, fontFamily: appFont }}>/{item.slug} · {formatDate(item.updatedAt)}</Text>
+        <View style={adminStyles.actionRow}>
+          <TouchableOpacity style={[adminStyles.actionBtn, { borderWidth: 1, borderColor: C.primary }]} onPress={() => openEdit(item)}>
+            <Text style={[adminStyles.actionBtnText, { color: C.primary, fontFamily: appFont }]}>Edit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: isDark ? '#450a0a' : '#fee2e2' }]} onPress={() => handleDelete(item)}>
+            <Text style={[adminStyles.actionBtnText, { color: '#b91c1c', fontFamily: appFont }]}>Delete</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-      <Text className="text-gray-500 text-xs">/{item.slug} · {formatDate(item.updatedAt)}</Text>
-      <View className="flex-row gap-2 mt-3">
-        <TouchableOpacity className="flex-1 border border-primary py-2 rounded-lg" onPress={() => openEdit(item)}>
-          <Text className="text-primary font-semibold text-center text-sm">Edit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity className="flex-1 bg-red-50 py-2 rounded-lg" onPress={() => handleDelete(item)}>
-          <Text className="text-red-600 font-semibold text-center text-sm">Delete</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
-    <View className="flex-1 bg-light">
-      <View className="flex-row items-center p-4 bg-white border-b border-gray-200">
+    <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
+      <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.dark} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />
         </TouchableOpacity>
-        <Text className="text-dark text-lg font-bold flex-1 ml-4">CMS Pages</Text>
-        <TouchableOpacity onPress={openCreate} className="bg-primary px-3 py-1.5 rounded-lg">
-          <Text className="text-white font-semibold text-sm">+ New</Text>
+        <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>CMS Pages</Text>
+        <TouchableOpacity onPress={openCreate} style={[adminStyles.badge, { backgroundColor: C.primary, paddingHorizontal: 12, paddingVertical: 6 }]}>
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13, fontFamily: appFont }}>+ New</Text>
         </TouchableOpacity>
       </View>
 
       {/* Type Filter */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="bg-white border-b border-gray-100 px-3 py-2">
-        {['all', ...PAGE_TYPES].map((t) => (
-          <TouchableOpacity key={t} className={`mr-2 px-3 py-1 rounded-full border ${filterType === t ? 'bg-primary border-primary' : 'border-gray-300'}`} onPress={() => setFilterType(t)}>
-            <Text className={`text-xs font-semibold capitalize ${filterType === t ? 'text-white' : 'text-dark'}`}>{t}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <View style={[{ backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border }]}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 10, gap: 8 }}>
+          {['all', ...PAGE_TYPES].map((t) => (
+            <TouchableOpacity
+              key={t}
+              style={[adminStyles.filterChip, { backgroundColor: filterType === t ? C.primary : C.surface, borderColor: filterType === t ? C.primary : C.inputBorder }]}
+              onPress={() => setFilterType(t)}
+            >
+              <Text style={[adminStyles.filterChipText, { color: filterType === t ? '#fff' : C.text, textTransform: 'capitalize', fontFamily: appFont }]}>{t}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       {isLoading ? <Loading /> : (
         <FlatList
           data={pages}
           keyExtractor={(i) => i._id}
           renderItem={({ item }) => <PageCard item={item} />}
-          contentContainerStyle={{ padding: 12 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <View className="items-center py-12">
-              <MaterialCommunityIcons name="file-document-outline" size={48} color={COLORS.gray[300]} />
-              <Text className="text-gray-500 mt-3">No pages yet</Text>
+            <View style={adminStyles.emptyState}>
+              <MaterialCommunityIcons name="file-document-outline" size={48} color={C.muted} />
+              <Text style={[adminStyles.emptyText, { color: C.muted, fontFamily: appFont }]}>No pages yet</Text>
             </View>
           }
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }

@@ -1,16 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { adminAPI } from '../../services/api.js';
 import Loading from '../../components/Loading.jsx';
-import { COLORS } from '../../utils/constants.js';
 import { formatDateTime } from '../../utils/helpers.js';
+import { useTheme } from '../../context/ThemeContext';
+import adminStyles, { getColors, appFont } from '../../styles/adminStyles.js';
 
 const RESOURCES = ['all', 'User', 'Service', 'Booking', 'Payment', 'Category', 'Coupon', 'Promotion', 'Notification', 'CMSPage'];
+const ACTION_COLORS = { success: '#10b981', failure: '#ef4444', warning: '#f59e0b' };
 
 export default function AuditLogsScreen() {
   const navigation = useNavigation();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const C = getColors(isDark);
+
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterResource, setFilterResource] = useState('all');
@@ -31,62 +37,91 @@ export default function AuditLogsScreen() {
     finally { setIsLoading(false); }
   };
 
-  const actionColor = (status: string) => ({ success: '#10b981', failure: '#ef4444', warning: '#f59e0b' }[status] || '#6b7280');
-
-  const LogCard = ({ item }: { item: any }) => (
-    <View className="bg-white rounded-xl p-4 mb-2 border border-gray-200">
-      <View className="flex-row justify-between items-start mb-1">
-        <Text className="font-semibold text-gray-800 flex-1 mr-2 text-sm" numberOfLines={1}>{item.action}</Text>
-        <View className="px-2 py-0.5 rounded-full" style={{ backgroundColor: actionColor(item.status) + '20' }}>
-          <Text className="text-xs font-semibold capitalize" style={{ color: actionColor(item.status) }}>{item.status}</Text>
+  const LogCard = ({ item }: { item: any }) => {
+    const color = ACTION_COLORS[item.status] || '#6b7280';
+    return (
+      <View style={[adminStyles.card, { backgroundColor: C.surface, borderColor: C.border }]}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+          <Text style={{ color: C.text, fontWeight: '700', fontSize: 13, flex: 1, marginRight: 8, fontFamily: appFont }} numberOfLines={1}>{item.action}</Text>
+          <View style={[adminStyles.badge, { backgroundColor: color + '20' }]}>
+            <Text style={[adminStyles.badgeText, { color, textTransform: 'capitalize', fontFamily: appFont }]}>{item.status}</Text>
+          </View>
         </View>
-      </View>
-      <View className="flex-row gap-2 mb-1">
-        <View className="bg-gray-100 px-2 py-0.5 rounded">
-          <Text className="text-gray-600 text-xs">{item.resource}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <View style={[adminStyles.badge, { backgroundColor: C.surfaceAlt }]}>
+            <Text style={[adminStyles.badgeText, { color: C.muted, fontFamily: appFont }]}>{item.resource}</Text>
+          </View>
+          <Text style={{ color: C.muted, fontSize: 12, flex: 1, fontFamily: appFont }}>
+            by {item.actor?.firstName} {item.actor?.lastName} ({item.actorRole})
+          </Text>
         </View>
-        <Text className="text-gray-500 text-xs">by {item.actor?.firstName} {item.actor?.lastName} ({item.actorRole})</Text>
+        <Text style={{ color: C.muted, fontSize: 11, fontFamily: appFont }}>{formatDateTime(item.createdAt)}</Text>
       </View>
-      <Text className="text-gray-400 text-xs">{formatDateTime(item.createdAt)}</Text>
-    </View>
-  );
+    );
+  };
 
   return (
-    <View className="flex-1 bg-light">
-      <View className="flex-row items-center p-4 bg-white border-b border-gray-200">
+    <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
+      <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.dark} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />
         </TouchableOpacity>
-        <Text className="text-dark text-lg font-bold flex-1 ml-4">Audit Logs</Text>
-        <Text className="text-gray-500 text-sm">{total} total</Text>
+        <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>Audit Logs</Text>
+        <View style={[adminStyles.badge, { backgroundColor: C.surfaceAlt }]}>
+          <Text style={[adminStyles.badgeText, { color: C.muted, fontFamily: appFont }]}>{total} total</Text>
+        </View>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="bg-white border-b border-gray-100 px-3 py-2">
-        {RESOURCES.map((r) => (
-          <TouchableOpacity
-            key={r}
-            className={`mr-2 px-3 py-1 rounded-full border ${filterResource === r ? 'bg-primary border-primary' : 'border-gray-300'}`}
-            onPress={() => { setFilterResource(r); setPage(1); }}
-          >
-            <Text className={`text-xs font-semibold ${filterResource === r ? 'text-white' : 'text-dark'}`}>{r}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      {/* Resource Filter */}
+      <View style={[{ backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border }]}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 10, gap: 8 }}>
+          {RESOURCES.map((r) => (
+            <TouchableOpacity
+              key={r}
+              style={[adminStyles.filterChip, { backgroundColor: filterResource === r ? C.primary : C.surface, borderColor: filterResource === r ? C.primary : C.inputBorder }]}
+              onPress={() => { setFilterResource(r); setPage(1); }}
+            >
+              <Text style={[adminStyles.filterChipText, { color: filterResource === r ? '#fff' : C.text, fontFamily: appFont }]}>{r}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       {isLoading ? <Loading /> : (
         <FlatList
           data={logs}
           keyExtractor={(i) => i._id}
           renderItem={({ item }) => <LogCard item={item} />}
-          contentContainerStyle={{ padding: 12 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <View className="items-center py-12">
-              <MaterialCommunityIcons name="clipboard-list-outline" size={48} color={COLORS.gray[300]} />
-              <Text className="text-gray-500 mt-3">No audit logs found</Text>
+            <View style={adminStyles.emptyState}>
+              <MaterialCommunityIcons name="clipboard-list-outline" size={48} color={C.muted} />
+              <Text style={[adminStyles.emptyText, { color: C.muted, fontFamily: appFont }]}>No audit logs found</Text>
             </View>
+          }
+          ListFooterComponent={
+            total > 30 ? (
+              <View style={adminStyles.paginationRow}>
+                <TouchableOpacity
+                  style={[adminStyles.pageBtn, { borderColor: C.inputBorder, opacity: page === 1 ? 0.4 : 1 }]}
+                  onPress={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  <Text style={[adminStyles.pageBtnText, { color: C.text, fontFamily: appFont }]}>Prev</Text>
+                </TouchableOpacity>
+                <Text style={{ color: C.muted, fontFamily: appFont }}>Page {page}</Text>
+                <TouchableOpacity
+                  style={[adminStyles.pageBtn, { borderColor: C.inputBorder }]}
+                  onPress={() => setPage((p) => p + 1)}
+                >
+                  <Text style={[adminStyles.pageBtnText, { color: C.text, fontFamily: appFont }]}>Next</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null
           }
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
