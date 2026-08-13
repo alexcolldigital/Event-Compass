@@ -8,6 +8,7 @@ import { useTheme } from '../../context/ThemeContext';
 const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
 const MENU_ITEMS = [
+  { icon: 'message-text', label: 'Messages', screen: 'Conversations', accent: '#0ea5e9' },
   { icon: 'account-multiple', label: 'User Management', screen: 'ManageUsers', accent: '#2563eb' },
   { icon: 'shield-check', label: 'Provider Approval', screen: 'ManageUsers', params: { filterRole: 'service_provider' }, accent: '#7c3aed' },
   { icon: 'calendar-check', label: 'Booking Management', screen: 'ManageBookings', accent: '#0f766e' },

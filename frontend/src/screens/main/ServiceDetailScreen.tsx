@@ -88,8 +88,7 @@ const ServiceDetailScreen = () => {
     try {
       const cartItem = normalizeCartItem(currentService, quantity);
       addItem(cartItem);
-      Alert.alert('Added to cart', `${currentService.name} is ready for checkout.`);
-      navigation.navigate('Checkout' as never);
+      navigation.navigate('EventDetails' as never);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to add service to cart';
       Alert.alert('Error', message);

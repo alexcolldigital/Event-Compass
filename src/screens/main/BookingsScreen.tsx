@@ -30,11 +30,12 @@ export default function BookingsScreen({ navigation }) {
   };
 
   useEffect(() => {
-    const status = selectedTab === 'cancelled' ? 'cancelled' : selectedTab === 'completed' ? 'completed' : user?.role === 'service_provider' ? 'confirmed' : 'pending';
+    const status = selectedTab === 'cancelled' ? 'cancelled' : selectedTab === 'completed' ? 'completed' : undefined;
+    const query = status ? { status } : {};
     if (user?.role === 'service_provider') {
-      getMyProviderBookings({ status });
+      getMyProviderBookings(query);
     } else {
-      getMyClientBookings({ status });
+      getMyClientBookings(query);
     }
   }, [selectedTab, user]);
 

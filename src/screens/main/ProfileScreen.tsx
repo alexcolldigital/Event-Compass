@@ -3,12 +3,13 @@
  * Clean profile workspace with curated account controls and a polished layout.
  */
 
-import React from 'react';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Image, Alert, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Image, Alert, StyleSheet, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../context/authStore.js';
 import Button from '../../components/Button.jsx';
 import { useTheme } from '../../context/ThemeContext';
+import { messageAPI } from '../../services/api.js';
 
 type ProfileScreenProps = {
   navigation: {
@@ -27,6 +28,24 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const { user, logout } = useAuthStore();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const [contactingSupport, setContactingSupport] = useState(false);
+
+  const handleContactSupport = async () => {
+    setContactingSupport(true);
+    try {
+      const res = await messageAPI.getAdminContacts();
+      const admin = res.admins?.[0];
+      if (!admin) {
+        Alert.alert('Unavailable', 'No support agents are available right now.');
+        return;
+      }
+      navigation.navigate('Chat', { receiver: admin });
+    } catch {
+      Alert.alert('Error', 'Could not connect to support. Please try again.');
+    } finally {
+      setContactingSupport(false);
+    }
+  };
 
   const colors = {
     bg: isDark ? '#0b120d' : '#f5f7f2',
@@ -50,6 +69,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     ...(user?.role === 'admin' ? [{ icon: 'view-dashboard', label: 'Admin Dashboard', onPress: () => navigation.navigate('Admin' as never), color: '#1f7a4d' }] : []),
     { icon: 'account-edit', label: 'Edit Profile', onPress: () => navigation.navigate('EditProfile'), color: '#2563eb' },
     { icon: 'lock', label: 'Change Password', onPress: () => navigation.navigate('ChangePassword'), color: '#8b5cf6' },
+    { icon: 'message-text', label: 'Messages', onPress: () => navigation.navigate('Conversations'), color: '#0ea5e9' },
+    { icon: 'headset', label: 'Contact Support', onPress: handleContactSupport, color: '#f59e0b' },
     { icon: 'bell', label: 'Notifications', onPress: () => navigation.navigate('Notifications'), color: '#ec4899' },
     { icon: 'help-circle', label: 'Help & Support', onPress: () => navigation.navigate('HelpSupport'), color: '#f59e0b' },
     ...(user?.role === 'service_provider' ? [{ icon: 'briefcase-plus', label: 'Manage Services', onPress: () => navigation.navigate('ProviderServices'), color: '#16a34a' }] : []),
@@ -92,7 +113,9 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
                 />
               </View>
               <Text style={[styles.menuLabel, { color: colors.text }]}>{item.label}</Text>
-              <MaterialCommunityIcons name="chevron-right" size={20} color={colors.muted} />
+              {item.label === 'Contact Support' && contactingSupport
+                ? <ActivityIndicator size="small" color={colors.primary} />
+                : <MaterialCommunityIcons name="chevron-right" size={20} color={colors.muted} />}
             </TouchableOpacity>
           ))}
         </View>

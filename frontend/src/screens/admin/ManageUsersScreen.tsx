@@ -77,6 +77,32 @@ const ManageUsersScreen = () => {
     );
   };
 
+  const handleAssignRole = (user) => {
+    const roles = [
+      { label: 'Client', value: 'client' },
+      { label: 'Service Provider', value: 'service_provider' },
+      { label: 'Admin', value: 'admin' },
+    ];
+    Alert.alert(
+      'Assign Role',
+      `Current role: ${user.role}\nSelect new role for ${user.firstName} ${user.lastName}:`,
+      [
+        ...roles.filter(r => r.value !== user.role).map(r => ({
+          text: r.label,
+          onPress: async () => {
+            try {
+              const response = await adminAPI.assignRole(user._id, r.value);
+              setUsers(users.map(u => u._id === user._id ? response.user : u));
+              setSelectedUser(null);
+              Alert.alert('Success', `User role updated to ${r.label}`);
+            } catch (err) { Alert.alert('Error', err.message || 'Failed to assign role'); }
+          },
+        })),
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
   const handleVerifyUser = (user) => {
     Alert.alert('Verify Provider', `Verify ${user.businessName} as a service provider?`, [
       { text: 'Cancel' },
@@ -181,8 +207,11 @@ const ManageUsersScreen = () => {
                   {user.isBlocked ? 'Unblock' : 'Block'}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[adminStyles.actionBtn, { borderWidth: 1, borderColor: C.primary }]}>
-                <Text style={[adminStyles.actionBtnText, { color: C.primary }]}>Details</Text>
+              <TouchableOpacity
+                style={[adminStyles.actionBtn, { backgroundColor: '#f5f3ff' }]}
+                onPress={() => handleAssignRole(user)}
+              >
+                <Text style={[adminStyles.actionBtnText, { color: '#7c3aed' }]}>Assign Role</Text>
               </TouchableOpacity>
             </View>
           </View>

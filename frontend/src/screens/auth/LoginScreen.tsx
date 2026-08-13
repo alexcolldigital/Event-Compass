@@ -105,7 +105,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           </View>
 
           <Button
-            title="Create Client Account"
+            title="Create Account"
             onPress={() => navigation.navigate('Register')}
             variant="outline"
             fullWidth

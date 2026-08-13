@@ -179,6 +179,16 @@ function BookingsStack() {
   );
 }
 
+// Messages stack
+function MessagesStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="ConversationsScreen" component={ConversationsScreen} />
+      <Stack.Screen name="Chat" component={ChatScreen} options={{ animation: 'slide_from_right' }} />
+    </Stack.Navigator>
+  );
+}
+
 // Provider services stack
 function ProviderServicesStack() {
   return (
@@ -213,6 +223,8 @@ function AdminStack() {
       <Stack.Screen name="NotificationManagement" component={NotificationManagementScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="CMSManagement" component={CMSManagementScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="AuditLogs" component={AuditLogsScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="Conversations" component={ConversationsScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="Chat" component={ChatScreen} options={{ animation: 'slide_from_right' }} />
     </Stack.Navigator>
   );
 }
@@ -302,12 +314,14 @@ export default function BottomTabNavigator() {
   const tabItems = isAdmin
     ? [
         { name: 'Admin', component: AdminStack, label: 'Admin' },
+        { name: 'Messages', component: MessagesStack, label: 'Messages' },
         { name: 'Profile', component: ProfileStack, label: 'Profile' },
       ]
     : [
         { name: 'Home', component: HomeStack, label: 'Home' },
         { name: 'Search', component: SearchStack, label: 'Search' },
         { name: 'Bookings', component: BookingsStack, label: 'Bookings' },
+        { name: 'Messages', component: MessagesStack, label: 'Messages' },
         ...(isProvider ? [{ name: 'Services', component: ProviderServicesStack, label: 'Services' }] : []),
         { name: 'Profile', component: ProfileStack, label: 'Profile' },
       ];
@@ -325,6 +339,8 @@ export default function BottomTabNavigator() {
             iconName = 'magnify';
           } else if (route.name === 'Bookings') {
             iconName = focused ? 'calendar-check' : 'calendar-outline';
+          } else if (route.name === 'Messages') {
+            iconName = focused ? 'message-text' : 'message-text-outline';
           } else if (route.name === 'Services') {
             iconName = focused ? 'briefcase' : 'briefcase-outline';
           } else if (route.name === 'Admin') {

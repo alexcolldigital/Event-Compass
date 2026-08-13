@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, SafeAreaView, ScrollView, TouchableOpacity,
-  StyleSheet, Alert, TextInput,
+  StyleSheet, Alert, TextInput, Platform,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
@@ -11,6 +11,18 @@ const EVENT_TYPES = [
   'Wedding', 'Birthday', 'Corporate', 'Burial/Funeral', 'Graduation',
   'Naming Ceremony', 'Engagement', 'Conference', 'Concert', 'Other',
 ];
+
+const NIGERIAN_STATES = [
+  'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue',
+  'Borno', 'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu',
+  'FCT - Abuja', 'Gombe', 'Imo', 'Jigawa', 'Kaduna', 'Kano', 'Katsina',
+  'Kebbi', 'Kogi', 'Kwara', 'Lagos', 'Nasarawa', 'Niger', 'Ogun', 'Ondo',
+  'Osun', 'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara',
+];
+
+const VENUE_TYPES = ['Indoor', 'Outdoor', 'Hybrid', 'Virtual'];
+
+const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
 const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
   const { theme } = useTheme();
@@ -25,40 +37,62 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
     primary: isDark ? '#34d399' : '#1f7a4d',
     chip: isDark ? '#1e293b' : '#f1f5f9',
     chipActive: isDark ? '#064e3b' : '#d1fae5',
+    error: '#ef4444',
   };
 
   const [clientName, setClientName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [clientAddress, setClientAddress] = useState('');
   const [eventType, setEventType] = useState('');
+  const [venueType, setVenueType] = useState('');
   const [eventDescription, setEventDescription] = useState('');
   const [expectedGuests, setExpectedGuests] = useState('');
   const [eventAddress, setEventAddress] = useState('');
   const [lga, setLga] = useState('');
   const [town, setTown] = useState('');
-  const [state, setState] = useState('Lagos');
-  const [eventDate, setEventDate] = useState(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
-  const [eventTime, setEventTime] = useState('12:00 PM');
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [state, setState] = useState('');
+  const [showStateList, setShowStateList] = useState(false);
+  const [eventDateText, setEventDateText] = useState('');
+  const [eventTime, setEventTime] = useState('');
   const [additionalNotes, setAdditionalNotes] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!clientName.trim()) e.clientName = 'Client name is required';
+    if (!phoneNumber.trim()) e.phoneNumber = 'Phone number is required';
+    if (!eventType) e.eventType = 'Please select an event type';
+    if (!eventAddress.trim()) e.eventAddress = 'Event address is required';
+    if (!lga.trim()) e.lga = 'LGA is required';
+    if (!town.trim()) e.town = 'Town / City is required';
+    if (!state.trim()) e.state = 'State is required';
+    if (!expectedGuests.trim() || isNaN(Number(expectedGuests)) || Number(expectedGuests) < 1)
+      e.expectedGuests = 'Enter a valid number of guests';
+    if (!eventDateText.trim()) {
+      e.eventDate = 'Event date is required';
+    } else {
+      const d = new Date(eventDateText);
+      if (isNaN(d.getTime())) e.eventDate = 'Enter a valid date (YYYY-MM-DD)';
+      else if (d < new Date()) e.eventDate = 'Event date must be in the future';
+    }
+    if (!eventTime.trim()) e.eventTime = 'Event time is required';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
   const handleContinue = () => {
-    if (!clientName.trim()) return Alert.alert('Required', 'Please enter the client name.');
-    if (!phoneNumber.trim()) return Alert.alert('Required', 'Please enter a phone number.');
-    if (!eventType) return Alert.alert('Required', 'Please select an event type.');
-    if (!eventAddress.trim()) return Alert.alert('Required', 'Please enter the event address.');
-    if (!lga.trim()) return Alert.alert('Required', 'Please enter the Local Government Area.');
-    if (!town.trim()) return Alert.alert('Required', 'Please enter the town/city.');
-    if (!state.trim()) return Alert.alert('Required', 'Please enter the state.');
-    if (!expectedGuests.trim() || isNaN(Number(expectedGuests)))
-      return Alert.alert('Required', 'Please enter a valid number of expected guests.');
-
+    if (!validate()) {
+      Alert.alert('Missing information', 'Please fill in all required fields.');
+      return;
+    }
+    const eventDate = new Date(eventDateText);
     navigation.navigate('Checkout', {
       eventDetails: {
         clientName: clientName.trim(),
         phoneNumber: phoneNumber.trim(),
         clientAddress: clientAddress.trim(),
         eventType,
+        venueType,
         eventDescription: eventDescription.trim(),
         expectedGuests: Number(expectedGuests),
         eventDate: eventDate.toISOString(),
@@ -76,20 +110,49 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
   };
 
   const Field = ({
-    icon, placeholder, value, onChangeText, keyboardType = 'default', multiline = false,
+    icon, placeholder, value, onChangeText, keyboardType = 'default', multiline = false, fieldKey,
   }: any) => (
-    <View style={[styles.field, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-      <MaterialCommunityIcons name={icon} size={18} color={colors.primary} />
-      <TextInput
-        style={[styles.input, { color: colors.text }, multiline && styles.multiline]}
-        placeholder={placeholder}
-        placeholderTextColor={colors.muted}
-        value={value}
-        onChangeText={onChangeText}
-        keyboardType={keyboardType}
-        multiline={multiline}
-        numberOfLines={multiline ? 3 : 1}
-      />
+    <View style={{ marginBottom: 2 }}>
+      <View style={[
+        styles.field,
+        { borderColor: errors[fieldKey] ? colors.error : colors.border, backgroundColor: colors.surface },
+      ]}>
+        <MaterialCommunityIcons name={icon} size={18} color={errors[fieldKey] ? colors.error : colors.primary} />
+        <TextInput
+          style={[styles.input, { color: colors.text, fontFamily: appFont }, multiline && styles.multiline]}
+          placeholder={placeholder}
+          placeholderTextColor={colors.muted}
+          value={value}
+          onChangeText={(t) => { onChangeText(t); if (errors[fieldKey]) setErrors((p) => ({ ...p, [fieldKey]: '' })); }}
+          keyboardType={keyboardType}
+          multiline={multiline}
+          numberOfLines={multiline ? 3 : 1}
+        />
+      </View>
+      {errors[fieldKey] ? <Text style={[styles.errorText, { color: colors.error }]}>{errors[fieldKey]}</Text> : null}
+    </View>
+  );
+
+  const ChipGroup = ({ options, selected, onSelect, fieldKey }: any) => (
+    <View style={{ marginBottom: 2 }}>
+      <View style={styles.chips}>
+        {options.map((opt: string) => (
+          <TouchableOpacity
+            key={opt}
+            onPress={() => { onSelect(opt); if (errors[fieldKey]) setErrors((p) => ({ ...p, [fieldKey]: '' })); }}
+            style={[
+              styles.chip,
+              {
+                backgroundColor: selected === opt ? colors.chipActive : colors.chip,
+                borderColor: selected === opt ? colors.primary : (errors[fieldKey] ? colors.error : 'transparent'),
+              },
+            ]}
+          >
+            <Text style={[styles.chipText, { color: selected === opt ? colors.primary : colors.muted, fontFamily: appFont }]}>{opt}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      {errors[fieldKey] ? <Text style={[styles.errorText, { color: colors.error }]}>{errors[fieldKey]}</Text> : null}
     </View>
   );
 
@@ -99,91 +162,102 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <MaterialCommunityIcons name="arrow-left" size={22} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Event Details</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.title, { color: colors.text, fontFamily: appFont }]}>Event Details</Text>
+          <Text style={[styles.subtitle, { color: colors.muted, fontFamily: appFont }]}>Step 1 of 2 — Fill in your event info</Text>
+        </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+
+        {/* Progress bar */}
+        <View style={[styles.progressTrack, { backgroundColor: colors.chip }]}>
+          <View style={[styles.progressFill, { backgroundColor: colors.primary, width: '50%' }]} />
+        </View>
+
         {/* Client Info */}
         <SectionLabel label="Client Information" color={colors.muted} />
-        <Field icon="account" placeholder="Client full name *" value={clientName} onChangeText={setClientName} />
-        <Field icon="phone" placeholder="Phone number *" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" />
-        <Field icon="home-outline" placeholder="Client address" value={clientAddress} onChangeText={setClientAddress} />
+        <Field icon="account" placeholder="Client full name *" value={clientName} onChangeText={setClientName} fieldKey="clientName" />
+        <Field icon="phone" placeholder="Phone number *" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" fieldKey="phoneNumber" />
+        <Field icon="home-outline" placeholder="Client home address" value={clientAddress} onChangeText={setClientAddress} fieldKey="clientAddress" />
 
         {/* Event Info */}
         <SectionLabel label="Event Information" color={colors.muted} />
+        <Text style={[styles.label, { color: colors.muted, fontFamily: appFont }]}>Event Type *</Text>
+        <ChipGroup options={EVENT_TYPES} selected={eventType} onSelect={setEventType} fieldKey="eventType" />
 
-        <Text style={[styles.label, { color: colors.muted }]}>Event Type *</Text>
-        <View style={styles.chips}>
-          {EVENT_TYPES.map((type) => (
-            <TouchableOpacity
-              key={type}
-              onPress={() => setEventType(type)}
-              style={[
-                styles.chip,
-                { backgroundColor: eventType === type ? colors.chipActive : colors.chip, borderColor: eventType === type ? colors.primary : 'transparent' },
-              ]}
-            >
-              <Text style={[styles.chipText, { color: eventType === type ? colors.primary : colors.muted }]}>{type}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <Text style={[styles.label, { color: colors.muted, fontFamily: appFont }]}>Venue Type</Text>
+        <ChipGroup options={VENUE_TYPES} selected={venueType} onSelect={setVenueType} fieldKey="venueType" />
 
-        <Field icon="text" placeholder="Event description" value={eventDescription} onChangeText={setEventDescription} multiline />
-        <Field icon="account-group" placeholder="Expected number of guests *" value={expectedGuests} onChangeText={setExpectedGuests} keyboardType="numeric" />
+        <Field icon="text" placeholder="Event description (theme, style, etc.)" value={eventDescription} onChangeText={setEventDescription} multiline fieldKey="eventDescription" />
+        <Field icon="account-group" placeholder="Expected number of guests *" value={expectedGuests} onChangeText={setExpectedGuests} keyboardType="numeric" fieldKey="expectedGuests" />
 
         {/* Date & Time */}
         <SectionLabel label="Date & Time" color={colors.muted} />
-        <TouchableOpacity
-          style={[styles.field, { borderColor: colors.border, backgroundColor: colors.surface }]}
-          onPress={() => setShowDatePicker(true)}
-        >
-          <MaterialCommunityIcons name="calendar" size={18} color={colors.primary} />
-          <Text style={[styles.input, { color: colors.text }]}>{eventDate.toDateString()}</Text>
-        </TouchableOpacity>
-        {showDatePicker && (
-          <View style={[styles.field, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-            <MaterialCommunityIcons name="calendar" size={18} color={colors.primary} />
-            <TextInput
-              style={[styles.input, { color: colors.text }]}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.muted}
-              value={eventDate.toISOString().split('T')[0]}
-              onChangeText={(text) => {
-                const d = new Date(text);
-                if (!isNaN(d.getTime())) { setEventDate(d); setShowDatePicker(false); }
-              }}
-              autoFocus
-            />
-          </View>
-        )}
-        <Field icon="clock-outline" placeholder="Event time (e.g. 3:00 PM) *" value={eventTime} onChangeText={setEventTime} />
+        <Field icon="calendar" placeholder="Event date (YYYY-MM-DD) *" value={eventDateText} onChangeText={setEventDateText} fieldKey="eventDate" />
+        <Field icon="clock-outline" placeholder="Event time (e.g. 3:00 PM) *" value={eventTime} onChangeText={setEventTime} fieldKey="eventTime" />
 
         {/* Location */}
         <SectionLabel label="Event Location" color={colors.muted} />
-        <Field icon="map-marker" placeholder="Full event address *" value={eventAddress} onChangeText={setEventAddress} />
-        <Field icon="city" placeholder="Local Government Area (LGA) *" value={lga} onChangeText={setLga} />
-        <Field icon="home-city" placeholder="Town / City *" value={town} onChangeText={setTown} />
-        <Field icon="map" placeholder="State *" value={state} onChangeText={setState} />
+        <Field icon="map-marker" placeholder="Full event address / venue name *" value={eventAddress} onChangeText={setEventAddress} fieldKey="eventAddress" />
+        <Field icon="city-variant-outline" placeholder="Local Government Area (LGA) *" value={lga} onChangeText={setLga} fieldKey="lga" />
+        <Field icon="home-city" placeholder="Town / City *" value={town} onChangeText={setTown} fieldKey="town" />
+
+        {/* State picker */}
+        <View style={{ marginBottom: 2 }}>
+          <TouchableOpacity
+            style={[styles.field, { borderColor: errors.state ? colors.error : colors.border, backgroundColor: colors.surface }]}
+            onPress={() => setShowStateList((v) => !v)}
+            activeOpacity={0.8}
+          >
+            <MaterialCommunityIcons name="map" size={18} color={errors.state ? colors.error : colors.primary} />
+            <Text style={[styles.input, { color: state ? colors.text : colors.muted, fontFamily: appFont }]}>
+              {state || 'Select State *'}
+            </Text>
+            <MaterialCommunityIcons name={showStateList ? 'chevron-up' : 'chevron-down'} size={18} color={colors.muted} />
+          </TouchableOpacity>
+          {errors.state ? <Text style={[styles.errorText, { color: colors.error }]}>{errors.state}</Text> : null}
+          {showStateList && (
+            <View style={[styles.dropdown, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <ScrollView nestedScrollEnabled style={{ maxHeight: 200 }}>
+                {NIGERIAN_STATES.map((s) => (
+                  <TouchableOpacity
+                    key={s}
+                    style={[styles.dropdownItem, { borderBottomColor: colors.border }]}
+                    onPress={() => { setState(s); setShowStateList(false); if (errors.state) setErrors((p) => ({ ...p, state: '' })); }}
+                  >
+                    <Text style={[styles.dropdownText, { color: s === state ? colors.primary : colors.text, fontFamily: appFont }]}>{s}</Text>
+                    {s === state && <MaterialCommunityIcons name="check" size={16} color={colors.primary} />}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+        </View>
 
         {/* Additional */}
         <SectionLabel label="Additional Information" color={colors.muted} />
-        <Field icon="note-text-outline" placeholder="Any special requirements or notes" value={additionalNotes} onChangeText={setAdditionalNotes} multiline />
+        <Field icon="note-text-outline" placeholder="Special requirements, dietary needs, accessibility, etc." value={additionalNotes} onChangeText={setAdditionalNotes} multiline fieldKey="additionalNotes" />
 
-        <Button title="Continue to Checkout" onPress={handleContinue} fullWidth variant="primary" />
+        <Button title="Continue to Checkout →" onPress={handleContinue} fullWidth variant="primary" style={{ marginTop: 8 }} />
+        <View style={{ height: 16 }} />
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const SectionLabel = ({ label, color }: { label: string; color: string }) => (
-  <Text style={[styles.sectionLabel, { color }]}>{label}</Text>
+  <Text style={[styles.sectionLabel, { color, fontFamily: appFont }]}>{label}</Text>
 );
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, gap: 12 },
   backBtn: { width: 42, height: 42, borderRadius: 14, backgroundColor: '#ecfdf3', alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 20, fontWeight: '800', marginLeft: 16 },
+  title: { fontSize: 20, fontWeight: '800' },
+  subtitle: { fontSize: 12, marginTop: 2 },
+  progressTrack: { height: 6, borderRadius: 99, marginBottom: 16, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 99 },
   content: { padding: 16, gap: 10, paddingBottom: 32 },
   sectionLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 8, marginBottom: 2 },
   label: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 },
@@ -193,6 +267,10 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
   chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
   chipText: { fontSize: 13, fontWeight: '600' },
+  errorText: { fontSize: 11, marginTop: 3, marginLeft: 4 },
+  dropdown: { borderWidth: 1, borderRadius: 12, marginTop: 4, overflow: 'hidden' },
+  dropdownItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 11, borderBottomWidth: 1 },
+  dropdownText: { fontSize: 14 },
 });
 
 export default EventDetailsScreen;

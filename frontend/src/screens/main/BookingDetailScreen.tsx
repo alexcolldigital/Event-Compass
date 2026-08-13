@@ -22,10 +22,9 @@ import { useAuthStore } from '../../context/authStore.js';
 import Button from '../../components/Button.jsx';
 import Loading from '../../components/Loading.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
-import { Card } from '../../components/Card.jsx';
 import { useTheme } from '../../context/ThemeContext';
 import { BOOKING_STATUS, USER_ROLES } from '../../utils/constants.js';
-import { formatCurrency, formatDate, formatDateTime } from '../../utils/helpers.js';
+import { formatCurrency, formatDate, formatDateTime, getStatusColor } from '../../utils/helpers.js';
 
 const BookingDetailScreen = () => {
   const route = useRoute();
@@ -53,13 +52,15 @@ const BookingDetailScreen = () => {
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
 
   const colors = {
-    bg: isDark ? '#050816' : '#f5f7f2',
-    surface: isDark ? '#111827' : '#ffffff',
-    surfaceAlt: isDark ? '#172033' : '#f3f6ef',
-    text: isDark ? '#f8fafc' : '#0f172a',
-    muted: isDark ? '#cbd5e1' : '#64748b',
-    border: isDark ? 'rgba(248,250,252,0.14)' : 'rgba(15,23,42,0.08)',
-    primary: isDark ? '#34d399' : '#1f7a4d',
+    bg: isDark ? '#0b120d' : '#f5f7f2',
+    surface: isDark ? '#151c16' : '#ffffff',
+    surfaceAlt: isDark ? '#1d261f' : '#f3f6ef',
+    text: isDark ? '#f4f8f1' : '#0f172a',
+    muted: isDark ? '#9fb1a3' : '#64748b',
+    border: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)',
+    primary: '#1f7a4d',
+    danger: '#dc2626',
+    dangerBg: isDark ? '#2d1515' : '#fef2f2',
   };
 
   useEffect(() => {
@@ -77,8 +78,7 @@ const BookingDetailScreen = () => {
             await confirmBooking(bookingId);
             Alert.alert('Success', 'Booking confirmed!');
           } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to confirm booking';
-            Alert.alert('Error', message);
+            Alert.alert('Error', err instanceof Error ? err.message : 'Failed to confirm booking');
           }
         },
       },
@@ -100,8 +100,7 @@ const BookingDetailScreen = () => {
             Alert.alert('Success', 'Booking cancelled!');
             navigation.goBack();
           } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to cancel booking';
-            Alert.alert('Error', message);
+            Alert.alert('Error', err instanceof Error ? err.message : 'Failed to cancel booking');
           }
         },
       },
@@ -118,8 +117,7 @@ const BookingDetailScreen = () => {
             await completeBooking(bookingId);
             Alert.alert('Success', 'Booking marked as completed!');
           } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to complete booking';
-            Alert.alert('Error', message);
+            Alert.alert('Error', err instanceof Error ? err.message : 'Failed to complete booking');
           }
         },
       },
@@ -131,90 +129,60 @@ const BookingDetailScreen = () => {
       setIsPaymentLoading(true);
       const origin = process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:19007';
       const response = await createBookingPaymentSession(bookingId, origin);
-      const sessionUrl = response.session?.url;
+      const sessionUrl = response.checkoutUrl || response.session?.url;
       if (!sessionUrl) throw new Error('Unable to create payment session');
-      navigation.navigate('WebCheckout', { url: sessionUrl });
+      navigation.navigate('WebCheckout', { checkoutUrl: sessionUrl, bookingId });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unable to initiate payment right now';
-      Alert.alert('Payment Error', message);
+      Alert.alert('Payment Error', err instanceof Error ? err.message : 'Unable to initiate payment right now');
     } finally {
       setIsPaymentLoading(false);
     }
   };
 
-  const handleReleaseEscrow = () => {
-    Alert.alert('Release escrow', 'Release the held funds to the service provider?', [
-      { text: 'Cancel', onPress: () => {} },
-      {
-        text: 'Release',
-        onPress: async () => {
-          try {
-            await releaseEscrow(bookingId);
-            Alert.alert('Success', 'Escrow released to the provider.');
-          } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to release escrow';
-            Alert.alert('Error', message);
-          }
-        },
-      },
-    ]);
-  };
-
-  const handleDisputeEscrow = () => {
-    Alert.alert('Dispute escrow', 'Open a dispute for this booking?', [
-      { text: 'Cancel', onPress: () => {} },
-      {
-        text: 'Continue',
-        onPress: async () => {
-          try {
-            await disputeEscrow(bookingId, 'Escrow dispute raised by the user.');
-            Alert.alert('Success', 'Escrow dispute opened.');
-          } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to dispute escrow';
-            Alert.alert('Error', message);
-          }
-        },
-      },
-    ]);
-  };
-
-  const handleContactAction = (type) => {
-    const contactValue = type === 'call' ? (contactPhone || '') : (contactEmail || '');
+  const handleContactAction = (type: string) => {
+    if (type === 'message') {
+      const otherParty = isProvider
+        ? { _id: String(client._id || client), firstName: client.firstName || '', lastName: client.lastName || '', role: 'client' }
+        : { _id: String(provider._id || provider), firstName: provider.firstName || '', lastName: provider.lastName || '', businessName: provider.businessName || '', role: 'service_provider' };
+      if (!otherParty._id || otherParty._id === 'undefined') {
+        Alert.alert('Unavailable', 'Cannot open chat for this booking yet.');
+        return;
+      }
+      (navigation as any).navigate('Chat', { receiver: otherParty, booking: currentBooking });
+      return;
+    }
+    const contactValue = type === 'call' ? (isProvider ? client.phone : provider.phone) || '' : '';
     if (!contactValue) {
       Alert.alert('Unavailable', 'Contact details are not available for this booking yet.');
       return;
     }
-    const url = type === 'call' ? `tel:${contactValue}` : `mailto:${contactValue}`;
-    Linking.openURL(url);
+    Linking.openURL(`tel:${contactValue}`);
   };
 
   const isProvider = user?.role === USER_ROLES.SERVICE_PROVIDER;
   const isClient = user?.role === USER_ROLES.CLIENT;
 
-  if (isLoading) {
-    return <Loading fullScreen message="Loading booking details..." />;
-  }
+  if (isLoading) return <Loading fullScreen message="Loading booking details..." />;
 
   if (error) {
     return (
-      <View className="flex-1 bg-light p-4">
-        <ErrorMessage error={error} />
-        <Button
-          title="Go Back"
-          onPress={() => navigation.goBack()}
-          variant="primary"
-          style={{ marginTop: 16 }}
-        />
-      </View>
+      <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
+        <View style={styles.content}>
+          <ErrorMessage error={error} />
+          <Button title="Go Back" onPress={() => navigation.goBack()} variant="primary" style={{ marginTop: 16 }} />
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (!currentBooking) {
     return (
-      <View className="flex-1 bg-light p-4 justify-center items-center">
-        <Text className="text-dark text-lg font-semibold mb-4">Booking not found</Text>
-        <Button title="Go Back" onPress={() => navigation.goBack()} />
-      </View>
+      <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
+        <View style={[styles.content, styles.centered]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Booking not found</Text>
+          <Button title="Go Back" onPress={() => navigation.goBack()} style={{ marginTop: 16 }} />
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -237,315 +205,269 @@ const BookingDetailScreen = () => {
   const openEscrowStatus = () => navigation.navigate('EscrowStatus', { booking: currentBooking });
   const openChat = () => navigation.navigate('Chat', { booking: currentBooking, receiver: isProvider ? client : provider });
   const openDispute = () => navigation.navigate('DisputeEvidence', { booking: currentBooking });
-  const openVerification = () => navigation.navigate('VendorVerification', { provider: provider });
+  const openVerification = () => navigation.navigate('VendorVerification', { provider });
+
+  const paymentStatus = currentBooking.payment?.status;
+  const paymentPillBg = paymentStatus === 'completed' ? '#ecfdf3' : paymentStatus === 'pending' ? '#fff7ed' : '#fef2f2';
+  const paymentPillText = paymentStatus === 'completed' ? '#15803d' : paymentStatus === 'pending' ? '#c2410c' : '#dc2626';
 
   return (
-    <View className="flex-1 bg-light">
-      {/* Header */}
-      <View className="flex-row items-center p-4 bg-white border-b border-gray-200">
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.dark} />
-        </TouchableOpacity>
-        <Text className="text-dark text-lg font-bold flex-1 ml-4">Booking Details</Text>
-      </View>
+    <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
 
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+        {/* Hero Banner */}
+        <View style={[styles.hero, { backgroundColor: colors.primary }]}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <MaterialCommunityIcons name="arrow-left" size={20} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.heroTitle}>Booking Details</Text>
+          <Text style={styles.heroSubtitle}>#{currentBooking.bookingNumber}</Text>
+        </View>
+
         {/* Status Card */}
-        <View className="bg-white p-4 mx-4 mt-4 rounded-lg border-l-4" style={{ borderColor: statusColor }}>
-          <View className="flex-row items-center justify-between mb-2">
-            <Text className="text-gray-600 text-sm">Booking Status</Text>
-            <View className="bg-gray-100 px-3 py-1 rounded-full">
-              <Text className="text-dark text-xs font-bold capitalize">{currentBooking.status}</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, borderLeftColor: statusColor, borderLeftWidth: 4 }]}>
+          <View style={styles.row}>
+            <Text style={[styles.label, { color: colors.muted }]}>Booking Status</Text>
+            <View style={[styles.pill, { backgroundColor: colors.surfaceAlt }]}>
+              <Text style={[styles.pillText, { color: colors.text }]}>{currentBooking.status?.toUpperCase()}</Text>
             </View>
           </View>
-          <Text className="text-dark text-2xl font-bold">
-            Booking #{currentBooking.bookingNumber}
-          </Text>
-          <Text className="text-gray-500 text-xs mt-2">
-            Created: {formatDateTime(currentBooking.createdAt)}
-          </Text>
+          <Text style={[styles.bookingNum, { color: colors.text }]}>Booking #{currentBooking.bookingNumber}</Text>
+          <Text style={[styles.meta, { color: colors.muted }]}>Created: {formatDateTime(currentBooking.createdAt)}</Text>
         </View>
 
         {/* Booking Information */}
-        <View className="bg-white p-4 mx-4 mt-3 rounded-lg">
-          <Text className="text-dark text-lg font-semibold mb-4">Booking Information</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Booking Information</Text>
 
-          <View className="mb-4 pb-4 border-b border-gray-200">
-            <View className="flex-row items-center mb-2">
-              <MaterialCommunityIcons name="briefcase" size={20} color={COLORS.primary} />
-              <Text className="text-gray-600 ml-3 flex-1">Service</Text>
+          <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
+            <View style={styles.iconLabel}>
+              <MaterialCommunityIcons name="briefcase" size={20} color={colors.primary} />
+              <Text style={[styles.label, { color: colors.muted, marginLeft: 10 }]}>Service</Text>
             </View>
-            <Text className="text-dark font-semibold ml-8">
-              {service.name || 'Service'}
-            </Text>
+            <Text style={[styles.value, { color: colors.text }]}>{service.name || 'Service'}</Text>
             {service.serviceType ? (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6, marginLeft: 32 }}>
-                <View style={{ backgroundColor: '#ecfdf3', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
-                  <Text style={{ color: '#1f7a4d', fontSize: 11, fontWeight: '700' }}>{service.serviceType}</Text>
-                </View>
-                {service.category ? (
-                  <View style={{ backgroundColor: '#f1f5f9', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
-                    <Text style={{ color: '#475569', fontSize: 11, fontWeight: '700' }}>{service.category}</Text>
-                  </View>
-                ) : null}
-                {service.subCategory ? (
-                  <View style={{ backgroundColor: '#f1f5f9', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
-                    <Text style={{ color: '#475569', fontSize: 11, fontWeight: '700' }}>{service.subCategory}</Text>
-                  </View>
-                ) : null}
+              <View style={styles.tagRow}>
+                <View style={styles.tagGreen}><Text style={styles.tagGreenText}>{service.serviceType}</Text></View>
+                {service.category ? <View style={[styles.tagGray, { backgroundColor: colors.surfaceAlt }]}><Text style={[styles.tagGrayText, { color: colors.muted }]}>{service.category}</Text></View> : null}
+                {service.subCategory ? <View style={[styles.tagGray, { backgroundColor: colors.surfaceAlt }]}><Text style={[styles.tagGrayText, { color: colors.muted }]}>{service.subCategory}</Text></View> : null}
               </View>
             ) : null}
           </View>
 
-          <View className="mb-4 pb-4 border-b border-gray-200">
-            <View className="flex-row items-center mb-2">
-              <MaterialCommunityIcons name="calendar" size={20} color={COLORS.primary} />
-              <Text className="text-gray-600 ml-3 flex-1">Event Date</Text>
+          <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
+            <View style={styles.iconLabel}>
+              <MaterialCommunityIcons name="calendar" size={20} color={colors.primary} />
+              <Text style={[styles.label, { color: colors.muted, marginLeft: 10 }]}>Event Date</Text>
             </View>
-            <Text className="text-dark font-semibold ml-8">
-              {formatDate(currentBooking.eventDate)}
-            </Text>
+            <Text style={[styles.value, { color: colors.text }]}>{formatDate(currentBooking.eventDate)}</Text>
           </View>
 
-          <View className="mb-4 pb-4 border-b border-gray-200">
-            <View className="flex-row items-center mb-2">
-              <MaterialCommunityIcons name="account-multiple" size={20} color={COLORS.primary} />
-              <Text className="text-gray-600 ml-3 flex-1">Number of Guests</Text>
+          <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
+            <View style={styles.iconLabel}>
+              <MaterialCommunityIcons name="account-multiple" size={20} color={colors.primary} />
+              <Text style={[styles.label, { color: colors.muted, marginLeft: 10 }]}>Number of Guests</Text>
             </View>
-            <Text className="text-dark font-semibold ml-8">{currentBooking.numberOfGuests}</Text>
+            <Text style={[styles.value, { color: colors.text }]}>{currentBooking.numberOfGuests}</Text>
           </View>
 
-          {currentBooking.specialRequirements && (
-            <View className="mb-4">
-              <View className="flex-row items-center mb-2">
-                <MaterialCommunityIcons name="note-text" size={20} color={COLORS.primary} />
-                <Text className="text-gray-600 ml-3 flex-1">Special Requirements</Text>
+          {currentBooking.specialRequirements ? (
+            <View style={styles.infoRowLast}>
+              <View style={styles.iconLabel}>
+                <MaterialCommunityIcons name="note-text" size={20} color={colors.primary} />
+                <Text style={[styles.label, { color: colors.muted, marginLeft: 10 }]}>Special Requirements</Text>
               </View>
-              <Text className="text-dark ml-8">{currentBooking.specialRequirements}</Text>
+              <Text style={[styles.value, { color: colors.text }]}>{currentBooking.specialRequirements}</Text>
             </View>
-          )}
+          ) : null}
         </View>
 
-        {/* Trust and actions */}
-        <View className="bg-white p-4 mx-4 mt-3 rounded-lg">
-          <Text className="text-dark text-lg font-semibold mb-4">Trust & communication</Text>
+        {/* Trust & Communication */}
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Trust & Communication</Text>
 
-          <View className="flex-row items-center justify-between mb-3">
-            <View className="flex-row items-center">
-              <MaterialCommunityIcons name="shield-check" size={18} color={COLORS.primary} />
-              <Text className="text-gray-600 ml-2">Vendor verified</Text>
+          {[
+            { icon: 'shield-check', label: 'Vendor verified', actionLabel: 'View badges', onPress: openVerification },
+            { icon: 'cash-multiple', label: 'Escrow status', actionLabel: 'Check status', onPress: openEscrowStatus },
+            { icon: 'message-text', label: 'Secure chat', actionLabel: 'Open', onPress: openChat },
+            { icon: 'alert-circle', label: 'Dispute', actionLabel: 'Submit evidence', onPress: openDispute },
+          ].map((item, i, arr) => (
+            <View key={item.label} style={[styles.trustRow, i < arr.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: 1 }]}>
+              <View style={styles.iconLabel}>
+                <MaterialCommunityIcons name={item.icon as any} size={18} color={colors.primary} />
+                <Text style={[styles.label, { color: colors.muted, marginLeft: 8 }]}>{item.label}</Text>
+              </View>
+              <TouchableOpacity onPress={item.onPress}>
+                <Text style={[styles.linkText, { color: colors.primary }]}>{item.actionLabel}</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={openVerification}>
-              <Text className="text-primary font-semibold">View badges</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View className="flex-row items-center justify-between mb-3">
-            <View className="flex-row items-center">
-              <MaterialCommunityIcons name="cash-multiple" size={18} color={COLORS.primary} />
-              <Text className="text-gray-600 ml-2">Escrow status</Text>
-            </View>
-            <TouchableOpacity onPress={openEscrowStatus}>
-              <Text className="text-primary font-semibold">Check status</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View className="flex-row items-center justify-between mb-3">
-            <View className="flex-row items-center">
-              <MaterialCommunityIcons name="message-text" size={18} color={COLORS.primary} />
-              <Text className="text-gray-600 ml-2">Secure chat</Text>
-            </View>
-            <TouchableOpacity onPress={openChat}>
-              <Text className="text-primary font-semibold">Open</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center">
-              <MaterialCommunityIcons name="alert-circle" size={18} color={COLORS.primary} />
-              <Text className="text-gray-600 ml-2">Dispute</Text>
-            </View>
-            <TouchableOpacity onPress={openDispute}>
-              <Text className="text-primary font-semibold">Submit evidence</Text>
-            </TouchableOpacity>
-          </View>
+          ))}
         </View>
 
-        {/* Pricing Information */}
-        <View className="bg-white p-4 mx-4 mt-3 rounded-lg">
-          <Text className="text-dark text-lg font-semibold mb-4">Pricing</Text>
+        {/* Pricing */}
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Pricing</Text>
 
-          <View className="flex-row justify-between mb-2">
-            <Text className="text-gray-600">Base Price</Text>
-            <Text className="text-dark font-semibold">
-              {formatCurrency(basePrice)}{service.pricing?.unit ? ` / ${service.pricing.unit.replace('_', ' ')}` : ''}
-            </Text>
-          </View>
-
-          <View className="flex-row justify-between mb-2">
-            <Text className="text-gray-600">Quantity</Text>
-            <Text className="text-dark font-semibold">{quantity}</Text>
-          </View>
-
-          <View className="flex-row justify-between mb-2">
-            <Text className="text-gray-600">Subtotal</Text>
-            <Text className="text-dark font-semibold">{formatCurrency(subtotal)}</Text>
-          </View>
-
-          {discount > 0 && (
-            <View className="flex-row justify-between mb-2">
-              <Text className="text-gray-600">Discount</Text>
-              <Text className="text-success font-semibold">-{formatCurrency(discount)}</Text>
+          {[
+            { label: 'Base Price', value: `${formatCurrency(basePrice)}${service.pricing?.unit ? ` / ${service.pricing.unit.replace('_', ' ')}` : ''}` },
+            { label: 'Quantity', value: String(quantity) },
+            { label: 'Subtotal', value: formatCurrency(subtotal) },
+            ...(discount > 0 ? [{ label: 'Discount', value: `-${formatCurrency(discount)}`, isDiscount: true }] : []),
+            { label: 'Tax', value: formatCurrency(tax) },
+          ].map((row: any) => (
+            <View key={row.label} style={styles.priceRow}>
+              <Text style={[styles.label, { color: colors.muted }]}>{row.label}</Text>
+              <Text style={[styles.value, { color: row.isDiscount ? '#16a34a' : colors.text }]}>{row.value}</Text>
             </View>
-          )}
+          ))}
 
-          <View className="flex-row justify-between mb-3">
-            <Text className="text-gray-600">Tax</Text>
-            <Text className="text-dark font-semibold">{formatCurrency(tax)}</Text>
+          <View style={[styles.totalRow, { borderTopColor: colors.border }]}>
+            <Text style={[styles.totalLabel, { color: colors.text }]}>Total Amount</Text>
+            <Text style={[styles.totalValue, { color: colors.primary }]}>{formatCurrency(totalAmount)}</Text>
           </View>
 
-          <View className="flex-row justify-between pt-3 border-t border-gray-200">
-            <Text className="text-dark text-lg font-bold">Total Amount</Text>
-            <Text className="text-primary text-lg font-bold">
-              {formatCurrency(totalAmount)}
-            </Text>
-          </View>
-
-          {/* Payment Status */}
-          <View className="mt-4 pt-4 border-t border-gray-200">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-gray-600">Payment Status</Text>
-              <View
-                className="px-3 py-1 rounded-full"
-                style={{
-                  backgroundColor:
-                    currentBooking.payment?.status === 'completed'
-                      ? '#dcfce7'
-                      : currentBooking.payment?.status === 'pending'
-                      ? '#fef3c7'
-                      : '#fee2e2',
-                }}
-              >
-                <Text
-                  className="text-xs font-semibold capitalize"
-                  style={{
-                    color:
-                      currentBooking.payment?.status === 'completed'
-                        ? '#15803d'
-                        : currentBooking.payment?.status === 'pending'
-                        ? '#92400e'
-                        : '#991b1b',
-                  }}
-                >
-                  {currentBooking.payment?.status || 'Pending'}
-                </Text>
-              </View>
+          <View style={[styles.paymentStatusRow, { borderTopColor: colors.border }]}>
+            <Text style={[styles.label, { color: colors.muted }]}>Payment Status</Text>
+            <View style={[styles.pill, { backgroundColor: paymentPillBg }]}>
+              <Text style={[styles.pillText, { color: paymentPillText }]}>{paymentStatus || 'Pending'}</Text>
             </View>
           </View>
         </View>
 
         {/* Party Information */}
-        <View className="bg-white p-4 mx-4 mt-3 rounded-lg">
-          <Text className="text-dark text-lg font-semibold mb-4">Party Information</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Party Information</Text>
 
-          <View className="mb-4 pb-4 border-b border-gray-200">
-            <Text className="text-gray-600 text-sm mb-2">
-              {isProvider ? 'Client' : 'Service Provider'}
-            </Text>
-            <Text className="text-dark font-semibold">
+          <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.label, { color: colors.muted }]}>{isProvider ? 'Client' : 'Service Provider'}</Text>
+            <Text style={[styles.value, { color: colors.text }]}>
               {isProvider
-                ? client.firstName +
-                  ' ' +
-                  client.lastName
+                ? `${client.firstName} ${client.lastName}`
                 : provider.businessName || `${provider.firstName || ''} ${provider.lastName || ''}`.trim()}
             </Text>
-            <Text className="text-gray-500 text-sm mt-1">
-              {isProvider ? client.email : provider.email}
-            </Text>
+            <Text style={[styles.meta, { color: colors.muted }]}>{isProvider ? client.email : provider.email}</Text>
           </View>
 
-          <View className="flex-row gap-2">
-            <TouchableOpacity className="flex-1 border border-primary rounded-lg py-3">
-              <View className="flex-row items-center justify-center">
-                <MaterialCommunityIcons name="phone" size={18} color={COLORS.primary} />
-                <Text className="text-primary font-semibold ml-2">Call</Text>
-              </View>
+          <View style={styles.contactRow}>
+            <TouchableOpacity style={[styles.contactBtn, { borderColor: colors.primary }]} onPress={() => handleContactAction('call')}>
+              <MaterialCommunityIcons name="phone" size={18} color={colors.primary} />
+              <Text style={[styles.contactBtnText, { color: colors.primary }]}>Call</Text>
             </TouchableOpacity>
-            <TouchableOpacity className="flex-1 border border-primary rounded-lg py-3">
-              <View className="flex-row items-center justify-center">
-                <MaterialCommunityIcons name="message" size={18} color={COLORS.primary} />
-                <Text className="text-primary font-semibold ml-2">Message</Text>
-              </View>
+            <TouchableOpacity style={[styles.contactBtn, { borderColor: colors.primary }]} onPress={() => handleContactAction('message')}>
+              <MaterialCommunityIcons name="message" size={18} color={colors.primary} />
+              <Text style={[styles.contactBtnText, { color: colors.primary }]}>Message</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Action Buttons */}
-        <View className="bg-white p-4 mx-4 mt-3 mb-6 rounded-lg">
-          <Text className="text-dark text-lg font-semibold mb-4">Actions</Text>
+        {/* Actions */}
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, marginBottom: 0 }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Actions</Text>
 
-          {/* For Provider */}
           {isProvider && isPending && (
-            <View className="gap-2">
+            <View style={styles.actionGap}>
               <Button title="Confirm Booking" onPress={handleConfirmBooking} variant="primary" fullWidth />
               <Button title="Decline" onPress={() => setShowCancelForm(true)} variant="danger" fullWidth />
             </View>
           )}
 
           {isProvider && isConfirmed && (
-            <Button
-              title="Mark as Completed"
-              onPress={handleCompleteBooking}
-              variant="primary"
-              fullWidth
-            />
+            <Button title="Mark as Completed" onPress={handleCompleteBooking} variant="primary" fullWidth />
           )}
 
-          {/* For Client */}
           {isClient && isPending && (
             <Button title="Cancel Booking" onPress={() => setShowCancelForm(true)} variant="danger" fullWidth />
           )}
 
           {isClient && isConfirmed && (
-            <View className="gap-2">
-              <Button title="View Payment Details" variant="outline" fullWidth />
+            <View style={styles.actionGap}>
+              {paymentStatus !== 'completed' ? (
+                <Button
+                  title={isPaymentLoading ? 'Opening Payment...' : 'Pay Now'}
+                  onPress={handlePayNow}
+                  isLoading={isPaymentLoading}
+                  variant="primary"
+                  fullWidth
+                />
+              ) : (
+                <Button title="Payment Completed" variant="outline" fullWidth />
+              )}
               <Button title="Cancel Booking" onPress={() => setShowCancelForm(true)} variant="danger" fullWidth />
             </View>
           )}
 
-          {/* Cancel Form */}
           {showCancelForm && !isCancelled && (
-            <View className="mt-4 p-3 bg-red-50 rounded-lg border border-red-200">
-              <Text className="text-dark font-semibold mb-2">Reason for Cancellation</Text>
-              <View className="bg-white border border-gray-300 rounded p-3 mb-3">
+            <View style={[styles.cancelForm, { backgroundColor: colors.dangerBg, borderColor: '#fca5a5' }]}>
+              <Text style={[styles.value, { color: colors.text, marginBottom: 8 }]}>Reason for Cancellation</Text>
+              <View style={[styles.textInputWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <TextInput
-                  className="text-gray-600"
+                  style={{ color: colors.text }}
                   placeholder="Enter reason..."
+                  placeholderTextColor={colors.muted}
                   value={cancelReason}
                   onChangeText={setCancelReason}
                   multiline
                 />
               </View>
-              <View className="flex-row gap-2">
-                <TouchableOpacity
-                  className="flex-1 border border-gray-300 rounded-lg py-2"
-                  onPress={() => setShowCancelForm(false)}
-                >
-                  <Text className="text-dark font-semibold text-center">Cancel</Text>
+              <View style={styles.cancelBtns}>
+                <TouchableOpacity style={[styles.cancelSecondary, { borderColor: colors.border }]} onPress={() => setShowCancelForm(false)}>
+                  <Text style={[styles.value, { color: colors.text, textAlign: 'center' }]}>Back</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  className="flex-1 bg-red-500 rounded-lg py-2"
-                  onPress={handleCancelBooking}
-                >
-                  <Text className="text-white font-semibold text-center">Confirm</Text>
+                <TouchableOpacity style={styles.cancelPrimary} onPress={handleCancelBooking}>
+                  <Text style={styles.cancelPrimaryText}>Confirm Cancel</Text>
                 </TouchableOpacity>
               </View>
             </View>
           )}
         </View>
+
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  content: { paddingHorizontal: 16, paddingBottom: 32 },
+  centered: { justifyContent: 'center', alignItems: 'center', flex: 1 },
+  hero: { borderRadius: 28, padding: 20, marginTop: 8, marginBottom: 16 },
+  backBtn: { width: 36, height: 36, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  heroTitle: { color: '#fff', fontSize: 24, fontWeight: '800' },
+  heroSubtitle: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 4 },
+  card: { borderRadius: 24, borderWidth: 1, padding: 16, marginBottom: 12 },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  bookingNum: { fontSize: 20, fontWeight: '800', marginBottom: 4 },
+  meta: { fontSize: 12 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', marginBottom: 14 },
+  infoRow: { paddingBottom: 14, marginBottom: 14, borderBottomWidth: 1 },
+  infoRowLast: { paddingBottom: 4 },
+  iconLabel: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  label: { fontSize: 13 },
+  value: { fontSize: 14, fontWeight: '700' },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
+  tagGreen: { backgroundColor: '#ecfdf3', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  tagGreenText: { color: '#1f7a4d', fontSize: 11, fontWeight: '700' },
+  tagGray: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  tagGrayText: { fontSize: 11, fontWeight: '700' },
+  trustRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
+  linkText: { fontSize: 13, fontWeight: '700' },
+  priceRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, paddingTop: 12, marginTop: 4, marginBottom: 12 },
+  totalLabel: { fontSize: 16, fontWeight: '800' },
+  totalValue: { fontSize: 16, fontWeight: '800' },
+  paymentStatusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, paddingTop: 12 },
+  pill: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  pillText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.6, textTransform: 'capitalize' },
+  contactRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  contactBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: 16, paddingVertical: 12, gap: 6 },
+  contactBtnText: { fontSize: 14, fontWeight: '700' },
+  actionGap: { gap: 10 },
+  cancelForm: { marginTop: 14, padding: 14, borderRadius: 16, borderWidth: 1 },
+  textInputWrap: { borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 12 },
+  cancelBtns: { flexDirection: 'row', gap: 10 },
+  cancelSecondary: { flex: 1, borderWidth: 1, borderRadius: 12, paddingVertical: 10 },
+  cancelPrimary: { flex: 1, backgroundColor: '#dc2626', borderRadius: 12, paddingVertical: 10, alignItems: 'center' },
+  cancelPrimaryText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+});
 
 export default BookingDetailScreen;

@@ -25,7 +25,7 @@ import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { Card } from '../../components/Card.jsx';
 import { useTheme } from '../../context/ThemeContext';
 import { BOOKING_STATUS, USER_ROLES } from '../../utils/constants.js';
-import { formatCurrency, formatDate, formatDateTime } from '../../utils/helpers.js';
+import { formatCurrency, formatDate, formatDateTime, getStatusColor } from '../../utils/helpers.js';
 
 const BookingDetailScreen = () => {
   const route = useRoute();
@@ -132,13 +132,13 @@ const BookingDetailScreen = () => {
       setIsPaymentLoading(true);
       const origin = process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:19007';
       const response = await createBookingPaymentSession(bookingId, origin);
-      const sessionUrl = response.session?.url;
+      const sessionUrl = response.checkoutUrl || response.session?.url;
 
       if (!sessionUrl) {
         throw new Error('Unable to create payment session');
       }
 
-      navigation.navigate('WebCheckout', { url: sessionUrl });
+      navigation.navigate('WebCheckout', { checkoutUrl: sessionUrl, bookingId });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unable to initiate payment right now';
       Alert.alert('Payment Error', message);
@@ -184,14 +184,23 @@ const BookingDetailScreen = () => {
   };
 
   const handleContactAction = (type) => {
-    const contactValue = type === 'call' ? (user?.phone || '') : (user?.email || '');
+    if (type === 'message') {
+      const otherParty = isProvider
+        ? { _id: String(client._id || client), firstName: client.firstName || '', lastName: client.lastName || '', role: 'client' }
+        : { _id: String(provider._id || provider), firstName: provider.firstName || '', lastName: provider.lastName || '', businessName: provider.businessName || '', role: 'service_provider' };
+      if (!otherParty._id || otherParty._id === 'undefined') {
+        Alert.alert('Unavailable', 'Cannot open chat for this booking yet.');
+        return;
+      }
+      (navigation as any).navigate('Chat', { receiver: otherParty, booking: currentBooking });
+      return;
+    }
+    const contactValue = type === 'call' ? (isProvider ? client.phone : provider.phone) || '' : '';
     if (!contactValue) {
       Alert.alert('Unavailable', 'Contact details are not available for this booking yet.');
       return;
     }
-
-    const url = type === 'call' ? `tel:${contactValue}` : `mailto:${contactValue}`;
-    Linking.openURL(url);
+    Linking.openURL(`tel:${contactValue}`);
   };
 
   const isProvider = user?.role === USER_ROLES.SERVICE_PROVIDER;

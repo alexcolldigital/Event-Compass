@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Platform, ScrollView } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Platform, ScrollView, Dimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 /** @typedef {import('react-native').StyleProp<import('react-native').ViewStyle>} StyleProp */
@@ -88,7 +88,7 @@ export const MarketplaceCard = ({ image, images, title, subtitle, rating, review
   const subtitleColor = surface.isDark ? '#cbd5e1' : '#64748b';
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef(null);
-  const [cardWidth, setCardWidth] = useState(Dimensions.get('window').width - 32);
+  const [cardWidth, setCardWidth] = useState(() => Dimensions.get('window').width - 32);
 
   // Build image list: prefer `images` array, fall back to single `image`
   const imageList = images && images.length > 0

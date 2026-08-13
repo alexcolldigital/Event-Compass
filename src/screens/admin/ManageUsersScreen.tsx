@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, SafeAreaView, FlatList, TouchableOpacity, Alert, TextInput, StyleSheet, Platform } from 'react-native';
+import { View, Text, SafeAreaView, FlatList, TouchableOpacity, Alert, TextInput, StyleSheet, Platform, Modal } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { adminAPI } from '../../services/api.js';
@@ -48,6 +48,31 @@ export default function ManageUsersScreen() {
         } catch (e) { Alert.alert('Error', e.message); }
       }},
     ]);
+  };
+
+  const handleAssignRole = (user) => {
+    const roles = [
+      { label: 'Client', value: 'client' },
+      { label: 'Service Provider', value: 'service_provider' },
+      { label: 'Admin', value: 'admin' },
+    ];
+    Alert.alert(
+      'Assign Role',
+      `Current role: ${user.role}\nSelect new role for ${user.firstName} ${user.lastName}:`,
+      [
+        ...roles.filter(r => r.value !== user.role).map(r => ({
+          text: r.label,
+          onPress: async () => {
+            try {
+              const res = await adminAPI.assignRole(user._id, r.value);
+              setUsers(prev => prev.map(u => u._id === user._id ? res.user : u));
+              setExpanded(null);
+            } catch (e) { Alert.alert('Error', e.message || 'Failed to assign role'); }
+          },
+        })),
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
   };
 
   const handleVerify = (user) => {
@@ -113,6 +138,9 @@ export default function ManageUsersScreen() {
           )}
           <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: item.isBlocked ? '#dcfce7' : '#fee2e2' }]} onPress={() => handleBlock(item)}>
             <Text style={[adminStyles.actionBtnText, { color: item.isBlocked ? '#15803d' : '#dc2626', fontFamily: font }]}>{item.isBlocked ? 'Unblock' : 'Block'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: '#f5f3ff' }]} onPress={() => handleAssignRole(item)}>
+            <Text style={[adminStyles.actionBtnText, { color: '#7c3aed', fontFamily: font }]}>Assign Role</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -66,20 +66,10 @@ const CheckoutScreen = ({ navigation }: { navigation: any }) => {
         bookingDetails,
       });
 
-      const firstCheckout = response?.checkouts?.find((checkout: any) => checkout?.checkoutUrl) || null;
       clearCart();
 
-      if (firstCheckout?.checkoutUrl) {
-        Alert.alert('Success', 'Your booking is ready for payment.');
-        navigation.navigate('WebCheckout', {
-          checkoutUrl: firstCheckout.checkoutUrl,
-          bookingId: firstCheckout.bookingId,
-        });
-        return;
-      }
-
       if (response?.bookings?.length > 0) {
-        Alert.alert('Success', 'Your bookings were created successfully. You can complete payment from the bookings screen.');
+        Alert.alert('Booking Submitted', 'Your booking was sent to the admin. You can pay after it is confirmed.');
         navigation.navigate('Bookings');
         return;
       }

@@ -8,11 +8,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'https://event-backend-kb9s.onrender.com').replace(/\/$/, '');
 const API_BASE_URL = API_URL.includes('/api') ? API_URL : `${API_URL}/api`;
+const API_TIMEOUT = Number(process.env.EXPO_PUBLIC_API_TIMEOUT || 30000);
 
 // Create axios instance
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: API_TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -139,6 +140,7 @@ export const adminAPI = {
   getAllUsers: (query) => apiClient.get('/admin/users', { params: query }),
   blockUser: (id, data) => apiClient.patch(`/admin/users/${id}/block`, data),
   verifyProvider: (id) => apiClient.patch(`/admin/users/${id}/verify`),
+  assignRole: (id, role) => apiClient.patch(`/admin/users/${id}/role`, { role }),
   getUserAnalytics: () => apiClient.get('/admin/users/analytics/breakdown'),
 
   // Services (admin)
@@ -215,6 +217,22 @@ export const adminAPI = {
 
   // Audit Logs
   getAuditLogs: (query) => apiClient.get('/admin/audit-logs', { params: query }),
+};
+
+// Message API calls
+export const messageAPI = {
+  sendMessage: (formData) =>
+    apiClient.post('/messages', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  getConversations: () => apiClient.get('/messages/conversations'),
+  getMessages: (conversationId, params) =>
+    apiClient.get(`/messages/conversation/${conversationId}`, { params }),
+  getBookingMessages: (bookingId) => apiClient.get(`/messages/booking/${bookingId}`),
+  markRead: (conversationId) =>
+    apiClient.patch(`/messages/conversation/${conversationId}/read`),
+  deleteMessage: (id) => apiClient.delete(`/messages/${id}`),
+  getAdminContacts: () => apiClient.get('/auth/admin-contacts'),
 };
 
 export default apiClient;
