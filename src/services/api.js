@@ -138,6 +138,7 @@ export const adminAPI = {
 
   // Users
   getAllUsers: (query) => apiClient.get('/admin/users', { params: query }),
+  createUser: (data) => apiClient.post('/admin/users', data),
   blockUser: (id, data) => apiClient.patch(`/admin/users/${id}/block`, data),
   verifyProvider: (id) => apiClient.patch(`/admin/users/${id}/verify`),
   assignRole: (id, role) => apiClient.patch(`/admin/users/${id}/role`, { role }),

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Alert, TextInput, SafeAreaView } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Alert, TextInput, SafeAreaView, Modal, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import Loading from '../../components/Loading.jsx';
@@ -23,6 +23,17 @@ const ManageUsersScreen = () => {
   const [searchText, setSearchText] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [selectedUser, setSelectedUser] = useState(null);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [newUser, setNewUser] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phoneNumber: '',
+    password: '',
+    passwordConfirm: '',
+    role: USER_ROLES.CLIENT,
+    businessName: '',
+  });
 
   useEffect(() => { loadUsers(); }, []);
   useEffect(() => { filterUsers(); }, [searchText, filterRole, users]);
@@ -118,6 +129,46 @@ const ManageUsersScreen = () => {
         },
       },
     ]);
+  };
+
+  const handleCreateUser = async () => {
+    if (!newUser.firstName || !newUser.lastName || !newUser.email || !newUser.phoneNumber || !newUser.password) {
+      Alert.alert('Missing fields', 'Please fill in all required details.');
+      return;
+    }
+
+    if (newUser.password.length < 6) {
+      Alert.alert('Weak password', 'Password must be at least 6 characters long.');
+      return;
+    }
+
+    if (newUser.password !== newUser.passwordConfirm) {
+      Alert.alert('Passwords do not match', 'Please re-enter the same password to continue.');
+      return;
+    }
+
+    try {
+      const response = await adminAPI.createUser({
+        ...newUser,
+        businessName: newUser.businessName || undefined,
+      });
+      setUsers((current) => [response.user, ...current]);
+      setSelectedUser(null);
+      setShowAddUserModal(false);
+      setNewUser({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phoneNumber: '',
+        password: '',
+        passwordConfirm: '',
+        role: USER_ROLES.CLIENT,
+        businessName: '',
+      });
+      Alert.alert('Success', `User ${response.user.firstName} ${response.user.lastName} created successfully.`);
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to create user');
+    }
   };
 
   const ROLE_FILTERS = [
@@ -230,6 +281,9 @@ const ManageUsersScreen = () => {
           <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />
         </TouchableOpacity>
         <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>Manage Users</Text>
+        <TouchableOpacity onPress={() => setShowAddUserModal(true)}>
+          <MaterialCommunityIcons name="account-plus" size={26} color={C.primary} />
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -300,6 +354,65 @@ const ManageUsersScreen = () => {
           </View>
         }
       />
+
+      <Modal visible={showAddUserModal} animationType="slide" transparent={false}>
+        <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
+          <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}> 
+            <TouchableOpacity onPress={() => setShowAddUserModal(false)}>
+              <MaterialCommunityIcons name="close" size={24} color={C.text} />
+            </TouchableOpacity>
+            <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>Add User</Text>
+            <View style={{ width: 24 }} />
+          </View>
+
+          <ScrollView style={{ padding: 16 }} contentContainerStyle={{ paddingBottom: 32 }}>
+            <View style={[adminStyles.formSection, { backgroundColor: C.surface, borderColor: C.border, borderWidth: 1, borderRadius: 16, padding: 16 }]}> 
+              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>First Name</Text>
+              <TextInput value={newUser.firstName} onChangeText={(text) => setNewUser({ ...newUser, firstName: text })} placeholder="First name" style={[adminStyles.formInput, { backgroundColor: C.surfaceAlt, borderColor: C.inputBorder, color: C.text, fontFamily: appFont }]} placeholderTextColor={C.muted} />
+
+              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont, marginTop: 12 }]}>Last Name</Text>
+              <TextInput value={newUser.lastName} onChangeText={(text) => setNewUser({ ...newUser, lastName: text })} placeholder="Last name" style={[adminStyles.formInput, { backgroundColor: C.surfaceAlt, borderColor: C.inputBorder, color: C.text, fontFamily: appFont }]} placeholderTextColor={C.muted} />
+
+              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont, marginTop: 12 }]}>Email</Text>
+              <TextInput value={newUser.email} onChangeText={(text) => setNewUser({ ...newUser, email: text })} placeholder="user@email.com" keyboardType="email-address" style={[adminStyles.formInput, { backgroundColor: C.surfaceAlt, borderColor: C.inputBorder, color: C.text, fontFamily: appFont }]} placeholderTextColor={C.muted} />
+
+              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont, marginTop: 12 }]}>Phone Number</Text>
+              <TextInput value={newUser.phoneNumber} onChangeText={(text) => setNewUser({ ...newUser, phoneNumber: text })} placeholder="+2348000000000" keyboardType="phone-pad" style={[adminStyles.formInput, { backgroundColor: C.surfaceAlt, borderColor: C.inputBorder, color: C.text, fontFamily: appFont }]} placeholderTextColor={C.muted} />
+
+              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont, marginTop: 12 }]}>Role</Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                {['client', 'service_provider', 'admin'].map((role) => (
+                  <TouchableOpacity
+                    key={role}
+                    onPress={() => setNewUser({ ...newUser, role })}
+                    style={{ flex: 1, paddingVertical: 10, borderRadius: 10, borderWidth: 1, alignItems: 'center', backgroundColor: newUser.role === role ? C.primary : C.surfaceAlt, borderColor: newUser.role === role ? C.primary : C.inputBorder }}
+                  >
+                    <Text style={{ color: newUser.role === role ? '#fff' : C.text, fontWeight: '700', fontFamily: appFont, textTransform: 'capitalize' }}>{role.replace('_', ' ')}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont, marginTop: 12 }]}>Business Name (optional)</Text>
+              <TextInput value={newUser.businessName} onChangeText={(text) => setNewUser({ ...newUser, businessName: text })} placeholder="Business name" style={[adminStyles.formInput, { backgroundColor: C.surfaceAlt, borderColor: C.inputBorder, color: C.text, fontFamily: appFont }]} placeholderTextColor={C.muted} />
+
+              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont, marginTop: 12 }]}>Password</Text>
+              <TextInput value={newUser.password} onChangeText={(text) => setNewUser({ ...newUser, password: text })} placeholder="Minimum 6 characters" secureTextEntry style={[adminStyles.formInput, { backgroundColor: C.surfaceAlt, borderColor: C.inputBorder, color: C.text, fontFamily: appFont }]} placeholderTextColor={C.muted} />
+
+              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont, marginTop: 12 }]}>Confirm Password</Text>
+              <TextInput value={newUser.passwordConfirm} onChangeText={(text) => setNewUser({ ...newUser, passwordConfirm: text })} placeholder="Repeat password" secureTextEntry style={[adminStyles.formInput, { backgroundColor: C.surfaceAlt, borderColor: C.inputBorder, color: C.text, fontFamily: appFont }]} placeholderTextColor={C.muted} />
+
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
+                <TouchableOpacity style={[adminStyles.modalBtn, { flex: 1, borderWidth: 1, borderColor: C.inputBorder }]} onPress={() => setShowAddUserModal(false)}>
+                  <Text style={[adminStyles.modalBtnText, { color: C.text, fontFamily: appFont }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[adminStyles.modalBtn, { flex: 1, backgroundColor: C.primary }]} onPress={handleCreateUser}>
+                  <Text style={[adminStyles.modalBtnText, { color: '#fff', fontFamily: appFont }]}>Create User</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 };
