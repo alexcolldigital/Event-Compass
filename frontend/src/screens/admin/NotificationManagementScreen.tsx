@@ -71,7 +71,68 @@ export default function NotificationManagementScreen() {
     ]);
   };
 
-  const NotifCard = ({ item }) => {
+  return (
+    <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
+      <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />
+        </TouchableOpacity>
+        <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>Notification Management</Text>
+        <TouchableOpacity onPress={() => setModalVisible(true)} style={[adminStyles.badge, { backgroundColor: C.primary, paddingHorizontal: 12, paddingVertical: 6 }]}>
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13, fontFamily: appFont }}>+ New</Text>
+        </TouchableOpacity>
+      </View>
+
+      {isLoading ? <Loading /> : (
+        <FlatList
+          data={notifications}
+          keyExtractor={(i) => i._id}
+          renderItem={({ item }) => <NotifCard item={item} C={C} isDark={isDark} onSend={handleSend} onDelete={handleDelete} />}
+          contentContainerStyle={{ padding: 16, paddingBottom: 96 }}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={adminStyles.emptyState}>
+              <MaterialCommunityIcons name="bell-off-outline" size={48} color={C.muted} />
+              <Text style={[adminStyles.emptyText, { color: C.muted, fontFamily: appFont }]}>No notifications yet</Text>
+            </View>
+          }
+        />
+      )}
+
+      <Modal visible={modalVisible} animationType="slide" transparent>
+        <View style={adminStyles.modalOverlay}>
+          <ScrollView style={[adminStyles.modalSheet, { backgroundColor: C.surface }]} contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
+            <Text style={[adminStyles.modalTitle, { color: C.text, fontFamily: appFont }]}>New Notification</Text>
+
+            <View style={adminStyles.formField}>
+              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>Title *</Text>
+              <TextInput style={[adminStyles.formInput, { color: C.text, borderColor: C.inputBorder, backgroundColor: C.surfaceAlt, fontFamily: appFont }]} value={form.title} onChangeText={(v) => setForm((f) => ({ ...f, title: v }))} placeholder="Notification title" placeholderTextColor={C.muted} />
+            </View>
+            <View style={adminStyles.formField}>
+              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>Message *</Text>
+              <TextInput style={[adminStyles.formInputMultiline, { color: C.text, borderColor: C.inputBorder, backgroundColor: C.surfaceAlt, fontFamily: appFont }]} value={form.message} onChangeText={(v) => setForm((f) => ({ ...f, message: v }))} placeholder="Notification message" placeholderTextColor={C.muted} multiline numberOfLines={3} />
+            </View>
+
+            <ChipSelector label="Target Role" options={ROLES} value={form.targetRole} onChange={(v) => setForm((f) => ({ ...f, targetRole: v }))} C={C} />
+            <ChipSelector label="Channel" options={CHANNELS} value={form.channel} onChange={(v) => setForm((f) => ({ ...f, channel: v }))} C={C} />
+
+            <View style={adminStyles.modalActions}>
+              <TouchableOpacity style={[adminStyles.modalBtn, { borderWidth: 1, borderColor: C.inputBorder }]} onPress={() => setModalVisible(false)}>
+                <Text style={[adminStyles.modalBtnText, { color: C.text, fontFamily: appFont }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[adminStyles.modalBtn, { backgroundColor: C.primary }]} onPress={handleCreate} disabled={isSaving}>
+                <Text style={[adminStyles.modalBtnText, { color: '#fff', fontFamily: appFont }]}>{isSaving ? 'Creating...' : 'Create'}</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+function NotifCard({ item, C, isDark, onSend, onDelete }) {
+  const color = STATUS_COLORS[item.status] || '#6b7280';
     const color = STATUS_COLORS[item.status] || '#6b7280';
     return (
       <View style={[adminStyles.card, { backgroundColor: C.surface, borderColor: C.border }]}>
@@ -93,22 +154,23 @@ export default function NotificationManagementScreen() {
         {item.sentAt && <Text style={{ color: C.muted, fontSize: 11, marginBottom: 8, fontFamily: appFont }}>Sent: {formatDateTime(item.sentAt)}</Text>}
         <View style={adminStyles.actionRow}>
           {item.status === 'draft' && (
-            <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: C.primary }]} onPress={() => handleSend(item)}>
+            <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: C.primary }]} onPress={() => onSend(item)}>
               <Text style={[adminStyles.actionBtnText, { color: '#fff', fontFamily: appFont }]}>Send Now</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: isDark ? '#450a0a' : '#fee2e2' }]} onPress={() => handleDelete(item)}>
+          <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: isDark ? '#450a0a' : '#fee2e2' }]} onPress={() => onDelete(item)}>
             <Text style={[adminStyles.actionBtnText, { color: '#b91c1c', fontFamily: appFont }]}>Delete</Text>
           </TouchableOpacity>
         </View>
       </View>
     );
-  };
+}
 
-  const ChipSelector = ({ label, options, value, onChange }) => (
+function ChipSelector({ label, options, value, onChange, C }) {
+  return (
     <View style={adminStyles.formField}>
       <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>{label}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {options.map((o) => (
           <TouchableOpacity
             key={o}
@@ -120,64 +182,5 @@ export default function NotificationManagementScreen() {
         ))}
       </ScrollView>
     </View>
-  );
-
-  return (
-    <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
-      <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />
-        </TouchableOpacity>
-        <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>Notification Management</Text>
-        <TouchableOpacity onPress={() => setModalVisible(true)} style={[adminStyles.badge, { backgroundColor: C.primary, paddingHorizontal: 12, paddingVertical: 6 }]}>
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13, fontFamily: appFont }}>+ New</Text>
-        </TouchableOpacity>
-      </View>
-
-      {isLoading ? <Loading /> : (
-        <FlatList
-          data={notifications}
-          keyExtractor={(i) => i._id}
-          renderItem={({ item }) => <NotifCard item={item} />}
-          contentContainerStyle={{ padding: 16, paddingBottom: 96 }}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={adminStyles.emptyState}>
-              <MaterialCommunityIcons name="bell-off-outline" size={48} color={C.muted} />
-              <Text style={[adminStyles.emptyText, { color: C.muted, fontFamily: appFont }]}>No notifications yet</Text>
-            </View>
-          }
-        />
-      )}
-
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={adminStyles.modalOverlay}>
-          <ScrollView style={[adminStyles.modalSheet, { backgroundColor: C.surface }]} contentContainerStyle={{ paddingBottom: 24 }}>
-            <Text style={[adminStyles.modalTitle, { color: C.text, fontFamily: appFont }]}>New Notification</Text>
-
-            <View style={adminStyles.formField}>
-              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>Title *</Text>
-              <TextInput style={[adminStyles.formInput, { color: C.text, borderColor: C.inputBorder, backgroundColor: C.surfaceAlt, fontFamily: appFont }]} value={form.title} onChangeText={(v) => setForm((f) => ({ ...f, title: v }))} placeholder="Notification title" placeholderTextColor={C.muted} />
-            </View>
-            <View style={adminStyles.formField}>
-              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>Message *</Text>
-              <TextInput style={[adminStyles.formInputMultiline, { color: C.text, borderColor: C.inputBorder, backgroundColor: C.surfaceAlt, fontFamily: appFont }]} value={form.message} onChangeText={(v) => setForm((f) => ({ ...f, message: v }))} placeholder="Notification message" placeholderTextColor={C.muted} multiline numberOfLines={3} />
-            </View>
-
-            <ChipSelector label="Target Role" options={ROLES} value={form.targetRole} onChange={(v) => setForm((f) => ({ ...f, targetRole: v }))} />
-            <ChipSelector label="Channel" options={CHANNELS} value={form.channel} onChange={(v) => setForm((f) => ({ ...f, channel: v }))} />
-
-            <View style={adminStyles.modalActions}>
-              <TouchableOpacity style={[adminStyles.modalBtn, { borderWidth: 1, borderColor: C.inputBorder }]} onPress={() => setModalVisible(false)}>
-                <Text style={[adminStyles.modalBtnText, { color: C.text, fontFamily: appFont }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[adminStyles.modalBtn, { backgroundColor: C.primary }]} onPress={handleCreate} disabled={isSaving}>
-                <Text style={[adminStyles.modalBtnText, { color: '#fff', fontFamily: appFont }]}>{isSaving ? 'Creating...' : 'Create'}</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </View>
-      </Modal>
-    </SafeAreaView>
   );
 }
