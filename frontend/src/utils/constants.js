@@ -81,6 +81,7 @@ export const USER_ROLES = {
 export const BOOKING_STATUS = {
   PENDING: 'pending',
   CONFIRMED: 'confirmed',
+  REJECTED: 'rejected',
   CANCELLED: 'cancelled',
   COMPLETED: 'completed',
 };

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Alert, TextInput, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Alert, TextInput, ScrollView, SafeAreaView, Modal, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import Loading from '../../components/Loading.jsx';
@@ -23,6 +23,9 @@ const ManageBookingsScreen = () => {
   const [searchText, setSearchText] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [actionModal, setActionModal] = useState<{ booking: any; type: 'accept' | 'reject' } | null>(null);
+  const [actionNote, setActionNote] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => { loadBookings(); }, []);
   useEffect(() => { filterBookings(); }, [searchText, filterStatus, bookings]);
@@ -58,33 +61,62 @@ const ManageBookingsScreen = () => {
     setFilteredBookings(filtered);
   };
 
-  const handleBookingAction = (booking, action) => {
-    const labels = { confirm: 'Confirm', complete: 'Complete', cancel: 'Cancel' };
-    Alert.alert(`${labels[action]} Booking`, `${labels[action]} booking ${booking.bookingNumber}?`, [
-      { text: 'Cancel' },
-      {
-        text: 'Confirm',
-        onPress: async () => {
-          try {
-            let response;
-            if (action === 'confirm') response = await adminAPI.confirmBooking(booking._id);
-            else if (action === 'complete') response = await adminAPI.completeBooking(booking._id);
-            else response = await adminAPI.cancelBooking(booking._id, { reason: 'Cancelled by admin' });
-            setBookings((prev) => prev.map((b) => b._id === booking._id ? response.booking : b));
-            setSelectedBooking(null);
-            Alert.alert('Success', `Booking ${action}ed successfully`);
-          } catch (err) {
-            Alert.alert('Error', err.message || `Failed to ${action} booking`);
-          }
+  const handleBookingAction = async (booking, action) => {
+    if (action === 'accept') {
+      setActionNote('');
+      setActionModal({ booking, type: 'accept' });
+    } else if (action === 'reject') {
+      setActionNote('');
+      setActionModal({ booking, type: 'reject' });
+    } else if (action === 'complete') {
+      Alert.alert('Complete Booking', `Complete booking ${booking.bookingNumber}?`, [
+        { text: 'Cancel' },
+        {
+          text: 'Complete',
+          onPress: async () => {
+            try {
+              const response = await adminAPI.completeBooking(booking._id);
+              setBookings((prev) => prev.map((b) => b._id === booking._id ? response.booking : b));
+              setSelectedBooking(null);
+            } catch (err) {
+              Alert.alert('Error', err.message || 'Failed to complete booking');
+            }
+          },
         },
-      },
-    ]);
+      ]);
+    }
+  };
+
+  const submitActionModal = async () => {
+    if (!actionModal) return;
+    if (actionModal.type === 'reject' && !actionNote.trim()) {
+      Alert.alert('Required', 'Please provide a reason for rejection.');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      let response;
+      if (actionModal.type === 'accept') {
+        response = await adminAPI.confirmBooking(actionModal.booking._id, { message: actionNote.trim() || undefined });
+      } else {
+        response = await adminAPI.rejectBooking(actionModal.booking._id, { reason: actionNote.trim() });
+      }
+      setBookings((prev) => prev.map((b) => b._id === actionModal.booking._id ? response.booking : b));
+      setSelectedBooking(null);
+      setActionModal(null);
+      Alert.alert('Done', actionModal.type === 'accept' ? 'Booking accepted.' : 'Booking rejected.');
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Action failed');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const STATUS_FILTERS = [
     { label: 'All', value: 'all' },
     { label: 'Pending', value: BOOKING_STATUS.PENDING },
     { label: 'Confirmed', value: BOOKING_STATUS.CONFIRMED },
+    { label: 'Rejected', value: BOOKING_STATUS.REJECTED },
     { label: 'Completed', value: BOOKING_STATUS.COMPLETED },
     { label: 'Cancelled', value: BOOKING_STATUS.CANCELLED },
   ];
@@ -141,16 +173,28 @@ const ManageBookingsScreen = () => {
             {[
               { label: 'Client', value: `${client.firstName} ${client.lastName}` },
               { label: 'Email', value: client.email || 'No email' },
+              { label: 'Phone', value: client.phoneNumber || 'N/A' },
               { label: 'Provider', value: provider.businessName || `${provider.firstName || ''} ${provider.lastName || ''}`.trim() || 'Provider' },
               { label: 'Event Date', value: formatDateTime(booking.eventDate) },
-              { label: 'Guests', value: booking.numberOfGuests },
+              { label: 'Event Time', value: booking.eventTime || 'N/A' },
+              { label: 'Event Type', value: booking.eventType || 'N/A' },
+              { label: 'Guests', value: booking.numberOfGuests || 'N/A' },
+              { label: 'Location', value: booking.bookingLocation ? [booking.bookingLocation.address, booking.bookingLocation.lga, booking.bookingLocation.state].filter(Boolean).join(', ') : 'N/A' },
+              { label: 'Special Req.', value: booking.specialRequirements || 'None' },
+              { label: 'Notes', value: booking.clientNotes || booking.bookingRequestNote || 'None' },
               { label: 'Booked', value: formatDate(booking.createdAt) },
             ].map((row) => (
               <View key={row.label} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
                 <Text style={{ color: C.muted, fontSize: 12, fontFamily: appFont }}>{row.label}</Text>
-                <Text style={{ color: C.text, fontSize: 12, fontWeight: '700', fontFamily: appFont }}>{row.value}</Text>
+                <Text style={{ color: C.text, fontSize: 12, fontWeight: '700', fontFamily: appFont, flex: 1, textAlign: 'right', marginLeft: 8 }}>{row.value}</Text>
               </View>
             ))}
+
+            {booking.adminNote ? (
+              <View style={{ backgroundColor: isDark ? '#1e3a5f' : '#eff6ff', borderRadius: 10, padding: 10, marginBottom: 10 }}>
+                <Text style={{ color: '#2563eb', fontSize: 12, fontFamily: appFont, fontWeight: '700' }}>Admin Note: {booking.adminNote}</Text>
+              </View>
+            ) : null}
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <Text style={{ color: C.muted, fontSize: 12, fontFamily: appFont }}>Payment</Text>
@@ -161,18 +205,18 @@ const ManageBookingsScreen = () => {
 
             <View style={adminStyles.actionRow}>
               {booking.status === BOOKING_STATUS.PENDING && (
-                <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: isDark ? '#1e3a5f' : '#eff6ff' }]} onPress={() => handleBookingAction(booking, 'confirm')}>
-                  <Text style={[adminStyles.actionBtnText, { color: '#2563eb' }]}>Confirm</Text>
-                </TouchableOpacity>
+                <>
+                  <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: isDark ? '#14532d' : '#dcfce7', flex: 1 }]} onPress={() => handleBookingAction(booking, 'accept')}>
+                    <Text style={[adminStyles.actionBtnText, { color: '#166534', fontFamily: appFont }]}>✓ Accept</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: isDark ? '#450a0a' : '#fee2e2', flex: 1 }]} onPress={() => handleBookingAction(booking, 'reject')}>
+                    <Text style={[adminStyles.actionBtnText, { color: '#b91c1c', fontFamily: appFont }]}>✗ Reject</Text>
+                  </TouchableOpacity>
+                </>
               )}
               {booking.status === BOOKING_STATUS.CONFIRMED && (
-                <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: isDark ? '#14532d' : '#dcfce7' }]} onPress={() => handleBookingAction(booking, 'complete')}>
-                  <Text style={[adminStyles.actionBtnText, { color: '#166534' }]}>Complete</Text>
-                </TouchableOpacity>
-              )}
-              {booking.status !== BOOKING_STATUS.CANCELLED && booking.status !== BOOKING_STATUS.COMPLETED && (
-                <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: isDark ? '#450a0a' : '#fee2e2' }]} onPress={() => handleBookingAction(booking, 'cancel')}>
-                  <Text style={[adminStyles.actionBtnText, { color: '#b91c1c' }]}>Cancel</Text>
+                <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: isDark ? '#1e3a5f' : '#eff6ff', flex: 1 }]} onPress={() => handleBookingAction(booking, 'complete')}>
+                  <Text style={[adminStyles.actionBtnText, { color: '#2563eb', fontFamily: appFont }]}>Mark Complete</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -257,8 +301,65 @@ const ManageBookingsScreen = () => {
           </View>
         }
       />
+
+      {/* Accept / Reject Modal */}
+      <Modal visible={!!actionModal} transparent animationType="fade" onRequestClose={() => !actionLoading && setActionModal(null)}>
+        <TouchableOpacity style={ms.overlay} activeOpacity={1} onPress={() => !actionLoading && setActionModal(null)}>
+          <View style={[ms.sheet, { backgroundColor: C.surface }]} onStartShouldSetResponder={() => true}>
+            <Text style={[ms.sheetTitle, { color: C.text, fontFamily: appFont }]}>
+              {actionModal?.type === 'accept' ? '✓ Accept Booking' : '✗ Reject Booking'}
+            </Text>
+            <Text style={[ms.sheetSub, { color: C.muted, fontFamily: appFont }]}>
+              {actionModal?.booking?.bookingNumber}
+            </Text>
+            <View style={[ms.divider, { backgroundColor: C.border }]} />
+            <Text style={[ms.noteLabel, { color: C.muted, fontFamily: appFont }]}>
+              {actionModal?.type === 'accept' ? 'Acceptance message (optional)' : 'Reason for rejection *'}
+            </Text>
+            <TextInput
+              style={[ms.noteInput, { color: C.text, borderColor: C.border, backgroundColor: C.bg, fontFamily: appFont }]}
+              placeholder={actionModal?.type === 'accept' ? 'e.g. Your booking has been approved...' : 'e.g. Date not available...'}
+              placeholderTextColor={C.muted}
+              value={actionNote}
+              onChangeText={setActionNote}
+              multiline
+              numberOfLines={3}
+            />
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+              <TouchableOpacity
+                style={[ms.btn, { backgroundColor: C.bg, borderColor: C.border, borderWidth: 1, flex: 1 }]}
+                onPress={() => !actionLoading && setActionModal(null)}
+                disabled={actionLoading}
+              >
+                <Text style={[ms.btnText, { color: C.muted, fontFamily: appFont }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[ms.btn, { backgroundColor: actionModal?.type === 'accept' ? '#166534' : '#b91c1c', flex: 1, opacity: actionLoading ? 0.6 : 1 }]}
+                onPress={submitActionModal}
+                disabled={actionLoading}
+              >
+                <Text style={[ms.btnText, { color: '#fff', fontFamily: appFont }]}>
+                  {actionLoading ? 'Processing...' : actionModal?.type === 'accept' ? 'Accept' : 'Reject'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
 
 export default ManageBookingsScreen;
+
+const ms = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  sheet: { width: '100%', borderRadius: 24, padding: 20, maxWidth: 420 },
+  sheetTitle: { fontSize: 17, fontWeight: '800', marginBottom: 4 },
+  sheetSub: { fontSize: 13, marginBottom: 12 },
+  divider: { height: 1, marginBottom: 14 },
+  noteLabel: { fontSize: 12, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.6 },
+  noteInput: { borderWidth: 1, borderRadius: 12, padding: 12, fontSize: 14, minHeight: 80, textAlignVertical: 'top', marginBottom: 14 },
+  btn: { borderRadius: 14, paddingVertical: 13, alignItems: 'center' },
+  btnText: { fontSize: 15, fontWeight: '800' },
+});

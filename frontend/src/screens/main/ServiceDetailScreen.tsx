@@ -293,8 +293,8 @@ const ServiceDetailScreen = () => {
           </View>
 
           <View style={styles.ctaRow}>
-            <Button title="Add to cart" onPress={handleAddToCart} variant="outline" size="lg" style={styles.secondaryButton} />
-            <Button title="Continue to checkout" onPress={handleBooking} variant="primary" fullWidth size="lg" />
+            <Button title="Add to cart" onPress={handleAddToCart} variant="outline" size="lg" style={styles.ctaBtn} />
+            <Button title="Continue to checkout" onPress={handleBooking} variant="primary" size="lg" style={styles.ctaBtn} />
           </View>
         </Card>
       </ScrollView>
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
   checkbox: { width: 20, height: 20, borderRadius: 4, borderWidth: 1.5, borderColor: '#1f7a4d', marginTop: 2, alignItems: 'center', justifyContent: 'center' },
   checkboxActive: { backgroundColor: '#1f7a4d' },
   ctaRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  secondaryButton: { flex: 1 },
+  ctaBtn: { flex: 1 },
   inputGroup: { marginTop: 8 },
   inputLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', fontFamily: appFont },
   inputValue: { fontSize: 14, fontWeight: '700', marginTop: 4 },

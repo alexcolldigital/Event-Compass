@@ -81,7 +81,7 @@ export default function CheckoutScreen({ navigation, route }: { navigation: any;
       clearCart();
 
       if (response?.bookings?.length > 0) {
-        Alert.alert('Booking Submitted', 'Your booking was sent to the admin. You can pay after it is confirmed.');
+        Alert.alert('Booking Request Sent', 'Your booking has been submitted. You will be notified once the admin reviews it.');
         navigation.navigate('Bookings');
         return;
       }
@@ -107,7 +107,10 @@ export default function CheckoutScreen({ navigation, route }: { navigation: any;
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <MaterialCommunityIcons name="arrow-left" size={22} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Checkout</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>Review & Submit</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, marginLeft: 14 }}>Step 3 of 3 — Preview & confirm</Text>
+        </View>
         {items.length > 0 && (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{items.length}</Text>
@@ -223,7 +226,7 @@ export default function CheckoutScreen({ navigation, route }: { navigation: any;
               <Text style={[styles.footerTotalValue, { color: colors.primary }]}>₦{totalAmount.toLocaleString()}</Text>
             </View>
             <Button
-              title={isLoading ? 'Processing...' : 'Place Order'}
+              title={isLoading ? 'Submitting...' : 'Submit Booking Request'}
               onPress={handlePlaceOrder}
               isLoading={isLoading}
               variant="primary"

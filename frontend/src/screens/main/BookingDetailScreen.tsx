@@ -234,6 +234,28 @@ const BookingDetailScreen = () => {
           </View>
           <Text style={[styles.bookingNum, { color: colors.text }]}>Booking #{currentBooking.bookingNumber}</Text>
           <Text style={[styles.meta, { color: colors.muted }]}>Created: {formatDateTime(currentBooking.createdAt)}</Text>
+
+          {/* Admin note — shown to client after accept or reject */}
+          {currentBooking.adminNote ? (
+            <View style={[
+              styles.adminNoteBox,
+              currentBooking.status === 'rejected'
+                ? { backgroundColor: colors.dangerBg, borderColor: '#fca5a5' }
+                : { backgroundColor: '#ecfdf3', borderColor: '#86efac' },
+            ]}>
+              <MaterialCommunityIcons
+                name={currentBooking.status === 'rejected' ? 'close-circle-outline' : 'check-circle-outline'}
+                size={16}
+                color={currentBooking.status === 'rejected' ? colors.danger : '#15803d'}
+              />
+              <Text style={[
+                styles.adminNoteText,
+                { color: currentBooking.status === 'rejected' ? colors.danger : '#15803d' },
+              ]}>
+                {currentBooking.status === 'rejected' ? 'Rejected: ' : 'Admin: '}{currentBooking.adminNote}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         {/* Booking Information */}
@@ -468,6 +490,8 @@ const styles = StyleSheet.create({
   cancelSecondary: { flex: 1, borderWidth: 1, borderRadius: 12, paddingVertical: 10 },
   cancelPrimary: { flex: 1, backgroundColor: '#dc2626', borderRadius: 12, paddingVertical: 10, alignItems: 'center' },
   cancelPrimaryText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  adminNoteBox: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 12, borderWidth: 1, borderRadius: 12, padding: 10 },
+  adminNoteText: { flex: 1, fontSize: 13, fontWeight: '600', lineHeight: 18 },
 });
 
 export default BookingDetailScreen;
