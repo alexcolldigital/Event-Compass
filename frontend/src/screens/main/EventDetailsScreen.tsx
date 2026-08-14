@@ -164,7 +164,7 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={[styles.title, { color: colors.text, fontFamily: appFont }]}>Event Details</Text>
-          <Text style={[styles.subtitle, { color: colors.muted, fontFamily: appFont }]}>Step 1 of 3 — Fill in your event info</Text>
+          <Text style={[styles.subtitle, { color: colors.muted, fontFamily: appFont }]}>Step 1 of 2 — Fill in your event info</Text>
         </View>
       </View>
 
@@ -173,6 +173,7 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
         {/* Progress bar */}
         <View style={[styles.progressTrack, { backgroundColor: colors.chip }]}>
           <View style={[styles.progressFill, { backgroundColor: colors.primary, width: '50%' }]} />
+          {/* 50% = step 1 of 2 */}
         </View>
 
         {/* Client Info */}

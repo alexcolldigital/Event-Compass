@@ -109,7 +109,7 @@ export default function CheckoutScreen({ navigation, route }: { navigation: any;
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Review & Submit</Text>
-          <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, marginLeft: 14 }}>Step 3 of 3 — Preview & confirm</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, marginLeft: 14 }}>Step 2 of 2 — Review & confirm</Text>
         </View>
         {items.length > 0 && (
           <View style={styles.badge}>

@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, Text, Image, TouchableOpacity, Alert, StyleSheet, Platform } from 'react-native';
+import { View, ScrollView, Text, Image, TouchableOpacity, Alert, StyleSheet, Platform, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useServiceStore } from '../../context/serviceStore.js';
@@ -56,6 +56,8 @@ const ServiceDetailScreen = () => {
   });
   const [isFavorite, setIsFavorite] = useState(false);
   const [policyAccepted, setPolicyAccepted] = useState(false);
+  const [cartToast, setCartToast] = useState(false);
+  const toastOpacity = React.useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (serviceId) {
@@ -95,6 +97,19 @@ const ServiceDetailScreen = () => {
     }
   };
 
+  const showCartToast = () => {
+    setCartToast(true);
+    Animated.sequence([
+      Animated.timing(toastOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const hideCartToast = () => {
+    Animated.timing(toastOpacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(() =>
+      setCartToast(false)
+    );
+  };
+
   const handleAddToCart = () => {
     if (!currentService?._id) {
       Alert.alert('Error', 'Unable to add this service to your cart.');
@@ -103,7 +118,7 @@ const ServiceDetailScreen = () => {
 
     const cartItem = normalizeCartItem(currentService, quantity);
     addItem(cartItem);
-    Alert.alert('Added to cart', `${currentService.name} was added to your cart.`);
+    showCartToast();
   };
 
   const handleAddToFavorites = () => {
@@ -146,7 +161,28 @@ const ServiceDetailScreen = () => {
   const finalPrice = totalPrice + tax;
 
   return (
-    <View style={[styles.screen, { backgroundColor: colors.bg }]}> 
+    <View style={[styles.screen, { backgroundColor: colors.bg }]}>
+      {/* Add to cart toast */}
+      {cartToast && (
+        <Animated.View style={[styles.toast, { opacity: toastOpacity, backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <MaterialCommunityIcons name="cart-check" size={20} color={colors.primary} />
+          <Text style={[styles.toastText, { color: colors.text }]} numberOfLines={1}>
+            {currentService?.name} added to cart
+          </Text>
+          <View style={styles.toastActions}>
+            <TouchableOpacity
+              onPress={() => { hideCartToast(); navigation.navigate('EventDetails' as never); }}
+              style={[styles.toastBtn, { backgroundColor: colors.primary }]}
+            >
+              <Text style={styles.toastBtnPrimary}>View Cart</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={hideCartToast} style={[styles.toastBtn, { backgroundColor: colors.surfaceAlt }]}>
+              <Text style={[styles.toastBtnSecondary, { color: colors.text }]}>Continue</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      )}
+
       <View style={styles.headerButtons}> 
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.circleButton}><MaterialCommunityIcons name="arrow-left" size={22} color={colors.primary} /></TouchableOpacity>
         <TouchableOpacity onPress={handleAddToFavorites} style={styles.circleButton}><MaterialCommunityIcons name={isFavorite ? 'heart' : 'heart-outline'} size={22} color={isFavorite ? '#ef4444' : colors.primary} /></TouchableOpacity>
@@ -355,6 +391,12 @@ const styles = StyleSheet.create({
   checkboxActive: { backgroundColor: '#1f7a4d' },
   ctaRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   ctaBtn: { flex: 1 },
+  toast: { position: 'absolute', top: 60, left: 16, right: 16, zIndex: 99, borderRadius: 18, borderWidth: 1, padding: 14, gap: 8, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 12, elevation: 8 },
+  toastText: { fontSize: 13, fontWeight: '700', flex: 1 },
+  toastActions: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  toastBtn: { flex: 1, borderRadius: 10, paddingVertical: 8, alignItems: 'center' },
+  toastBtnPrimary: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  toastBtnSecondary: { fontSize: 13, fontWeight: '700' },
   inputGroup: { marginTop: 8 },
   inputLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', fontFamily: appFont },
   inputValue: { fontSize: 14, fontWeight: '700', marginTop: 4 },

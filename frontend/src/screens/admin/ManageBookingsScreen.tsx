@@ -241,7 +241,7 @@ const ManageBookingsScreen = () => {
         data={filteredBookings}
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => <BookingCard booking={item} />}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 96 }}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <>
