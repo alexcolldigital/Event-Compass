@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, SafeAreaView, FlatList, TouchableOpacity, Alert, TextInput, ScrollView, StyleSheet } from 'react-native';
+import {
+  View, Text, SafeAreaView, FlatList, TouchableOpacity, Alert,
+  TextInput, ScrollView, StyleSheet, Modal, ActivityIndicator,
+} from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { adminAPI } from '../../services/api.js';
@@ -22,15 +25,20 @@ export default function ManageBookingsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
-  const [expanded, setExpanded] = useState(null);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => { load(); }, []);
   useEffect(() => { filter(); }, [search, status, bookings]);
 
   const load = async () => {
     setIsLoading(true);
-    try { const r = await adminAPI.getAllBookings({ limit: 100 }); setBookings(r.bookings || []); }
-    catch (_) {} finally { setIsLoading(false); }
+    try {
+      const r = await adminAPI.getAllBookings({ limit: 100 });
+      setBookings(r.bookings || []);
+    } catch (_) {}
+    finally { setIsLoading(false); }
   };
 
   const filter = () => {
@@ -38,90 +46,270 @@ export default function ManageBookingsScreen() {
     if (search.trim()) {
       const t = search.toLowerCase();
       f = f.filter(b => {
-        const client = b.client || b.clientId || {};
-        const svc = b.service || b.serviceId || {};
-        return (b.bookingNumber || '').toLowerCase().includes(t) || (client.email || '').toLowerCase().includes(t) || (svc.name || '').toLowerCase().includes(t);
+        const client = b.client || {};
+        const svc = b.service || b.venue || {};
+        return (b.bookingNumber || '').toLowerCase().includes(t)
+          || (client.email || '').toLowerCase().includes(t)
+          || (`${client.firstName || ''} ${client.lastName || ''}`).toLowerCase().includes(t)
+          || (svc.name || '').toLowerCase().includes(t);
       });
     }
     if (status !== 'all') f = f.filter(b => b.status === status);
     setFiltered(f);
   };
 
-  const handleAction = (booking, action) => {
-    Alert.alert(`${action.charAt(0).toUpperCase() + action.slice(1)} Booking`, `${action} booking ${booking.bookingNumber}?`, [
-      { text: 'Cancel' },
-      { text: 'Confirm', onPress: async () => {
-        try {
-          let r;
-          if (action === 'confirm') r = await adminAPI.confirmBooking(booking._id);
-          else if (action === 'complete') r = await adminAPI.completeBooking(booking._id);
-          else r = await adminAPI.cancelBooking(booking._id, { reason: 'Cancelled by admin' });
-          setBookings(prev => prev.map(b => b._id === booking._id ? r.booking : b));
-          setExpanded(null);
-          Alert.alert('Success', `Booking ${action}ed`);
-        } catch (e) { Alert.alert('Error', e.message); }
-      }},
-    ]);
+  const openDetail = async (booking) => {
+    setModalVisible(true);
+    setDetailLoading(true);
+    try {
+      const r = await adminAPI.getBookingById(booking._id);
+      setSelectedBooking(r.booking);
+    } catch (_) {
+      setSelectedBooking(booking);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+    setSelectedBooking(null);
+  };
+
+  const handleAction = (action) => {
+    if (!selectedBooking) return;
+    const labels = { confirm: 'Confirm', complete: 'Complete', cancel: 'Cancel' };
+    Alert.alert(
+      `${labels[action]} Booking`,
+      `${labels[action]} booking ${selectedBooking.bookingNumber}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm', onPress: async () => {
+            try {
+              let r;
+              if (action === 'confirm') r = await adminAPI.confirmBooking(selectedBooking._id);
+              else if (action === 'complete') r = await adminAPI.completeBooking(selectedBooking._id);
+              else r = await adminAPI.cancelBooking(selectedBooking._id, { reason: 'Cancelled by admin' });
+              setBookings(prev => prev.map(b => b._id === selectedBooking._id ? r.booking : b));
+              setSelectedBooking(r.booking);
+              Alert.alert('Success', `Booking ${action}ed successfully`);
+            } catch (e) { Alert.alert('Error', e.message || 'Action failed'); }
+          },
+        },
+      ]
+    );
   };
 
   if (isLoading) return <Loading fullScreen />;
 
   const BookingCard = ({ item }) => {
-    const open = expanded === item._id;
-    const client = item.client || item.clientId || {};
-    const provider = item.serviceProvider || item.serviceProviderId || {};
-    const svc = item.service || item.serviceId || item.venue || {};
+    const client = item.client || {};
+    const svc = item.service || item.venue || {};
     const amount = item.totalAmount || item.pricing?.totalAmount || 0;
     const sc = statusColor(item.status);
+    return (
+      <TouchableOpacity onPress={() => openDetail(item)} style={[adminStyles.card, { backgroundColor: c.surface, borderColor: c.border }]} activeOpacity={0.85}>
+        <View style={adminStyles.cardRow}>
+          <Text style={[s.bookingNum, { color: c.text, fontFamily: font }]}>{item.bookingNumber}</Text>
+          <View style={[adminStyles.badge, { backgroundColor: sc + '20' }]}>
+            <Text style={[adminStyles.badgeText, { color: sc, fontFamily: font, textTransform: 'capitalize' }]}>{item.status}</Text>
+          </View>
+        </View>
+        <Text style={[s.svcName, { color: c.muted, fontFamily: font }]}>{svc.name || 'Booked service'}</Text>
+        <Text style={[s.clientName, { color: c.muted, fontFamily: font }]}>{client.firstName} {client.lastName}</Text>
+        <View style={[adminStyles.cardRow, { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: c.border }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <MaterialCommunityIcons name="calendar" size={14} color={c.muted} />
+            <Text style={[s.dateText, { color: c.muted, fontFamily: font }]}> {formatDate(item.eventDate)}</Text>
+          </View>
+          <Text style={[s.amount, { color: c.primary, fontFamily: font }]}>{formatCurrency(amount)}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const DetailRow = ({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) => (
+    <View style={s.detailRow}>
+      <Text style={[s.detailKey, { color: c.muted, fontFamily: font }]}>{label}</Text>
+      <Text style={[s.detailVal, { color: valueColor || c.text, fontFamily: font }]} numberOfLines={2}>{value || '—'}</Text>
+    </View>
+  );
+
+  const SectionHeader = ({ title }: { title: string }) => (
+    <Text style={[s.sectionHeader, { color: c.primary, fontFamily: font }]}>{title}</Text>
+  );
+
+  const renderModal = () => {
+    const b = selectedBooking;
+    if (!b) return null;
+    const client = b.client || {};
+    const provider = b.serviceProvider || {};
+    const svc = b.service || {};
+    const venue = b.venue || {};
+    const pricing = b.pricing || {};
+    const payment = b.payment || {};
+    const location = b.bookingLocation || {};
+    const sc = statusColor(b.status);
+    const amount = pricing.totalAmount || b.totalAmount || 0;
 
     return (
-      <View>
-        <TouchableOpacity onPress={() => setExpanded(open ? null : item._id)} style={[adminStyles.card, { backgroundColor: c.surface, borderColor: c.border }]}>
-          <View style={adminStyles.cardRow}>
-            <Text style={[s.bookingNum, { color: c.text, fontFamily: font }]}>{item.bookingNumber}</Text>
-            <View style={[adminStyles.badge, { backgroundColor: sc + '20' }]}>
-              <Text style={[adminStyles.badgeText, { color: sc, fontFamily: font, textTransform: 'capitalize' }]}>{item.status}</Text>
-            </View>
-          </View>
-          <Text style={[s.svcName, { color: c.muted, fontFamily: font }]}>{svc.name || 'Booked service'}</Text>
-          <Text style={[s.clientName, { color: c.muted, fontFamily: font }]}>{client.firstName} {client.lastName}</Text>
-          <View style={[adminStyles.cardRow, { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: c.border }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <MaterialCommunityIcons name="calendar" size={14} color={c.muted} />
-              <Text style={[s.dateText, { color: c.muted, fontFamily: font }]}> {formatDate(item.eventDate)}</Text>
-            </View>
-            <Text style={[s.amount, { color: c.primary, fontFamily: font }]}>{formatCurrency(amount)}</Text>
-          </View>
-        </TouchableOpacity>
-
-        {open && (
-          <View style={[s.expandedCard, { backgroundColor: c.surfaceAlt, borderColor: c.border }]}>
-            {[['Client', `${client.firstName} ${client.lastName}`], ['Email', client.email || 'N/A'], ['Provider', provider.businessName || `${provider.firstName || ''} ${provider.lastName || ''}`.trim() || 'N/A'], ['Event Date', formatDateTime(item.eventDate)], ['Guests', item.numberOfGuests || 'N/A'], ['Amount', formatCurrency(amount)], ['Payment', item.paymentStatus || item.payment?.status || 'pending']].map(([k, v]) => (
-              <View key={k} style={s.infoRow}>
-                <Text style={[s.infoKey, { color: c.muted, fontFamily: font }]}>{k}</Text>
-                <Text style={[s.infoVal, { color: c.text, fontFamily: font }]}>{v}</Text>
+      <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={closeModal}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
+          {/* Modal Header */}
+          <View style={[s.modalHeader, { backgroundColor: c.surface, borderBottomColor: c.border }]}>
+            <TouchableOpacity onPress={closeModal} style={s.modalClose}>
+              <MaterialCommunityIcons name="close" size={22} color={c.text} />
+            </TouchableOpacity>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={[s.modalTitle, { color: c.text, fontFamily: font }]}>{b.bookingNumber}</Text>
+              <View style={[adminStyles.badge, { backgroundColor: sc + '20', alignSelf: 'flex-start', marginTop: 2 }]}>
+                <Text style={[adminStyles.badgeText, { color: sc, fontFamily: font, textTransform: 'capitalize' }]}>{b.status}</Text>
               </View>
-            ))}
-            <View style={adminStyles.actionRow}>
-              {item.status === 'pending' && (
-                <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: '#eff6ff' }]} onPress={() => handleAction(item, 'confirm')}>
-                  <Text style={[adminStyles.actionBtnText, { color: '#2563eb', fontFamily: font }]}>Confirm</Text>
-                </TouchableOpacity>
-              )}
-              {item.status === 'confirmed' && (
-                <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: '#f0fdf4' }]} onPress={() => handleAction(item, 'complete')}>
-                  <Text style={[adminStyles.actionBtnText, { color: '#15803d', fontFamily: font }]}>Complete</Text>
-                </TouchableOpacity>
-              )}
-              {item.status !== 'cancelled' && item.status !== 'completed' && (
-                <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: '#fff1f2' }]} onPress={() => handleAction(item, 'cancel')}>
-                  <Text style={[adminStyles.actionBtnText, { color: '#dc2626', fontFamily: font }]}>Cancel</Text>
-                </TouchableOpacity>
-              )}
             </View>
+            <Text style={[s.modalAmount, { color: c.primary, fontFamily: font }]}>{formatCurrency(amount)}</Text>
           </View>
-        )}
-      </View>
+
+          {detailLoading ? (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+              <ActivityIndicator size="large" color={c.primary} />
+              <Text style={{ color: c.muted, marginTop: 12, fontFamily: font }}>Loading details...</Text>
+            </View>
+          ) : (
+            <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+
+              {/* Client Info */}
+              <View style={[s.section, { backgroundColor: c.surface, borderColor: c.border }]}>
+                <SectionHeader title="👤 Client Information" />
+                <DetailRow label="Name" value={`${client.firstName || ''} ${client.lastName || ''}`.trim()} />
+                <DetailRow label="Email" value={client.email} />
+                <DetailRow label="Phone" value={client.phoneNumber} />
+              </View>
+
+              {/* Provider Info */}
+              <View style={[s.section, { backgroundColor: c.surface, borderColor: c.border }]}>
+                <SectionHeader title="🏢 Service Provider" />
+                <DetailRow label="Business" value={provider.businessName || `${provider.firstName || ''} ${provider.lastName || ''}`.trim()} />
+                <DetailRow label="Email" value={provider.email} />
+                <DetailRow label="Phone" value={provider.phoneNumber} />
+              </View>
+
+              {/* Service / Venue */}
+              {(svc.name || venue.name) && (
+                <View style={[s.section, { backgroundColor: c.surface, borderColor: c.border }]}>
+                  <SectionHeader title={b.bookingType === 'venue' ? '🏛️ Venue Details' : '🎯 Service Details'} />
+                  <DetailRow label="Name" value={svc.name || venue.name} />
+                  <DetailRow label="Type" value={svc.serviceType || b.bookingType} />
+                  {svc.description && <DetailRow label="Description" value={svc.description} />}
+                  {svc.packages && svc.packages.length > 0 && (
+                    <>
+                      <Text style={[s.subHeader, { color: c.muted, fontFamily: font }]}>Packages</Text>
+                      {svc.packages.map((pkg, i) => (
+                        <View key={i} style={[s.packageRow, { borderColor: c.border }]}>
+                          <Text style={[s.packageName, { color: c.text, fontFamily: font }]}>{pkg.name}</Text>
+                          <Text style={[s.packagePrice, { color: c.primary, fontFamily: font }]}>{formatCurrency(pkg.price)}</Text>
+                        </View>
+                      ))}
+                    </>
+                  )}
+                </View>
+              )}
+
+              {/* Booking Details */}
+              <View style={[s.section, { backgroundColor: c.surface, borderColor: c.border }]}>
+                <SectionHeader title="📋 Booking Details" />
+                <DetailRow label="Booking Type" value={b.bookingType} />
+                <DetailRow label="Event Date" value={formatDateTime(b.eventDate)} />
+                {b.eventEndDate && <DetailRow label="End Date" value={formatDateTime(b.eventEndDate)} />}
+                {b.eventTime && <DetailRow label="Event Time" value={b.eventTime} />}
+                {b.numberOfGuests && <DetailRow label="Guests" value={String(b.numberOfGuests)} />}
+                {b.duration && <DetailRow label="Duration" value={`${b.duration} ${b.durationUnit || 'hours'}`} />}
+                {b.specialRequirements && <DetailRow label="Special Requirements" value={b.specialRequirements} />}
+                {b.clientNotes && <DetailRow label="Client Notes" value={b.clientNotes} />}
+                {b.bookingRequestNote && <DetailRow label="Request Note" value={b.bookingRequestNote} />}
+              </View>
+
+              {/* Location */}
+              {(location.state || location.address) && (
+                <View style={[s.section, { backgroundColor: c.surface, borderColor: c.border }]}>
+                  <SectionHeader title="📍 Event Location" />
+                  {location.address && <DetailRow label="Address" value={location.address} />}
+                  {location.town && <DetailRow label="Town" value={location.town} />}
+                  {location.lga && <DetailRow label="LGA" value={location.lga} />}
+                  {location.state && <DetailRow label="State" value={location.state} />}
+                  {location.country && <DetailRow label="Country" value={location.country} />}
+                </View>
+              )}
+
+              {/* Pricing Breakdown */}
+              <View style={[s.section, { backgroundColor: c.surface, borderColor: c.border }]}>
+                <SectionHeader title="💰 Pricing Breakdown" />
+                {pricing.basePrice != null && <DetailRow label="Base Price" value={formatCurrency(pricing.basePrice)} />}
+                {pricing.quantity != null && <DetailRow label="Quantity" value={String(pricing.quantity)} />}
+                {pricing.unitPrice != null && <DetailRow label="Unit Price" value={formatCurrency(pricing.unitPrice)} />}
+                {pricing.subtotal != null && <DetailRow label="Subtotal" value={formatCurrency(pricing.subtotal)} />}
+                {pricing.discount != null && pricing.discount > 0 && <DetailRow label="Discount" value={`-${formatCurrency(pricing.discount)}`} valueColor="#dc2626" />}
+                {pricing.tax != null && pricing.tax > 0 && <DetailRow label="Tax" value={formatCurrency(pricing.tax)} />}
+                <View style={[s.totalRow, { borderTopColor: c.border }]}>
+                  <Text style={[s.totalLabel, { color: c.text, fontFamily: font }]}>Total Amount</Text>
+                  <Text style={[s.totalValue, { color: c.primary, fontFamily: font }]}>{formatCurrency(amount)}</Text>
+                </View>
+                {b.paymentPlan && b.paymentPlan !== 'full' && (
+                  <>
+                    <DetailRow label="Payment Plan" value={b.paymentPlan} />
+                    {b.depositAmount != null && <DetailRow label="Deposit" value={formatCurrency(b.depositAmount)} />}
+                    {b.balanceDue != null && <DetailRow label="Balance Due" value={formatCurrency(b.balanceDue)} />}
+                  </>
+                )}
+              </View>
+
+              {/* Payment Status */}
+              <View style={[s.section, { backgroundColor: c.surface, borderColor: c.border }]}>
+                <SectionHeader title="💳 Payment Status" />
+                <DetailRow label="Status" value={payment.status || 'pending'} valueColor={payment.status === 'completed' ? '#10b981' : '#f59e0b'} />
+                {payment.method && <DetailRow label="Method" value={payment.method} />}
+                {payment.transactionId && <DetailRow label="Transaction ID" value={payment.transactionId} />}
+                {payment.paymentDate && <DetailRow label="Paid On" value={formatDateTime(payment.paymentDate)} />}
+                {payment.refundStatus && payment.refundStatus !== 'none' && (
+                  <DetailRow label="Refund Status" value={payment.refundStatus} valueColor="#f59e0b" />
+                )}
+              </View>
+
+              {/* Timeline */}
+              <View style={[s.section, { backgroundColor: c.surface, borderColor: c.border }]}>
+                <SectionHeader title="🕐 Timeline" />
+                <DetailRow label="Booked On" value={formatDateTime(b.createdAt || b.bookingDate)} />
+                {b.confirmedDate && <DetailRow label="Confirmed" value={formatDateTime(b.confirmedDate)} />}
+                {b.completedDate && <DetailRow label="Completed" value={formatDateTime(b.completedDate)} />}
+                {b.cancelledDate && <DetailRow label="Cancelled" value={formatDateTime(b.cancelledDate)} />}
+                {b.cancellationReason && <DetailRow label="Cancel Reason" value={b.cancellationReason} />}
+              </View>
+
+              {/* Action Buttons */}
+              {b.status !== 'cancelled' && b.status !== 'completed' && (
+                <View style={[adminStyles.actionRow, { marginTop: 8 }]}>
+                  {b.status === 'pending' && (
+                    <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: '#eff6ff' }]} onPress={() => handleAction('confirm')}>
+                      <MaterialCommunityIcons name="check-circle" size={16} color="#2563eb" />
+                      <Text style={[adminStyles.actionBtnText, { color: '#2563eb', fontFamily: font, marginTop: 2 }]}>Confirm</Text>
+                    </TouchableOpacity>
+                  )}
+                  {b.status === 'confirmed' && (
+                    <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: '#f0fdf4' }]} onPress={() => handleAction('complete')}>
+                      <MaterialCommunityIcons name="check-all" size={16} color="#15803d" />
+                      <Text style={[adminStyles.actionBtnText, { color: '#15803d', fontFamily: font, marginTop: 2 }]}>Complete</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: '#fff1f2' }]} onPress={() => handleAction('cancel')}>
+                    <MaterialCommunityIcons name="close-circle" size={16} color="#dc2626" />
+                    <Text style={[adminStyles.actionBtnText, { color: '#dc2626', fontFamily: font, marginTop: 2 }]}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </ScrollView>
+          )}
+        </SafeAreaView>
+      </Modal>
     );
   };
 
@@ -135,7 +323,11 @@ export default function ManageBookingsScreen() {
       </View>
 
       <View style={[adminStyles.statsRow, { paddingHorizontal: 16, marginTop: 12 }]}>
-        {[{ label: 'Total', value: bookings.length, bg: '#eff6ff', color: '#2563eb' }, { label: 'Pending', value: bookings.filter(b => b.status === 'pending').length, bg: '#fffbeb', color: '#d97706' }, { label: 'Completed', value: bookings.filter(b => b.status === 'completed').length, bg: '#f0fdf4', color: '#15803d' }].map(st => (
+        {[
+          { label: 'Total', value: bookings.length, bg: '#eff6ff', color: '#2563eb' },
+          { label: 'Pending', value: bookings.filter(b => b.status === 'pending').length, bg: '#fffbeb', color: '#d97706' },
+          { label: 'Completed', value: bookings.filter(b => b.status === 'completed').length, bg: '#f0fdf4', color: '#15803d' },
+        ].map(st => (
           <View key={st.label} style={[adminStyles.statCard, { backgroundColor: st.bg, borderColor: st.color + '30' }]}>
             <Text style={[adminStyles.statLabel, { color: st.color, fontFamily: font }]}>{st.label}</Text>
             <Text style={[adminStyles.statValue, { color: st.color, fontFamily: font }]}>{st.value}</Text>
@@ -145,7 +337,13 @@ export default function ManageBookingsScreen() {
 
       <View style={[adminStyles.searchBar, { backgroundColor: c.surface, borderColor: c.inputBorder }]}>
         <MaterialCommunityIcons name="magnify" size={20} color={c.muted} />
-        <TextInput style={[adminStyles.searchInput, { color: c.text, fontFamily: font }]} placeholder="Search booking, client..." placeholderTextColor={c.muted} value={search} onChangeText={setSearch} />
+        <TextInput
+          style={[adminStyles.searchInput, { color: c.text, fontFamily: font }]}
+          placeholder="Search booking, client..."
+          placeholderTextColor={c.muted}
+          value={search}
+          onChangeText={setSearch}
+        />
         {search ? <TouchableOpacity onPress={() => setSearch('')}><MaterialCommunityIcons name="close-circle" size={18} color={c.muted} /></TouchableOpacity> : null}
       </View>
 
@@ -169,6 +367,8 @@ export default function ManageBookingsScreen() {
           </View>
         }
       />
+
+      {renderModal()}
     </SafeAreaView>
   );
 }
@@ -179,8 +379,20 @@ const s = StyleSheet.create({
   clientName: { fontSize: 12, fontWeight: '500', marginTop: 2 },
   dateText: { fontSize: 12, fontWeight: '600' },
   amount: { fontSize: 14, fontWeight: '800' },
-  expandedCard: { borderRadius: 16, borderWidth: 1, padding: 14, marginTop: -8, marginBottom: 10 },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  infoKey: { fontSize: 12, fontWeight: '600' },
-  infoVal: { fontSize: 12, fontWeight: '700' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1 },
+  modalClose: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  modalTitle: { fontSize: 15, fontWeight: '800' },
+  modalAmount: { fontSize: 18, fontWeight: '800' },
+  section: { borderRadius: 16, borderWidth: 1, padding: 14, marginBottom: 12 },
+  sectionHeader: { fontSize: 13, fontWeight: '800', marginBottom: 10, letterSpacing: 0.3 },
+  subHeader: { fontSize: 12, fontWeight: '700', marginTop: 8, marginBottom: 4 },
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 7 },
+  detailKey: { fontSize: 12, fontWeight: '600', flex: 1 },
+  detailVal: { fontSize: 12, fontWeight: '700', flex: 1.5, textAlign: 'right' },
+  packageRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, marginBottom: 4 },
+  packageName: { fontSize: 12, fontWeight: '600' },
+  packagePrice: { fontSize: 12, fontWeight: '700' },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 10, marginTop: 6, borderTopWidth: 1 },
+  totalLabel: { fontSize: 13, fontWeight: '800' },
+  totalValue: { fontSize: 15, fontWeight: '800' },
 });

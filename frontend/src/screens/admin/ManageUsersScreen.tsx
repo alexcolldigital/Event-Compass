@@ -1,420 +1,330 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Alert, TextInput, SafeAreaView, Modal, ScrollView } from 'react-native';
+import {
+  View, Text, SafeAreaView, FlatList, TouchableOpacity, Alert,
+  TextInput, StyleSheet, Modal, ScrollView,
+} from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import Loading from '../../components/Loading.jsx';
-import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { adminAPI } from '../../services/api.js';
-import { USER_ROLES } from '../../utils/constants.js';
-import { formatDate } from '../../utils/helpers.js';
+import Loading from '../../components/Loading.jsx';
 import { useTheme } from '../../context/ThemeContext';
-import adminStyles, { getColors, appFont } from '../../styles/adminStyles.js';
+import { getColors, adminStyles, font } from '../../styles/adminStyles';
+import { formatDate } from '../../utils/helpers.js';
 
-const ManageUsersScreen = () => {
+const ROLES = [
+  { label: 'Client', value: 'client', icon: 'account', color: '#2563eb', bg: '#eff6ff' },
+  { label: 'Service Provider', value: 'service_provider', icon: 'briefcase', color: '#7c3aed', bg: '#f5f3ff' },
+  { label: 'Admin', value: 'admin', icon: 'shield-account', color: '#dc2626', bg: '#fff1f2' },
+];
+
+export default function ManageUsersScreen() {
   const navigation = useNavigation();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const C = getColors(isDark);
+  const c = getColors(isDark);
 
   const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [filtered, setFiltered] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchText, setSearchText] = useState('');
-  const [filterRole, setFilterRole] = useState('all');
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [showAddUserModal, setShowAddUserModal] = useState(false);
-  const [newUser, setNewUser] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phoneNumber: '',
-    password: '',
-    passwordConfirm: '',
-    role: USER_ROLES.CLIENT,
-    businessName: '',
-  });
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [expanded, setExpanded] = useState(null);
 
-  useEffect(() => { loadUsers(); }, []);
-  useEffect(() => { filterUsers(); }, [searchText, filterRole, users]);
+  // Role picker modal state
+  const [roleModalUser, setRoleModalUser] = useState(null);
+  const [roleLoading, setRoleLoading] = useState(false);
 
-  const loadUsers = async () => {
+  useEffect(() => { load(); }, []);
+  useEffect(() => { filter(); }, [search, roleFilter, users]);
+
+  const load = async () => {
     setIsLoading(true);
     try {
-      const response = await adminAPI.getAllUsers({ limit: 100 });
-      setUsers(response.users || []);
-      setError(null);
-    } catch (err) {
-      setError(err.message || 'Failed to load users');
-    } finally {
-      setIsLoading(false);
-    }
+      const r = await adminAPI.getAllUsers({ limit: 100 });
+      setUsers(r.users || []);
+    } catch (_) {}
+    finally { setIsLoading(false); }
   };
 
-  const filterUsers = () => {
-    let filtered = users;
-    if (searchText.trim()) {
-      filtered = filtered.filter((u) =>
-        u.firstName.toLowerCase().includes(searchText.toLowerCase()) ||
-        u.lastName.toLowerCase().includes(searchText.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchText.toLowerCase()) ||
-        (u.phoneNumber || u.phone || '').includes(searchText)
-      );
-    }
-    if (filterRole !== 'all') filtered = filtered.filter((u) => u.role === filterRole);
-    setFilteredUsers(filtered);
+  const filter = () => {
+    let f = users;
+    if (search.trim()) f = f.filter(u => `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(search.toLowerCase()));
+    if (roleFilter !== 'all') f = f.filter(u => u.role === roleFilter);
+    setFiltered(f);
   };
 
-  const handleBlockUser = (user) => {
+  const handleBlock = (user) => {
     Alert.alert(
       user.isBlocked ? 'Unblock User' : 'Block User',
-      user.isBlocked
-        ? `Unblock ${user.firstName} ${user.lastName}?`
-        : `Block ${user.businessName || `${user.firstName} ${user.lastName}`}?`,
+      `${user.isBlocked ? 'Unblock' : 'Block'} ${user.firstName} ${user.lastName}?`,
       [
-        { text: 'Cancel' },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Confirm',
-          onPress: async () => {
+          text: 'Confirm', onPress: async () => {
             try {
-              const response = await adminAPI.blockUser(user._id, { reason: user.isBlocked ? undefined : 'Blocked by admin' });
-              setUsers(users.map((u) => u._id === user._id ? response.user : u));
-              setSelectedUser(null);
-              Alert.alert('Success', `User ${user.isBlocked ? 'unblocked' : 'blocked'} successfully`);
-            } catch (err) { Alert.alert('Error', err.message || 'Failed to update user'); }
+              const r = await adminAPI.blockUser(user._id, { reason: user.isBlocked ? undefined : 'Blocked by admin' });
+              setUsers(prev => prev.map(u => u._id === user._id ? r.user : u));
+              setExpanded(null);
+            } catch (e) { Alert.alert('Error', e.message || 'Failed to update user'); }
           },
         },
       ]
     );
   };
 
-  const handleAssignRole = (user) => {
-    const roles = [
-      { label: 'Client', value: 'client' },
-      { label: 'Service Provider', value: 'service_provider' },
-      { label: 'Admin', value: 'admin' },
-    ];
-    Alert.alert(
-      'Assign Role',
-      `Current role: ${user.role}\nSelect new role for ${user.firstName} ${user.lastName}:`,
-      [
-        ...roles.filter(r => r.value !== user.role).map(r => ({
-          text: r.label,
-          onPress: async () => {
-            try {
-              const response = await adminAPI.assignRole(user._id, r.value);
-              setUsers(users.map(u => u._id === user._id ? response.user : u));
-              setSelectedUser(null);
-              Alert.alert('Success', `User role updated to ${r.label}`);
-            } catch (err) { Alert.alert('Error', err.message || 'Failed to assign role'); }
-          },
-        })),
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
-  };
-
-  const handleVerifyUser = (user) => {
-    Alert.alert('Verify Provider', `Verify ${user.businessName} as a service provider?`, [
-      { text: 'Cancel' },
+  const handleVerify = (user) => {
+    Alert.alert('Verify Provider', `Verify ${user.businessName || user.firstName}?`, [
+      { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Verify',
-        onPress: async () => {
+        text: 'Verify', onPress: async () => {
           try {
-            const response = await adminAPI.verifyProvider(user._id);
-            setUsers(users.map((u) => u._id === user._id ? response.user : u));
-            setSelectedUser(null);
-            Alert.alert('Success', 'Provider verified successfully');
-          } catch (err) { Alert.alert('Error', err.message || 'Failed to verify provider'); }
+            const r = await adminAPI.verifyProvider(user._id);
+            setUsers(prev => prev.map(u => u._id === user._id ? r.user : u));
+            setExpanded(null);
+          } catch (e) { Alert.alert('Error', e.message || 'Failed to verify'); }
         },
       },
     ]);
   };
 
-  const handleCreateUser = async () => {
-    if (!newUser.firstName || !newUser.lastName || !newUser.email || !newUser.phoneNumber || !newUser.password) {
-      Alert.alert('Missing fields', 'Please fill in all required details.');
+  const handleAssignRole = async (newRole: string) => {
+    if (!roleModalUser || newRole === roleModalUser.role) {
+      setRoleModalUser(null);
       return;
     }
-
-    if (newUser.password.length < 6) {
-      Alert.alert('Weak password', 'Password must be at least 6 characters long.');
-      return;
-    }
-
-    if (newUser.password !== newUser.passwordConfirm) {
-      Alert.alert('Passwords do not match', 'Please re-enter the same password to continue.');
-      return;
-    }
-
+    setRoleLoading(true);
     try {
-      const response = await adminAPI.createUser({
-        ...newUser,
-        businessName: newUser.businessName || undefined,
-      });
-      setUsers((current) => [response.user, ...current]);
-      setSelectedUser(null);
-      setShowAddUserModal(false);
-      setNewUser({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phoneNumber: '',
-        password: '',
-        passwordConfirm: '',
-        role: USER_ROLES.CLIENT,
-        businessName: '',
-      });
-      Alert.alert('Success', `User ${response.user.firstName} ${response.user.lastName} created successfully.`);
-    } catch (err) {
-      Alert.alert('Error', err.message || 'Failed to create user');
+      const r = await adminAPI.assignRole(roleModalUser._id, newRole);
+      setUsers(prev => prev.map(u => u._id === roleModalUser._id ? r.user : u));
+      setExpanded(null);
+      setRoleModalUser(null);
+      Alert.alert('Success', `Role updated to ${ROLES.find(r => r.value === newRole)?.label}`);
+    } catch (e) {
+      Alert.alert('Error', e.message || 'Failed to assign role');
+    } finally {
+      setRoleLoading(false);
     }
   };
 
   const ROLE_FILTERS = [
     { label: 'All', value: 'all' },
-    { label: 'Clients', value: USER_ROLES.CLIENT },
-    { label: 'Providers', value: USER_ROLES.SERVICE_PROVIDER },
+    { label: 'Clients', value: 'client' },
+    { label: 'Providers', value: 'service_provider' },
+    { label: 'Admins', value: 'admin' },
   ];
 
-  const STAT_CARDS = [
-    { label: 'Total', value: users.length, accent: '#2563eb', bg: isDark ? '#1e3a5f' : '#eff6ff', border: isDark ? '#1e40af' : '#bfdbfe' },
-    { label: 'Active', value: users.filter((u) => !u.isBlocked).length, accent: '#1f7a4d', bg: isDark ? '#14532d' : '#f0fdf4', border: isDark ? '#166534' : '#bbf7d0' },
-    { label: 'Blocked', value: users.filter((u) => u.isBlocked).length, accent: '#dc2626', bg: isDark ? '#450a0a' : '#fff1f2', border: isDark ? '#991b1b' : '#fecaca' },
-  ];
-
-  const UserCard = ({ user }) => {
-    const isProvider = user.role === USER_ROLES.SERVICE_PROVIDER;
-    const expanded = selectedUser?._id === user._id;
+  const UserCard = ({ item }) => {
+    const open = expanded === item._id;
+    const isProvider = item.role === 'service_provider';
+    const roleInfo = ROLES.find(r => r.value === item.role);
     return (
-      <TouchableOpacity
-        onPress={() => setSelectedUser(expanded ? null : user)}
-        style={[adminStyles.card, { backgroundColor: C.surface, borderColor: C.border }]}
-        activeOpacity={0.85}
-      >
-        <View style={adminStyles.cardRow}>
-          <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: C.primary + '22', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-            <MaterialCommunityIcons name="account" size={22} color={C.primary} />
+      <View>
+        <TouchableOpacity
+          onPress={() => setExpanded(open ? null : item._id)}
+          style={[adminStyles.listItem, { backgroundColor: c.surface, borderColor: c.border }]}
+          activeOpacity={0.85}
+        >
+          <View style={[adminStyles.listIcon, { backgroundColor: `${c.primary}18` }]}>
+            <MaterialCommunityIcons name="account" size={22} color={c.primary} />
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14, fontFamily: appFont }}>
-              {user.firstName} {user.lastName}
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={[adminStyles.listLabel, { color: c.text, fontFamily: font, marginLeft: 0 }]}>
+              {item.firstName} {item.lastName}
             </Text>
-            {isProvider && <Text style={{ color: C.muted, fontSize: 12, marginTop: 2, fontFamily: appFont }}>{user.businessName}</Text>}
-            <Text style={{ color: C.muted, fontSize: 12, marginTop: 1, fontFamily: appFont }}>{user.email}</Text>
+            <Text style={[adminStyles.listSub, { color: c.muted, fontFamily: font }]}>{item.email}</Text>
+            {isProvider && item.businessName
+              ? <Text style={[adminStyles.listSub, { color: c.muted, fontFamily: font }]}>{item.businessName}</Text>
+              : null}
           </View>
-          <View style={[adminStyles.badge, { backgroundColor: user.isBlocked ? '#fee2e2' : '#dcfce7' }]}>
-            <Text style={[adminStyles.badgeText, { color: user.isBlocked ? '#b91c1c' : '#166534' }]}>
-              {user.isBlocked ? 'Blocked' : 'Active'}
-            </Text>
+          <View style={{ alignItems: 'flex-end', gap: 4 }}>
+            <View style={[adminStyles.badge, { backgroundColor: item.isBlocked ? '#fee2e2' : '#dcfce7' }]}>
+              <Text style={[adminStyles.badgeText, { color: item.isBlocked ? '#dc2626' : '#15803d', fontFamily: font }]}>
+                {item.isBlocked ? 'Blocked' : 'Active'}
+              </Text>
+            </View>
+            {roleInfo && (
+              <View style={[adminStyles.badge, { backgroundColor: roleInfo.bg }]}>
+                <Text style={[adminStyles.badgeText, { color: roleInfo.color, fontFamily: font }]}>{roleInfo.label}</Text>
+              </View>
+            )}
           </View>
-        </View>
+          <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={20} color={c.muted} style={{ marginLeft: 8 }} />
+        </TouchableOpacity>
 
-        {expanded && (
-          <View style={{ marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: C.border }}>
+        {open && (
+          <View style={[s.expandedCard, { backgroundColor: c.surfaceAlt, borderColor: c.border }]}>
             {[
-              { label: 'Role', value: user.role },
-              { label: 'Phone', value: user.phoneNumber || user.phone || 'Not provided' },
-              { label: 'Bookings', value: user.totalBookings },
-              { label: 'Joined', value: formatDate(user.createdAt) },
-            ].map((row) => (
-              <View key={row.label} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text style={{ color: C.muted, fontSize: 12, fontFamily: appFont }}>{row.label}</Text>
-                <Text style={{ color: C.text, fontSize: 12, fontWeight: '700', fontFamily: appFont, textTransform: 'capitalize' }}>{row.value}</Text>
+              ['Role', item.role],
+              ['Phone', item.phoneNumber || 'N/A'],
+              ['Bookings', String(item.totalBookings || 0)],
+              ['Joined', formatDate(item.createdAt)],
+            ].map(([k, v]) => (
+              <View key={k} style={s.infoRow}>
+                <Text style={[s.infoKey, { color: c.muted, fontFamily: font }]}>{k}</Text>
+                <Text style={[s.infoVal, { color: c.text, fontFamily: font }]}>{v}</Text>
               </View>
             ))}
-
-            {user.isBlocked && user.blockReason && (
-              <View style={{ backgroundColor: isDark ? '#450a0a' : '#fff1f2', borderRadius: 10, padding: 10, marginBottom: 10 }}>
-                <Text style={{ color: C.muted, fontSize: 11, fontWeight: '700', marginBottom: 2, fontFamily: appFont }}>Block Reason</Text>
-                <Text style={{ color: '#dc2626', fontSize: 12, fontFamily: appFont }}>{user.blockReason}</Text>
+            {item.isBlocked && item.blockReason ? (
+              <View style={[s.reasonBox, { backgroundColor: '#fee2e2' }]}>
+                <Text style={{ color: '#dc2626', fontSize: 12, fontFamily: font }}>Reason: {item.blockReason}</Text>
               </View>
-            )}
-
-            {isProvider && (
-              <View style={{ marginBottom: 10 }}>
-                {user.isBusinessVerified || user.businessVerified ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#14532d' : '#f0fdf4', padding: 10, borderRadius: 10 }}>
-                    <MaterialCommunityIcons name="check-circle" size={14} color={C.success} />
-                    <Text style={{ color: '#166534', fontSize: 12, marginLeft: 6, fontWeight: '700', fontFamily: appFont }}>Verified Provider</Text>
-                  </View>
-                ) : (
-                  <TouchableOpacity
-                    style={{ backgroundColor: isDark ? '#1e3a5f' : '#eff6ff', padding: 10, borderRadius: 10, alignItems: 'center' }}
-                    onPress={() => handleVerifyUser(user)}
-                  >
-                    <Text style={{ color: '#2563eb', fontSize: 12, fontWeight: '700', fontFamily: appFont }}>Verify Provider</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-
+            ) : null}
             <View style={adminStyles.actionRow}>
+              {isProvider && !(item.isBusinessVerified) && (
+                <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: '#eff6ff' }]} onPress={() => handleVerify(item)}>
+                  <Text style={[adminStyles.actionBtnText, { color: '#2563eb', fontFamily: font }]}>Verify</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
-                style={[adminStyles.actionBtn, { backgroundColor: user.isBlocked ? '#dcfce7' : '#fee2e2' }]}
-                onPress={() => handleBlockUser(user)}
+                style={[adminStyles.actionBtn, { backgroundColor: item.isBlocked ? '#dcfce7' : '#fee2e2' }]}
+                onPress={() => handleBlock(item)}
               >
-                <Text style={[adminStyles.actionBtnText, { color: user.isBlocked ? '#166534' : '#b91c1c' }]}>
-                  {user.isBlocked ? 'Unblock' : 'Block'}
+                <Text style={[adminStyles.actionBtnText, { color: item.isBlocked ? '#15803d' : '#dc2626', fontFamily: font }]}>
+                  {item.isBlocked ? 'Unblock' : 'Block'}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[adminStyles.actionBtn, { backgroundColor: '#f5f3ff' }]}
-                onPress={() => handleAssignRole(user)}
+                onPress={() => setRoleModalUser(item)}
               >
-                <Text style={[adminStyles.actionBtnText, { color: '#7c3aed' }]}>Assign Role</Text>
+                <Text style={[adminStyles.actionBtnText, { color: '#7c3aed', fontFamily: font }]}>Assign Role</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
-      </TouchableOpacity>
+      </View>
     );
   };
 
-  if (isLoading) return <Loading fullScreen message="Loading users..." />;
+  if (isLoading) return <Loading fullScreen />;
 
   return (
-    <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
-      {/* Header */}
-      <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
+    <SafeAreaView style={[adminStyles.screen, { backgroundColor: c.bg }]}>
+      <View style={[adminStyles.header, { backgroundColor: c.surface, borderBottomColor: c.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={c.text} />
         </TouchableOpacity>
-        <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>Manage Users</Text>
-        <TouchableOpacity onPress={() => setShowAddUserModal(true)}>
-          <MaterialCommunityIcons name="account-plus" size={26} color={C.primary} />
-        </TouchableOpacity>
+        <Text style={[adminStyles.headerTitle, { color: c.text, fontFamily: font }]}>Manage Users</Text>
       </View>
 
+      <View style={[adminStyles.statsRow, { paddingHorizontal: 16, marginTop: 12 }]}>
+        {[
+          { label: 'Total', value: users.length, bg: '#eff6ff', color: '#2563eb' },
+          { label: 'Active', value: users.filter(u => !u.isBlocked).length, bg: '#f0fdf4', color: '#15803d' },
+          { label: 'Blocked', value: users.filter(u => u.isBlocked).length, bg: '#fff1f2', color: '#dc2626' },
+        ].map(st => (
+          <View key={st.label} style={[adminStyles.statCard, { backgroundColor: st.bg, borderColor: st.color + '30' }]}>
+            <Text style={[adminStyles.statLabel, { color: st.color, fontFamily: font }]}>{st.label}</Text>
+            <Text style={[adminStyles.statValue, { color: st.color, fontFamily: font }]}>{st.value}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={[adminStyles.searchBar, { backgroundColor: c.surface, borderColor: c.inputBorder }]}>
+        <MaterialCommunityIcons name="magnify" size={20} color={c.muted} />
+        <TextInput
+          style={[adminStyles.searchInput, { color: c.text, fontFamily: font }]}
+          placeholder="Search name, email..."
+          placeholderTextColor={c.muted}
+          value={search}
+          onChangeText={setSearch}
+        />
+        {search ? <TouchableOpacity onPress={() => setSearch('')}><MaterialCommunityIcons name="close-circle" size={18} color={c.muted} /></TouchableOpacity> : null}
+      </View>
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[{ backgroundColor: c.surface, borderBottomWidth: 1, borderBottomColor: c.border }]} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}>
+        {ROLE_FILTERS.map(r => (
+          <TouchableOpacity
+            key={r.value}
+            style={[adminStyles.chip, { backgroundColor: roleFilter === r.value ? c.primary : 'transparent', borderColor: roleFilter === r.value ? c.primary : c.inputBorder }]}
+            onPress={() => setRoleFilter(r.value)}
+          >
+            <Text style={[adminStyles.chipText, { color: roleFilter === r.value ? '#fff' : c.muted, fontFamily: font }]}>{r.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
       <FlatList
-        data={filteredUsers}
-        keyExtractor={(item) => item._id}
-        renderItem={({ item }) => <UserCard user={item} />}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={
-          <>
-            {/* Hero */}
-            <View style={[adminStyles.hero, { backgroundColor: C.primary, marginTop: 12 }]}>
-              <Text style={[adminStyles.heroEyebrow, { fontFamily: appFont }]}>ADMIN</Text>
-              <Text style={[adminStyles.heroTitle, { fontFamily: appFont }]}>User Management</Text>
-              <Text style={[adminStyles.heroSubtitle, { fontFamily: appFont }]}>{users.length} registered users</Text>
-            </View>
-
-            {error && <View style={{ marginBottom: 12 }}><ErrorMessage error={error} /></View>}
-
-            {/* Search */}
-            <View style={[adminStyles.searchBar, { backgroundColor: C.surface, borderColor: C.inputBorder }]}>
-              <MaterialCommunityIcons name="magnify" size={20} color={C.muted} />
-              <TextInput
-                placeholder="Search by name, email, phone..."
-                value={searchText}
-                onChangeText={(t) => { setSearchText(t); }}
-                style={[adminStyles.searchInput, { color: C.text, fontFamily: appFont }]}
-                placeholderTextColor={C.muted}
-              />
-              {searchText !== '' && (
-                <TouchableOpacity onPress={() => setSearchText('')}>
-                  <MaterialCommunityIcons name="close-circle" size={18} color={C.muted} />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Role Filter */}
-            <View style={adminStyles.filterRow}>
-              {ROLE_FILTERS.map((f) => (
-                <TouchableOpacity
-                  key={f.value}
-                  style={[adminStyles.filterChip, { flex: 1, alignItems: 'center', backgroundColor: filterRole === f.value ? C.primary : C.surface, borderColor: filterRole === f.value ? C.primary : C.inputBorder }]}
-                  onPress={() => setFilterRole(f.value)}
-                >
-                  <Text style={[adminStyles.filterChipText, { color: filterRole === f.value ? '#fff' : C.text, fontFamily: appFont }]}>{f.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Stats */}
-            <View style={adminStyles.statsGrid}>
-              {STAT_CARDS.map((s) => (
-                <View key={s.label} style={[adminStyles.statCard, { backgroundColor: s.bg, borderColor: s.border }]}>
-                  <Text style={[adminStyles.statLabel, { color: s.accent, fontFamily: appFont }]}>{s.label}</Text>
-                  <Text style={[adminStyles.statValue, { color: s.accent, fontFamily: appFont }]}>{s.value}</Text>
-                </View>
-              ))}
-            </View>
-
-            <Text style={[adminStyles.sectionTitle, { color: C.text, fontFamily: appFont }]}>Users</Text>
-          </>
-        }
+        data={filtered}
+        keyExtractor={i => i._id}
+        contentContainerStyle={{ padding: 16 }}
+        renderItem={({ item }) => <UserCard item={item} />}
         ListEmptyComponent={
-          <View style={adminStyles.emptyState}>
-            <MaterialCommunityIcons name="account-off" size={48} color={C.muted} />
-            <Text style={[adminStyles.emptyText, { color: C.muted, fontFamily: appFont }]}>No users found</Text>
-            <Text style={[adminStyles.emptySubtext, { color: C.muted, fontFamily: appFont }]}>Try adjusting your filters</Text>
+          <View style={adminStyles.empty}>
+            <MaterialCommunityIcons name="account-off" size={48} color={c.muted} />
+            <Text style={[adminStyles.emptyText, { color: c.muted, fontFamily: font }]}>No users found</Text>
           </View>
         }
       />
 
-      <Modal visible={showAddUserModal} animationType="slide" transparent={false}>
-        <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
-          <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}> 
-            <TouchableOpacity onPress={() => setShowAddUserModal(false)}>
-              <MaterialCommunityIcons name="close" size={24} color={C.text} />
+      {/* Role Picker Modal */}
+      <Modal
+        visible={!!roleModalUser}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !roleLoading && setRoleModalUser(null)}
+      >
+        <TouchableOpacity
+          style={s.overlay}
+          activeOpacity={1}
+          onPress={() => !roleLoading && setRoleModalUser(null)}
+        >
+          <View style={[s.roleSheet, { backgroundColor: c.surface }]} onStartShouldSetResponder={() => true}>
+            <Text style={[s.roleSheetTitle, { color: c.text, fontFamily: font }]}>Assign Role</Text>
+            {roleModalUser && (
+              <Text style={[s.roleSheetSub, { color: c.muted, fontFamily: font }]}>
+                {roleModalUser.firstName} {roleModalUser.lastName} · Current: {ROLES.find(r => r.value === roleModalUser.role)?.label || roleModalUser.role}
+              </Text>
+            )}
+            <View style={[s.roleDivider, { backgroundColor: c.border }]} />
+            {ROLES.map(r => {
+              const isCurrent = roleModalUser?.role === r.value;
+              return (
+                <TouchableOpacity
+                  key={r.value}
+                  style={[s.roleOption, { backgroundColor: isCurrent ? r.bg : 'transparent', opacity: roleLoading ? 0.5 : 1 }]}
+                  onPress={() => !roleLoading && handleAssignRole(r.value)}
+                  disabled={roleLoading}
+                  activeOpacity={0.75}
+                >
+                  <View style={[s.roleIconWrap, { backgroundColor: r.bg }]}>
+                    <MaterialCommunityIcons name={r.icon as any} size={20} color={r.color} />
+                  </View>
+                  <Text style={[s.roleOptionLabel, { color: isCurrent ? r.color : c.text, fontFamily: font }]}>{r.label}</Text>
+                  {isCurrent && (
+                    <MaterialCommunityIcons name="check-circle" size={18} color={r.color} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity
+              style={[s.cancelBtn, { borderColor: c.inputBorder }]}
+              onPress={() => !roleLoading && setRoleModalUser(null)}
+              disabled={roleLoading}
+            >
+              <Text style={[s.cancelBtnText, { color: c.muted, fontFamily: font }]}>Cancel</Text>
             </TouchableOpacity>
-            <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>Add User</Text>
-            <View style={{ width: 24 }} />
           </View>
-
-          <ScrollView style={{ padding: 16 }} contentContainerStyle={{ paddingBottom: 32 }}>
-            <View style={[adminStyles.formSection, { backgroundColor: C.surface, borderColor: C.border, borderWidth: 1, borderRadius: 16, padding: 16 }]}> 
-              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>First Name</Text>
-              <TextInput value={newUser.firstName} onChangeText={(text) => setNewUser({ ...newUser, firstName: text })} placeholder="First name" style={[adminStyles.formInput, { backgroundColor: C.surfaceAlt, borderColor: C.inputBorder, color: C.text, fontFamily: appFont }]} placeholderTextColor={C.muted} />
-
-              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont, marginTop: 12 }]}>Last Name</Text>
-              <TextInput value={newUser.lastName} onChangeText={(text) => setNewUser({ ...newUser, lastName: text })} placeholder="Last name" style={[adminStyles.formInput, { backgroundColor: C.surfaceAlt, borderColor: C.inputBorder, color: C.text, fontFamily: appFont }]} placeholderTextColor={C.muted} />
-
-              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont, marginTop: 12 }]}>Email</Text>
-              <TextInput value={newUser.email} onChangeText={(text) => setNewUser({ ...newUser, email: text })} placeholder="user@email.com" keyboardType="email-address" style={[adminStyles.formInput, { backgroundColor: C.surfaceAlt, borderColor: C.inputBorder, color: C.text, fontFamily: appFont }]} placeholderTextColor={C.muted} />
-
-              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont, marginTop: 12 }]}>Phone Number</Text>
-              <TextInput value={newUser.phoneNumber} onChangeText={(text) => setNewUser({ ...newUser, phoneNumber: text })} placeholder="+2348000000000" keyboardType="phone-pad" style={[adminStyles.formInput, { backgroundColor: C.surfaceAlt, borderColor: C.inputBorder, color: C.text, fontFamily: appFont }]} placeholderTextColor={C.muted} />
-
-              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont, marginTop: 12 }]}>Role</Text>
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                {['client', 'service_provider', 'admin'].map((role) => (
-                  <TouchableOpacity
-                    key={role}
-                    onPress={() => setNewUser({ ...newUser, role })}
-                    style={{ flex: 1, paddingVertical: 10, borderRadius: 10, borderWidth: 1, alignItems: 'center', backgroundColor: newUser.role === role ? C.primary : C.surfaceAlt, borderColor: newUser.role === role ? C.primary : C.inputBorder }}
-                  >
-                    <Text style={{ color: newUser.role === role ? '#fff' : C.text, fontWeight: '700', fontFamily: appFont, textTransform: 'capitalize' }}>{role.replace('_', ' ')}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont, marginTop: 12 }]}>Business Name (optional)</Text>
-              <TextInput value={newUser.businessName} onChangeText={(text) => setNewUser({ ...newUser, businessName: text })} placeholder="Business name" style={[adminStyles.formInput, { backgroundColor: C.surfaceAlt, borderColor: C.inputBorder, color: C.text, fontFamily: appFont }]} placeholderTextColor={C.muted} />
-
-              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont, marginTop: 12 }]}>Password</Text>
-              <TextInput value={newUser.password} onChangeText={(text) => setNewUser({ ...newUser, password: text })} placeholder="Minimum 6 characters" secureTextEntry style={[adminStyles.formInput, { backgroundColor: C.surfaceAlt, borderColor: C.inputBorder, color: C.text, fontFamily: appFont }]} placeholderTextColor={C.muted} />
-
-              <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont, marginTop: 12 }]}>Confirm Password</Text>
-              <TextInput value={newUser.passwordConfirm} onChangeText={(text) => setNewUser({ ...newUser, passwordConfirm: text })} placeholder="Repeat password" secureTextEntry style={[adminStyles.formInput, { backgroundColor: C.surfaceAlt, borderColor: C.inputBorder, color: C.text, fontFamily: appFont }]} placeholderTextColor={C.muted} />
-
-              <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
-                <TouchableOpacity style={[adminStyles.modalBtn, { flex: 1, borderWidth: 1, borderColor: C.inputBorder }]} onPress={() => setShowAddUserModal(false)}>
-                  <Text style={[adminStyles.modalBtnText, { color: C.text, fontFamily: appFont }]}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[adminStyles.modalBtn, { flex: 1, backgroundColor: C.primary }]} onPress={handleCreateUser}>
-                  <Text style={[adminStyles.modalBtnText, { color: '#fff', fontFamily: appFont }]}>Create User</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </ScrollView>
-        </SafeAreaView>
+        </TouchableOpacity>
       </Modal>
     </SafeAreaView>
   );
-};
+}
 
-export default ManageUsersScreen;
+const s = StyleSheet.create({
+  expandedCard: { borderRadius: 16, borderWidth: 1, padding: 14, marginTop: -8, marginBottom: 10 },
+  infoRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  infoKey: { fontSize: 12, fontWeight: '600' },
+  infoVal: { fontSize: 12, fontWeight: '700' },
+  reasonBox: { borderRadius: 10, padding: 8, marginBottom: 8 },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  roleSheet: { width: '100%', borderRadius: 24, padding: 20, maxWidth: 400 },
+  roleSheetTitle: { fontSize: 17, fontWeight: '800', marginBottom: 4 },
+  roleSheetSub: { fontSize: 13, fontWeight: '500', marginBottom: 12 },
+  roleDivider: { height: 1, marginBottom: 12 },
+  roleOption: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 14, marginBottom: 8 },
+  roleIconWrap: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  roleOptionLabel: { flex: 1, fontSize: 15, fontWeight: '700' },
+  cancelBtn: { marginTop: 4, borderWidth: 1, borderRadius: 14, paddingVertical: 12, alignItems: 'center' },
+  cancelBtnText: { fontSize: 14, fontWeight: '700' },
+});
