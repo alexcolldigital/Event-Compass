@@ -8,7 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import { adminAPI } from '../../services/api.js';
 import Loading from '../../components/Loading.jsx';
 import { useTheme } from '../../context/ThemeContext';
-import { getColors, adminStyles, font } from '../../styles/adminStyles';
+import { getColors, adminStyles, appFont as font } from '../../styles/adminStyles';
 import { formatDate } from '../../utils/helpers.js';
 
 const ROLES = [
