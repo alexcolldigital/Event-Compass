@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 20, paddingBottom: 20 },
   backBtn: { width: 40, height: 40, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
   headerTitle: { color: '#fff', fontSize: 20, fontWeight: '800', marginLeft: 14 },
-  content: { padding: 16, gap: 12, paddingBottom: 32 },
+  content: { padding: 16, gap: 12, paddingBottom: 96 },
   contactRow: { flexDirection: 'row', gap: 10 },
   contactChip: { flex: 1, borderWidth: 1, borderRadius: 18, padding: 14, alignItems: 'center', gap: 6 },
   contactChipLabel: { fontSize: 12, fontWeight: '700' },

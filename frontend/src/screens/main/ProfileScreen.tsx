@@ -136,7 +136,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { paddingHorizontal: 16, paddingBottom: 32 },
+  content: { paddingHorizontal: 16, paddingBottom: 96 },
   hero: { borderRadius: 28, padding: 24, alignItems: 'center', marginTop: 8, marginBottom: 16 },
   avatarWrap: { width: 100, height: 100, borderRadius: 999, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   avatar: { width: 100, height: 100, borderRadius: 999 },

@@ -73,7 +73,7 @@ export default function AnalyticsDashboardScreen() {
       </View>
 
       {isLoading ? <Loading /> : !analytics ? null : (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 96 }}>
           {/* KPI Cards */}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
             {KPI_CARDS.map((k) => (

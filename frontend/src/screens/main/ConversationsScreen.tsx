@@ -107,7 +107,7 @@ const ConversationsScreen = () => {
         data={conversations}
         keyExtractor={(item) => item._id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor={colors.primary} />}
-        contentContainerStyle={{ flexGrow: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 96 }}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <MaterialCommunityIcons name="message-outline" size={56} color={colors.muted} />

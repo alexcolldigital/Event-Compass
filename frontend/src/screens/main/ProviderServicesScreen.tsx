@@ -722,7 +722,7 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { paddingHorizontal: 16, paddingBottom: 32 },
+  content: { paddingHorizontal: 16, paddingBottom: 96 },
   hero: { borderRadius: 28, padding: 20, marginTop: 8, marginBottom: 16 },
   heroRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   heroCopy: { flex: 1 },

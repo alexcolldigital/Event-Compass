@@ -248,7 +248,7 @@ export default function NotificationsScreen({ navigation }: { navigation: any })
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { padding: 16, paddingBottom: 40 },
+  content: { padding: 16, paddingBottom: 96 },
   header: { borderRadius: 28, padding: 22, marginBottom: 20 },
   backButton: {
     width: 44, height: 44, borderRadius: 999,

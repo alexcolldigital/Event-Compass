@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, TextInput, StyleSheet, Platform, Alert } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, TextInput, StyleSheet, Platform, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../context/authStore.js';
 import { useServiceStore } from '../../context/serviceStore.js';
@@ -145,14 +145,27 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
     }
   };
 
+  const [cartToast, setCartToast] = useState<{ visible: boolean; name: string }>({ visible: false, name: '' });
+  const toastOpacity = React.useRef(new Animated.Value(0)).current;
+
+  const showCartToast = (name: string) => {
+    setCartToast({ visible: true, name });
+    Animated.sequence([
+      Animated.timing(toastOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const hideCartToast = () => {
+    Animated.timing(toastOpacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(() =>
+      setCartToast({ visible: false, name: '' })
+    );
+  };
+
   const handleAddToCart = (service: any) => {
     const cartItem = normalizeCartItem(service, 1);
-    if (!cartItem) {
-      return;
-    }
-
+    if (!cartItem) return;
     addItem(cartItem);
-    Alert.alert('Added to cart', `${service.name} was added to your cart.`);
+    showCartToast(service.name);
   };
 
   if (isLoading && services.length === 0) {
@@ -169,7 +182,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
               <Text style={styles.heroTitle}>{user?.firstName || 'Guest'}</Text>
               <Text style={styles.heroSubtitle}>Ready to book premium services?</Text>
             </View>
-            <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('Checkout' as never)}>
+            <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('EventDetails' as never)}>
               <MaterialCommunityIcons name="cart-outline" size={22} color="#fff" />
               {items.length > 0 ? <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{items.length}</Text></View> : null}
             </TouchableOpacity>
@@ -275,13 +288,35 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
           <Text style={[styles.bannerCopy, { color: colors.muted }]}>Discover exclusive discounts, seasonal packages, and fast booking availability.</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Add to cart toast popup */}
+      {cartToast.visible && (
+        <Animated.View style={[styles.toast, { opacity: toastOpacity }]}>
+          <Text style={styles.toastText} numberOfLines={1}>✓ Added: {cartToast.name}</Text>
+          <View style={styles.toastActions}>
+            <TouchableOpacity
+              style={[styles.toastBtn, styles.toastBtnOutline]}
+              onPress={hideCartToast}
+            >
+              <Text style={styles.toastBtnOutlineText}>Continue</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.toastBtn, styles.toastBtnFill]}
+              onPress={() => { hideCartToast(); navigation.navigate('EventDetails' as never); }}
+            >
+              <MaterialCommunityIcons name="cart" size={14} color="#fff" />
+              <Text style={styles.toastBtnFillText}>View Cart</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { paddingBottom: 32, paddingHorizontal: 16 },
+  content: { paddingBottom: 96, paddingHorizontal: 16 },
   hero: { borderRadius: 28, padding: 20, marginTop: 8, marginBottom: 16 },
   heroTopRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   eyebrow: { color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '700', letterSpacing: 1.2 },
@@ -308,6 +343,14 @@ const styles = StyleSheet.create({
   emptyCard: { borderRadius: 22, borderWidth: 1, paddingVertical: 24, alignItems: 'center', justifyContent: 'center' },
   emptyText: { fontSize: 14, fontWeight: '700', marginTop: 10, fontFamily: appFont },
   banner: { borderRadius: 24, borderWidth: 1, padding: 18, marginTop: 8 },
+  toast: { position: 'absolute', bottom: 24, left: 16, right: 16, backgroundColor: '#111827', borderRadius: 18, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 12 },
+  toastText: { color: '#f8fafc', fontSize: 13, fontWeight: '700', marginBottom: 10, fontFamily: appFont },
+  toastActions: { flexDirection: 'row', gap: 10 },
+  toastBtn: { flex: 1, paddingVertical: 9, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
+  toastBtnOutline: { borderWidth: 1, borderColor: 'rgba(248,250,252,0.25)' },
+  toastBtnOutlineText: { color: '#cbd5e1', fontSize: 13, fontWeight: '700', fontFamily: appFont },
+  toastBtnFill: { backgroundColor: '#1f7a4d' },
+  toastBtnFillText: { color: '#fff', fontSize: 13, fontWeight: '700', fontFamily: appFont },
   bannerBadge: { alignSelf: 'flex-start', backgroundColor: '#ecfdf3', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, marginBottom: 8 },
   bannerBadgeText: { color: '#1f7a4d', fontSize: 11, fontWeight: '800', letterSpacing: 1 },
   bannerTitle: { fontSize: 18, fontWeight: '800', marginBottom: 6, fontFamily: appFont },

@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { useCartStore } from '../../context/cartStore';
 import Button from '../../components/Button.jsx';
 
 const EVENT_TYPES = [
@@ -27,6 +28,7 @@ const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'Sy
 const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const { items, removeItem, updateItemQuantity, getTotalAmount } = useCartStore();
 
   const colors = {
     bg: isDark ? '#050816' : '#f8fafc',
@@ -173,8 +175,51 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
         {/* Progress bar */}
         <View style={[styles.progressTrack, { backgroundColor: colors.chip }]}>
           <View style={[styles.progressFill, { backgroundColor: colors.primary, width: '50%' }]} />
-          {/* 50% = step 1 of 2 */}
         </View>
+
+        {/* Selected Items Summary */}
+        {items.length > 0 && (
+          <View style={[styles.cartCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
+            <View style={styles.cartCardHeader}>
+              <MaterialCommunityIcons name="cart-check" size={18} color={colors.primary} />
+              <Text style={[styles.cartCardTitle, { color: colors.text, fontFamily: appFont }]}>
+                Selected Items ({items.length})
+              </Text>
+            </View>
+            {items.map((item: any) => (
+              <View key={item.serviceId} style={[styles.cartRow, { borderTopColor: colors.border }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.cartItemName, { color: colors.text, fontFamily: appFont }]} numberOfLines={1}>{item.name}</Text>
+                  <Text style={[styles.cartItemPrice, { color: colors.muted, fontFamily: appFont }]}>
+                    ₦{(item.price || 0).toLocaleString()} × {item.quantity}
+                  </Text>
+                </View>
+                <View style={styles.cartQtyRow}>
+                  <TouchableOpacity
+                    onPress={() => item.quantity <= 1 ? removeItem(item.serviceId) : updateItemQuantity(item.serviceId, item.quantity - 1)}
+                    style={[styles.qtyBtn, { borderColor: colors.border }]}
+                  >
+                    <MaterialCommunityIcons name={item.quantity <= 1 ? 'trash-can-outline' : 'minus'} size={14} color={item.quantity <= 1 ? '#ef4444' : colors.primary} />
+                  </TouchableOpacity>
+                  <Text style={[styles.qtyText, { color: colors.text, fontFamily: appFont }]}>{item.quantity}</Text>
+                  <TouchableOpacity
+                    onPress={() => updateItemQuantity(item.serviceId, item.quantity + 1)}
+                    style={[styles.qtyBtn, { borderColor: colors.border }]}
+                  >
+                    <MaterialCommunityIcons name="plus" size={14} color={colors.primary} />
+                  </TouchableOpacity>
+                </View>
+                <Text style={[styles.cartItemSubtotal, { color: colors.primary, fontFamily: appFont }]}>
+                  ₦{((item.price || 0) * (item.quantity || 1)).toLocaleString()}
+                </Text>
+              </View>
+            ))}
+            <View style={[styles.cartTotal, { borderTopColor: colors.border }]}>
+              <Text style={[styles.cartTotalLabel, { color: colors.muted, fontFamily: appFont }]}>Total</Text>
+              <Text style={[styles.cartTotalValue, { color: colors.primary, fontFamily: appFont }]}>₦{getTotalAmount().toLocaleString()}</Text>
+            </View>
+          </View>
+        )}
 
         {/* Client Info */}
         <SectionLabel label="Client Information" color={colors.muted} />
@@ -259,7 +304,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 12, marginTop: 2 },
   progressTrack: { height: 6, borderRadius: 99, marginBottom: 16, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 99 },
-  content: { padding: 16, gap: 10, paddingBottom: 32 },
+  content: { padding: 16, gap: 10, paddingBottom: 96 },
   sectionLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 8, marginBottom: 2 },
   label: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 },
   field: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 },
@@ -272,6 +317,19 @@ const styles = StyleSheet.create({
   dropdown: { borderWidth: 1, borderRadius: 12, marginTop: 4, overflow: 'hidden' },
   dropdownItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 11, borderBottomWidth: 1 },
   dropdownText: { fontSize: 14 },
+  cartCard: { borderWidth: 1.5, borderRadius: 16, padding: 14, marginBottom: 4 },
+  cartCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  cartCardTitle: { fontSize: 14, fontWeight: '800' },
+  cartRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderTopWidth: 1 },
+  cartItemName: { fontSize: 13, fontWeight: '700' },
+  cartItemPrice: { fontSize: 12, marginTop: 2 },
+  cartQtyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  qtyBtn: { width: 28, height: 28, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  qtyText: { fontSize: 13, fontWeight: '700', minWidth: 18, textAlign: 'center' },
+  cartItemSubtotal: { fontSize: 13, fontWeight: '800', minWidth: 70, textAlign: 'right' },
+  cartTotal: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, paddingTop: 10, marginTop: 4 },
+  cartTotalLabel: { fontSize: 13, fontWeight: '700' },
+  cartTotalValue: { fontSize: 16, fontWeight: '900' },
 });
 
 export default EventDetailsScreen;

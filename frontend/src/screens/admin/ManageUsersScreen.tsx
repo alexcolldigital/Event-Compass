@@ -247,7 +247,7 @@ export default function ManageUsersScreen() {
       <FlatList
         data={filtered}
         keyExtractor={i => i._id}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 96 }}
         renderItem={({ item }) => <UserCard item={item} />}
         ListEmptyComponent={
           <View style={adminStyles.empty}>

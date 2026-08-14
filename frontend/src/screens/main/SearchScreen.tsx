@@ -258,7 +258,7 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { paddingHorizontal: 16, paddingBottom: 32 },
+  content: { paddingHorizontal: 16, paddingBottom: 96 },
   hero: { borderRadius: 28, padding: 18, marginTop: 8, marginBottom: 16 },
   heroTitle: { color: '#fff', fontSize: 24, fontWeight: '800', marginBottom: 12, fontFamily: appFont },
   searchBar: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 12, flexDirection: 'row', alignItems: 'center' },

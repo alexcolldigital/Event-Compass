@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 20, paddingBottom: 20 },
   backBtn: { width: 40, height: 40, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
   headerTitle: { color: '#fff', fontSize: 20, fontWeight: '800', marginLeft: 14 },
-  content: { padding: 16, gap: 14, paddingBottom: 32 },
+  content: { padding: 16, gap: 14, paddingBottom: 96 },
   brandCard: { borderRadius: 24, padding: 28, alignItems: 'center' },
   logoWrap: { width: 80, height: 80, borderRadius: 999, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   brandName: { color: '#fff', fontSize: 26, fontWeight: '900' },

@@ -585,7 +585,7 @@ const ManageServicesScreen = () => {
         data={filteredServices}
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => <ServiceCard service={item} />}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 96 }}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <>

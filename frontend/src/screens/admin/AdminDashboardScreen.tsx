@@ -122,7 +122,7 @@ export default function AdminDashboardScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { paddingHorizontal: 16, paddingBottom: 32 },
+  content: { paddingHorizontal: 16, paddingBottom: 96 },
   hero: { borderRadius: 28, padding: 24, marginTop: 8, marginBottom: 16 },
   eyebrow: { color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '700', letterSpacing: 1.2 },
   heroTitle: { color: '#fff', fontSize: 28, fontWeight: '800', marginTop: 6 },

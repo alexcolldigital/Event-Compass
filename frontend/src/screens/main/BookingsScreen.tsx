@@ -143,7 +143,7 @@ export default function BookingsScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { paddingHorizontal: 16, paddingBottom: 32 },
+  content: { paddingHorizontal: 16, paddingBottom: 96 },
   hero: { borderRadius: 28, padding: 20, marginTop: 8, marginBottom: 16 },
   heroTitle: { color: '#fff', fontSize: 24, fontWeight: '800' },
   heroSubtitle: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 6 },

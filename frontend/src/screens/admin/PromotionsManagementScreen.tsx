@@ -148,7 +148,7 @@ export default function PromotionsManagementScreen() {
           data={promotions}
           keyExtractor={(i) => i._id}
           renderItem={({ item }) => <PromoCard item={item} />}
-          contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 96 }}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={adminStyles.emptyState}>

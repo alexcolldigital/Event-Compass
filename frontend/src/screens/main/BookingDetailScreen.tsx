@@ -450,7 +450,7 @@ const BookingDetailScreen = () => {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { paddingHorizontal: 16, paddingBottom: 32 },
+  content: { paddingHorizontal: 16, paddingBottom: 96 },
   centered: { justifyContent: 'center', alignItems: 'center', flex: 1 },
   hero: { borderRadius: 28, padding: 20, marginTop: 8, marginBottom: 16 },
   backBtn: { width: 36, height: 36, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },

@@ -3,6 +3,9 @@
  * Shared constants for the frontend application
  */
 
+// Tab Bar
+export const TAB_BAR_HEIGHT = 72;
+
 // App Configuration
 export const APP_CONFIG = {
   NAME: 'Event Compass',

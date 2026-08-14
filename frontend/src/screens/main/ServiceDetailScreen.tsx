@@ -340,7 +340,7 @@ const ServiceDetailScreen = () => {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { paddingHorizontal: 16, paddingBottom: 36 },
+  content: { paddingHorizontal: 16, paddingBottom: 96 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   headerButtons: { position: 'absolute', top: 18, left: 16, right: 16, zIndex: 2, flexDirection: 'row', justifyContent: 'space-between' },
   circleButton: { width: 44, height: 44, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.95)', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10, elevation: 3 },
