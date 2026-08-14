@@ -133,7 +133,6 @@ export default function NotificationManagementScreen() {
 
 function NotifCard({ item, C, isDark, onSend, onDelete }) {
   const color = STATUS_COLORS[item.status] || '#6b7280';
-    const color = STATUS_COLORS[item.status] || '#6b7280';
     return (
       <View style={[adminStyles.card, { backgroundColor: C.surface, borderColor: C.border }]}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
