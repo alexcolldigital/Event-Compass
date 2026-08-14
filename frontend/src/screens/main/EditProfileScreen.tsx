@@ -206,8 +206,8 @@ export default function EditProfileScreen() {
                   placeholder="John"
                   value={formData.firstName}
                   onChangeText={(text: string) => {
-                    setFormData({ ...formData, firstName: text });
-                    if (formErrors.firstName) setFormErrors({ ...formErrors, firstName: null });
+                    setFormData((prev) => ({ ...prev, firstName: text }));
+                    if (formErrors.firstName) setFormErrors((e) => ({ ...e, firstName: null }));
                   }}
                   icon="account"
                   error={formErrors.firstName}
@@ -219,8 +219,8 @@ export default function EditProfileScreen() {
                   placeholder="Doe"
                   value={formData.lastName}
                   onChangeText={(text: string) => {
-                    setFormData({ ...formData, lastName: text });
-                    if (formErrors.lastName) setFormErrors({ ...formErrors, lastName: null });
+                    setFormData((prev) => ({ ...prev, lastName: text }));
+                    if (formErrors.lastName) setFormErrors((e) => ({ ...e, lastName: null }));
                   }}
                   icon="account"
                   error={formErrors.lastName}
@@ -232,8 +232,8 @@ export default function EditProfileScreen() {
               placeholder="your@email.com"
               value={formData.email}
               onChangeText={(text: string) => {
-                setFormData({ ...formData, email: text });
-                if (formErrors.email) setFormErrors({ ...formErrors, email: null });
+                setFormData((prev) => ({ ...prev, email: text }));
+                if (formErrors.email) setFormErrors((e) => ({ ...e, email: null }));
               }}
               keyboardType="email-address"
               icon="email"
@@ -244,8 +244,8 @@ export default function EditProfileScreen() {
               placeholder="+234 801 234 5678"
               value={formData.phoneNumber}
               onChangeText={(text: string) => {
-                setFormData({ ...formData, phoneNumber: text });
-                if (formErrors.phoneNumber) setFormErrors({ ...formErrors, phoneNumber: null });
+                setFormData((prev) => ({ ...prev, phoneNumber: text }));
+                if (formErrors.phoneNumber) setFormErrors((e) => ({ ...e, phoneNumber: null }));
               }}
               keyboardType="phone-pad"
               icon="phone"
@@ -264,8 +264,8 @@ export default function EditProfileScreen() {
                 placeholder="Your business name"
                 value={formData.businessName}
                 onChangeText={(text: string) => {
-                  setFormData({ ...formData, businessName: text });
-                  if (formErrors.businessName) setFormErrors({ ...formErrors, businessName: null });
+                  setFormData((prev) => ({ ...prev, businessName: text }));
+                  if (formErrors.businessName) setFormErrors((e) => ({ ...e, businessName: null }));
                 }}
                 icon="briefcase"
                 error={formErrors.businessName}
@@ -279,8 +279,8 @@ export default function EditProfileScreen() {
                 placeholderTextColor="#9ca3af"
                 value={formData.businessDescription}
                 onChangeText={(text) => {
-                  setFormData({ ...formData, businessDescription: text });
-                  if (formErrors.businessDescription) setFormErrors({ ...formErrors, businessDescription: null });
+                  setFormData((prev) => ({ ...prev, businessDescription: text }));
+                  if (formErrors.businessDescription) setFormErrors((e) => ({ ...e, businessDescription: null }));
                 }}
                 style={[
                   styles.textArea,

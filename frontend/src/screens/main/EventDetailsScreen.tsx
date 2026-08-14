@@ -3,7 +3,13 @@ import {
   View, Text, SafeAreaView, ScrollView, TouchableOpacity,
   StyleSheet, Alert, TextInput, Platform,
 } from 'react-native';
+
+// Lazy-load native date picker only on iOS/Android to avoid web bundle errors
+const NativeDateTimePicker = Platform.OS !== 'web'
+  ? require('@react-native-community/datetimepicker').default
+  : () => null;
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+
 import { useTheme } from '../../context/ThemeContext';
 import { useCartStore } from '../../context/cartStore';
 import Button from '../../components/Button.jsx';
@@ -54,8 +60,10 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
   const [town, setTown] = useState('');
   const [state, setState] = useState('');
   const [showStateList, setShowStateList] = useState(false);
-  const [eventDateText, setEventDateText] = useState('');
-  const [eventTime, setEventTime] = useState('');
+  const [eventDate, setEventDate] = useState<Date | null>(null);
+  const [eventTime, setEventTime] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [additionalNotes, setAdditionalNotes] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -70,14 +78,9 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
     if (!state.trim()) e.state = 'State is required';
     if (!expectedGuests.trim() || isNaN(Number(expectedGuests)) || Number(expectedGuests) < 1)
       e.expectedGuests = 'Enter a valid number of guests';
-    if (!eventDateText.trim()) {
-      e.eventDate = 'Event date is required';
-    } else {
-      const d = new Date(eventDateText);
-      if (isNaN(d.getTime())) e.eventDate = 'Enter a valid date (YYYY-MM-DD)';
-      else if (d < new Date()) e.eventDate = 'Event date must be in the future';
-    }
-    if (!eventTime.trim()) e.eventTime = 'Event time is required';
+    if (!eventDate) e.eventDate = 'Event date is required';
+    else if (eventDate < new Date()) e.eventDate = 'Event date must be in the future';
+    if (!eventTime) e.eventTime = 'Event time is required';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -87,7 +90,9 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
       Alert.alert('Missing information', 'Please fill in all required fields.');
       return;
     }
-    const eventDate = new Date(eventDateText);
+    const timeStr = eventTime
+      ? eventTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      : '';
     navigation.navigate('Checkout', {
       eventDetails: {
         clientName: clientName.trim(),
@@ -97,8 +102,8 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
         venueType,
         eventDescription: eventDescription.trim(),
         expectedGuests: Number(expectedGuests),
-        eventDate: eventDate.toISOString(),
-        eventTime: eventTime.trim(),
+        eventDate: eventDate!.toISOString(),
+        eventTime: timeStr,
         location: {
           address: eventAddress.trim(),
           lga: lga.trim(),
@@ -110,53 +115,6 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
       },
     });
   };
-
-  const Field = ({
-    icon, placeholder, value, onChangeText, keyboardType = 'default', multiline = false, fieldKey,
-  }: any) => (
-    <View style={{ marginBottom: 2 }}>
-      <View style={[
-        styles.field,
-        { borderColor: errors[fieldKey] ? colors.error : colors.border, backgroundColor: colors.surface },
-      ]}>
-        <MaterialCommunityIcons name={icon} size={18} color={errors[fieldKey] ? colors.error : colors.primary} />
-        <TextInput
-          style={[styles.input, { color: colors.text, fontFamily: appFont }, multiline && styles.multiline]}
-          placeholder={placeholder}
-          placeholderTextColor={colors.muted}
-          value={value}
-          onChangeText={(t) => { onChangeText(t); if (errors[fieldKey]) setErrors((p) => ({ ...p, [fieldKey]: '' })); }}
-          keyboardType={keyboardType}
-          multiline={multiline}
-          numberOfLines={multiline ? 3 : 1}
-        />
-      </View>
-      {errors[fieldKey] ? <Text style={[styles.errorText, { color: colors.error }]}>{errors[fieldKey]}</Text> : null}
-    </View>
-  );
-
-  const ChipGroup = ({ options, selected, onSelect, fieldKey }: any) => (
-    <View style={{ marginBottom: 2 }}>
-      <View style={styles.chips}>
-        {options.map((opt: string) => (
-          <TouchableOpacity
-            key={opt}
-            onPress={() => { onSelect(opt); if (errors[fieldKey]) setErrors((p) => ({ ...p, [fieldKey]: '' })); }}
-            style={[
-              styles.chip,
-              {
-                backgroundColor: selected === opt ? colors.chipActive : colors.chip,
-                borderColor: selected === opt ? colors.primary : (errors[fieldKey] ? colors.error : 'transparent'),
-              },
-            ]}
-          >
-            <Text style={[styles.chipText, { color: selected === opt ? colors.primary : colors.muted, fontFamily: appFont }]}>{opt}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      {errors[fieldKey] ? <Text style={[styles.errorText, { color: colors.error }]}>{errors[fieldKey]}</Text> : null}
-    </View>
-  );
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
@@ -223,31 +181,110 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
 
         {/* Client Info */}
         <SectionLabel label="Client Information" color={colors.muted} />
-        <Field icon="account" placeholder="Client full name *" value={clientName} onChangeText={setClientName} fieldKey="clientName" />
-        <Field icon="phone" placeholder="Phone number *" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" fieldKey="phoneNumber" />
-        <Field icon="home-outline" placeholder="Client home address" value={clientAddress} onChangeText={setClientAddress} fieldKey="clientAddress" />
+        <Field icon="account" placeholder="Client full name *" value={clientName} onChangeText={setClientName} fieldKey="clientName" colors={colors} errors={errors} setErrors={setErrors} />
+        <Field icon="phone" placeholder="Phone number *" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" fieldKey="phoneNumber" colors={colors} errors={errors} setErrors={setErrors} />
+        <Field icon="home-outline" placeholder="Client home address" value={clientAddress} onChangeText={setClientAddress} fieldKey="clientAddress" colors={colors} errors={errors} setErrors={setErrors} />
 
         {/* Event Info */}
         <SectionLabel label="Event Information" color={colors.muted} />
         <Text style={[styles.label, { color: colors.muted, fontFamily: appFont }]}>Event Type *</Text>
-        <ChipGroup options={EVENT_TYPES} selected={eventType} onSelect={setEventType} fieldKey="eventType" />
+        <ChipGroup options={EVENT_TYPES} selected={eventType} onSelect={setEventType} fieldKey="eventType" colors={colors} errors={errors} setErrors={setErrors} />
 
         <Text style={[styles.label, { color: colors.muted, fontFamily: appFont }]}>Venue Type</Text>
-        <ChipGroup options={VENUE_TYPES} selected={venueType} onSelect={setVenueType} fieldKey="venueType" />
+        <ChipGroup options={VENUE_TYPES} selected={venueType} onSelect={setVenueType} fieldKey="venueType" colors={colors} errors={errors} setErrors={setErrors} />
 
-        <Field icon="text" placeholder="Event description (theme, style, etc.)" value={eventDescription} onChangeText={setEventDescription} multiline fieldKey="eventDescription" />
-        <Field icon="account-group" placeholder="Expected number of guests *" value={expectedGuests} onChangeText={setExpectedGuests} keyboardType="numeric" fieldKey="expectedGuests" />
+        <Field icon="text" placeholder="Event description (theme, style, etc.)" value={eventDescription} onChangeText={setEventDescription} multiline fieldKey="eventDescription" colors={colors} errors={errors} setErrors={setErrors} />
+        <Field icon="account-group" placeholder="Expected number of guests *" value={expectedGuests} onChangeText={setExpectedGuests} keyboardType="numeric" fieldKey="expectedGuests" colors={colors} errors={errors} setErrors={setErrors} />
 
         {/* Date & Time */}
         <SectionLabel label="Date & Time" color={colors.muted} />
-        <Field icon="calendar" placeholder="Event date (YYYY-MM-DD) *" value={eventDateText} onChangeText={setEventDateText} fieldKey="eventDate" />
-        <Field icon="clock-outline" placeholder="Event time (e.g. 3:00 PM) *" value={eventTime} onChangeText={setEventTime} fieldKey="eventTime" />
+
+        <View style={{ marginBottom: 2 }}>
+          <TouchableOpacity
+            style={[styles.field, { borderColor: errors.eventDate ? colors.error : colors.border, backgroundColor: colors.surface }]}
+            onPress={() => setShowDatePicker(true)}
+            activeOpacity={0.8}
+          >
+            <MaterialCommunityIcons name="calendar" size={18} color={errors.eventDate ? colors.error : colors.primary} />
+            <Text style={[styles.input, { color: eventDate ? colors.text : colors.muted, fontFamily: appFont }]}>
+              {eventDate ? eventDate.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) : 'Select event date *'}
+            </Text>
+          </TouchableOpacity>
+          {errors.eventDate ? <Text style={[styles.errorText, { color: colors.error }]}>{errors.eventDate}</Text> : null}
+        </View>
+
+        {showDatePicker && (
+          Platform.OS === 'web' ? (
+            <input
+              type="date"
+              min={new Date().toISOString().split('T')[0]}
+              defaultValue={eventDate ? eventDate.toISOString().split('T')[0] : ''}
+              onChange={(e) => {
+                const d = e.target.value ? new Date(e.target.value) : null;
+                setShowDatePicker(false);
+                if (d) { setEventDate(d); setErrors((p) => ({ ...p, eventDate: '' })); }
+              }}
+              style={{ display: 'block', marginBottom: 8, padding: 8, borderRadius: 8, border: '1px solid #ccc', fontSize: 14 }}
+            />
+          ) : (
+            <NativeDateTimePicker
+              value={eventDate || new Date()}
+              mode="date"
+              minimumDate={new Date()}
+              onChange={(_, date) => {
+                setShowDatePicker(Platform.OS === 'ios');
+                if (date) { setEventDate(date); setErrors((p) => ({ ...p, eventDate: '' })); }
+              }}
+            />
+          )
+        )}
+
+        <View style={{ marginBottom: 2 }}>
+          <TouchableOpacity
+            style={[styles.field, { borderColor: errors.eventTime ? colors.error : colors.border, backgroundColor: colors.surface }]}
+            onPress={() => setShowTimePicker(true)}
+            activeOpacity={0.8}
+          >
+            <MaterialCommunityIcons name="clock-outline" size={18} color={errors.eventTime ? colors.error : colors.primary} />
+            <Text style={[styles.input, { color: eventTime ? colors.text : colors.muted, fontFamily: appFont }]}>
+              {eventTime ? eventTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Select event time *'}
+            </Text>
+          </TouchableOpacity>
+          {errors.eventTime ? <Text style={[styles.errorText, { color: colors.error }]}>{errors.eventTime}</Text> : null}
+        </View>
+
+        {showTimePicker && (
+          Platform.OS === 'web' ? (
+            <input
+              type="time"
+              defaultValue={eventTime ? eventTime.toTimeString().slice(0, 5) : ''}
+              onChange={(e) => {
+                if (e.target.value) {
+                  const [h, m] = e.target.value.split(':').map(Number);
+                  const t = new Date(); t.setHours(h, m, 0, 0);
+                  setShowTimePicker(false);
+                  setEventTime(t); setErrors((p) => ({ ...p, eventTime: '' }));
+                }
+              }}
+              style={{ display: 'block', marginBottom: 8, padding: 8, borderRadius: 8, border: '1px solid #ccc', fontSize: 14 }}
+            />
+          ) : (
+            <NativeDateTimePicker
+              value={eventTime || new Date()}
+              mode="time"
+              onChange={(_, time) => {
+                setShowTimePicker(Platform.OS === 'ios');
+                if (time) { setEventTime(time); setErrors((p) => ({ ...p, eventTime: '' })); }
+              }}
+            />
+          )
+        )}
 
         {/* Location */}
         <SectionLabel label="Event Location" color={colors.muted} />
-        <Field icon="map-marker" placeholder="Full event address / venue name *" value={eventAddress} onChangeText={setEventAddress} fieldKey="eventAddress" />
-        <Field icon="city-variant-outline" placeholder="Local Government Area (LGA) *" value={lga} onChangeText={setLga} fieldKey="lga" />
-        <Field icon="home-city" placeholder="Town / City *" value={town} onChangeText={setTown} fieldKey="town" />
+        <Field icon="map-marker" placeholder="Full event address / venue name *" value={eventAddress} onChangeText={setEventAddress} fieldKey="eventAddress" colors={colors} errors={errors} setErrors={setErrors} />
+        <Field icon="city-variant-outline" placeholder="Local Government Area (LGA) *" value={lga} onChangeText={setLga} fieldKey="lga" colors={colors} errors={errors} setErrors={setErrors} />
+        <Field icon="home-city" placeholder="Town / City *" value={town} onChangeText={setTown} fieldKey="town" colors={colors} errors={errors} setErrors={setErrors} />
 
         {/* State picker */}
         <View style={{ marginBottom: 2 }}>
@@ -283,7 +320,7 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
 
         {/* Additional */}
         <SectionLabel label="Additional Information" color={colors.muted} />
-        <Field icon="note-text-outline" placeholder="Special requirements, dietary needs, accessibility, etc." value={additionalNotes} onChangeText={setAdditionalNotes} multiline fieldKey="additionalNotes" />
+        <Field icon="note-text-outline" placeholder="Special requirements, dietary needs, accessibility, etc." value={additionalNotes} onChangeText={setAdditionalNotes} multiline fieldKey="additionalNotes" colors={colors} errors={errors} setErrors={setErrors} />
 
         <Button title="Continue to Checkout →" onPress={handleContinue} fullWidth variant="primary" style={{ marginTop: 8 }} />
         <View style={{ height: 16 }} />
@@ -295,6 +332,46 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
 const SectionLabel = ({ label, color }: { label: string; color: string }) => (
   <Text style={[styles.sectionLabel, { color, fontFamily: appFont }]}>{label}</Text>
 );
+
+function Field({ icon, placeholder, value, onChangeText, keyboardType = 'default', multiline = false, fieldKey, colors, errors, setErrors }: any) {
+  return (
+    <View style={{ marginBottom: 2 }}>
+      <View style={[styles.field, { borderColor: errors[fieldKey] ? colors.error : colors.border, backgroundColor: colors.surface }]}>
+        <MaterialCommunityIcons name={icon} size={18} color={errors[fieldKey] ? colors.error : colors.primary} />
+        <TextInput
+          style={[styles.input, { color: colors.text, fontFamily: appFont }, multiline && styles.multiline]}
+          placeholder={placeholder}
+          placeholderTextColor={colors.muted}
+          value={value}
+          onChangeText={(t) => { onChangeText(t); if (errors[fieldKey]) setErrors((p: any) => ({ ...p, [fieldKey]: '' })); }}
+          keyboardType={keyboardType}
+          multiline={multiline}
+          numberOfLines={multiline ? 3 : 1}
+        />
+      </View>
+      {errors[fieldKey] ? <Text style={[styles.errorText, { color: colors.error }]}>{errors[fieldKey]}</Text> : null}
+    </View>
+  );
+}
+
+function ChipGroup({ options, selected, onSelect, fieldKey, colors, errors, setErrors }: any) {
+  return (
+    <View style={{ marginBottom: 2 }}>
+      <View style={styles.chips}>
+        {options.map((opt: string) => (
+          <TouchableOpacity
+            key={opt}
+            onPress={() => { onSelect(opt); if (errors[fieldKey]) setErrors((p: any) => ({ ...p, [fieldKey]: '' })); }}
+            style={[styles.chip, { backgroundColor: selected === opt ? colors.chipActive : colors.chip, borderColor: selected === opt ? colors.primary : (errors[fieldKey] ? colors.error : 'transparent') }]}
+          >
+            <Text style={[styles.chipText, { color: selected === opt ? colors.primary : colors.muted, fontFamily: appFont }]}>{opt}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      {errors[fieldKey] ? <Text style={[styles.errorText, { color: colors.error }]}>{errors[fieldKey]}</Text> : null}
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },

@@ -28,9 +28,10 @@ export default function RescheduleScreen({ route, navigation }: any) {
   };
 
   const [newDate, setNewDate] = useState(new Date());
-  const [newTime, setNewTime] = useState('');
+  const [newTime, setNewTime] = useState<Date | null>(null);
   const [reason, setReason] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const hasPendingReschedule = booking?.reschedule?.status === 'pending';
   const isRequester = booking?.reschedule?.requestedBy === user?._id;
@@ -41,7 +42,7 @@ export default function RescheduleScreen({ route, navigation }: any) {
     try {
       await requestReschedule(booking._id, {
         newDate: newDate.toISOString(),
-        newTime,
+        newTime: newTime ? newTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '',
         reason,
       });
       Alert.alert('Success', 'Reschedule request sent');
@@ -138,14 +139,23 @@ export default function RescheduleScreen({ route, navigation }: any) {
 
             <View style={[styles.input, { backgroundColor: colors.input, borderColor: colors.border }]}>
               <MaterialCommunityIcons name="clock-outline" size={18} color={colors.primary} />
-              <TextInput
-                style={[styles.inputText, { color: colors.text, flex: 1 }]}
-                placeholder="New time (e.g. 3:00 PM)"
-                placeholderTextColor={colors.muted}
-                value={newTime}
-                onChangeText={setNewTime}
-              />
+              <TouchableOpacity onPress={() => setShowTimePicker(true)} style={{ flex: 1 }}>
+                <Text style={[styles.inputText, { color: newTime ? colors.text : colors.muted }]}>
+                  {newTime ? newTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Select new time'}
+                </Text>
+              </TouchableOpacity>
             </View>
+
+            {showTimePicker && (
+              <DateTimePicker
+                value={newTime || new Date()}
+                mode="time"
+                onChange={(_, time) => {
+                  setShowTimePicker(Platform.OS === 'ios');
+                  if (time) setNewTime(time);
+                }}
+              />
+            )}
 
             <View style={[styles.textArea, { backgroundColor: colors.input, borderColor: colors.border }]}>
               <TextInput

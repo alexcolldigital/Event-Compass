@@ -1,5 +1,5 @@
 // @ts-check
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, TextInput, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -26,7 +26,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
  */
 
 /** @param {InputProps} props */
-export const Input = ({
+export const Input = React.memo(({
   label,
   placeholder,
   value,
@@ -48,6 +48,18 @@ export const Input = ({
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const tint = error ? '#dc2626' : isFocused ? '#16a34a' : '#94a3b8';
+
+  const handleFocus = useCallback(() => {
+    setIsFocused(true);
+    onFocus?.();
+  }, [onFocus]);
+
+  const handleBlur = useCallback(() => {
+    setIsFocused(false);
+    onBlur?.();
+  }, [onBlur]);
+
+  const togglePassword = useCallback(() => setIsPasswordVisible((v) => !v), []);
 
   return (
     <View style={[styles.container, containerStyle]}>
@@ -77,21 +89,12 @@ export const Input = ({
           numberOfLines={numberOfLines}
           maxLength={maxLength || undefined}
           style={[styles.input, multiline && styles.multiline, inputStyle]}
-          onFocus={() => {
-            setIsFocused(true);
-            onFocus?.();
-          }}
-          onBlur={() => {
-            setIsFocused(false);
-            onBlur?.();
-          }}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
         />
 
         {secureTextEntry && (
-          <TouchableOpacity
-            onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-            style={styles.passwordButton}
-          >
+          <TouchableOpacity onPress={togglePassword} style={styles.passwordButton}>
             <MaterialCommunityIcons
               name={isPasswordVisible ? 'eye' : 'eye-off'}
               size={22}
@@ -105,7 +108,7 @@ export const Input = ({
       {helperText && !error ? <Text style={styles.helper}>{helperText}</Text> : null}
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

@@ -264,72 +264,6 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
     }
   };
 
-  const renderChoicePills = (options: string[], selected: string, onSelect: (value: string) => void) => (
-    <View style={styles.pillRow}>
-      {options.map((option) => {
-        const active = selected === option;
-        return (
-          <TouchableOpacity
-            key={option}
-            onPress={() => onSelect(option)}
-            style={[
-              styles.pill,
-              active && styles.pillActive,
-              { borderColor: colors.border, backgroundColor: active ? colors.primary : colors.surfaceAlt },
-            ]}
-          >
-            <Text style={[styles.pillText, { color: active ? '#fff' : colors.text }]}>{option}</Text>
-          </TouchableOpacity>
-        );
-      })}
-    </View>
-  );
-
-  const renderDropdownModal = (
-    visible,
-    onClose,
-    title,
-    options,
-    selected,
-    onSelect
-  ) => (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
-        <View style={[styles.modalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
-          <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>{title}</Text>
-            <TouchableOpacity onPress={onClose}>
-              <MaterialCommunityIcons name="close" size={20} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-          <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false}>
-            {options.map((option) => {
-              const active = selected === option;
-              return (
-                <TouchableOpacity
-                  key={option}
-                  activeOpacity={0.85}
-                  onPress={() => {
-                    onSelect(option);
-                    onClose();
-                  }}
-                  style={[
-                    styles.modalOption,
-                    active && { backgroundColor: colors.primary },
-                    { borderColor: colors.border },
-                  ]}
-                >
-                  <Text style={[styles.modalOptionText, active && { color: '#fff' }]}>{option}</Text>
-                  {active ? <MaterialCommunityIcons name="check" size={18} color="#fff" /> : null}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-      </TouchableOpacity>
-    </Modal>
-  );
-
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}> 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
@@ -386,7 +320,7 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
             />
             <View style={styles.fieldBlock}>
               <Text style={styles.label}>Category</Text>
-              {renderChoicePills(categoryOptions, formState.category, (value) => updateField('category', value))}
+              {renderChoicePills(categoryOptions, formState.category, (value) => updateField('category', value), colors)}
               {formErrors.category ? <Text style={styles.errorText}>{formErrors.category}</Text> : null}
             </View>
             <Input
@@ -398,7 +332,7 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
             />
             <View style={styles.fieldBlock}>
               <Text style={styles.label}>Service Type</Text>
-              {renderChoicePills(serviceTypeOptions, formState.serviceType, (value) => updateField('serviceType', value))}
+              {renderChoicePills(serviceTypeOptions, formState.serviceType, (value) => updateField('serviceType', value), colors)}
               {formErrors.serviceType ? <Text style={styles.errorText}>{formErrors.serviceType}</Text> : null}
             </View>
 
@@ -435,7 +369,7 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
             <Text style={[styles.sectionLabel, { color: colors.text }]}>3. Pricing</Text>
             <View style={styles.fieldBlock}>
               <Text style={styles.label}>Pricing Type</Text>
-              {renderChoicePills(pricingTypeOptions, formState.pricingType, (value) => updateField('pricingType', value))}
+              {renderChoicePills(pricingTypeOptions, formState.pricingType, (value) => updateField('pricingType', value), colors)}
             </View>
             <View style={styles.gridRow}>
               <View style={styles.gridColumn}>
@@ -646,38 +580,10 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
         ) : null}
 
         <View style={styles.section}>
-          {renderDropdownModal(
-            isCurrencyMenuOpen,
-            () => setIsCurrencyMenuOpen(false),
-            'Select currency',
-            currencyOptions,
-            formState.currency,
-            (value) => updateField('currency', value)
-          )}
-          {renderDropdownModal(
-            isUnitMenuOpen,
-            () => setIsUnitMenuOpen(false),
-            'Select unit',
-            unitOptions,
-            formState.unit,
-            (value) => updateField('unit', value)
-          )}
-          {renderDropdownModal(
-            isDurationMenuOpen,
-            () => setIsDurationMenuOpen(false),
-            'Select duration',
-            durationOptions,
-            formState.duration,
-            (value) => updateField('duration', value)
-          )}
-          {renderDropdownModal(
-            isStatusMenuOpen,
-            () => setIsStatusMenuOpen(false),
-            'Select availability status',
-            availabilityStatusOptions,
-            formState.availabilityStatus,
-            (value) => updateField('availabilityStatus', value)
-          )}
+          {renderDropdownModal(isCurrencyMenuOpen, () => setIsCurrencyMenuOpen(false), 'Select currency', currencyOptions, formState.currency, (value) => updateField('currency', value), colors)}
+          {renderDropdownModal(isUnitMenuOpen, () => setIsUnitMenuOpen(false), 'Select unit', unitOptions, formState.unit, (value) => updateField('unit', value), colors)}
+          {renderDropdownModal(isDurationMenuOpen, () => setIsDurationMenuOpen(false), 'Select duration', durationOptions, formState.duration, (value) => updateField('duration', value), colors)}
+          {renderDropdownModal(isStatusMenuOpen, () => setIsStatusMenuOpen(false), 'Select availability status', availabilityStatusOptions, formState.availabilityStatus, (value) => updateField('availabilityStatus', value), colors)}
 
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>My services</Text>
@@ -717,6 +623,58 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function renderChoicePills(options: string[], selected: string, onSelect: (value: string) => void, colors: any) {
+  return (
+    <View style={styles.pillRow}>
+      {options.map((option) => {
+        const active = selected === option;
+        return (
+          <TouchableOpacity
+            key={option}
+            onPress={() => onSelect(option)}
+            style={[styles.pill, active && styles.pillActive, { borderColor: colors.border, backgroundColor: active ? colors.primary : colors.surfaceAlt }]}
+          >
+            <Text style={[styles.pillText, { color: active ? '#fff' : colors.text }]}>{option}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+function renderDropdownModal(visible: boolean, onClose: () => void, title: string, options: string[], selected: string, onSelect: (v: string) => void, colors: any) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+        <View style={[styles.modalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{title}</Text>
+            <TouchableOpacity onPress={onClose}>
+              <MaterialCommunityIcons name="close" size={20} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false}>
+            {options.map((option) => {
+              const active = selected === option;
+              return (
+                <TouchableOpacity
+                  key={option}
+                  activeOpacity={0.85}
+                  onPress={() => { onSelect(option); onClose(); }}
+                  style={[styles.modalOption, active && { backgroundColor: colors.primary }, { borderColor: colors.border }]}
+                >
+                  <Text style={[styles.modalOptionText, active && { color: '#fff' }]}>{option}</Text>
+                  {active ? <MaterialCommunityIcons name="check" size={18} color="#fff" /> : null}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </TouchableOpacity>
+    </Modal>
   );
 }
 
