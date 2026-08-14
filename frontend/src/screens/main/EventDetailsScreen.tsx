@@ -34,7 +34,7 @@ const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'Sy
 const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const { items, removeItem, updateItemQuantity, getTotalAmount } = useCartStore();
+  const { items, removeItem, updateItemQuantity, getTotalAmount, eventDraft, setEventDraft } = useCartStore();
 
   const colors = {
     bg: isDark ? '#050816' : '#f8fafc',
@@ -48,24 +48,24 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
     error: '#ef4444',
   };
 
-  const [clientName, setClientName] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [clientAddress, setClientAddress] = useState('');
-  const [eventType, setEventType] = useState('');
-  const [venueType, setVenueType] = useState('');
-  const [eventDescription, setEventDescription] = useState('');
-  const [expectedGuests, setExpectedGuests] = useState('');
-  const [eventAddress, setEventAddress] = useState('');
-  const [lga, setLga] = useState('');
-  const [town, setTown] = useState('');
-  const [state, setState] = useState('');
+  const [clientName, setClientName] = useState(eventDraft.clientName || '');
+  const [phoneNumber, setPhoneNumber] = useState(eventDraft.phoneNumber || '');
+  const [clientAddress, setClientAddress] = useState(eventDraft.clientAddress || '');
+  const [eventType, setEventType] = useState(eventDraft.eventType || '');
+  const [venueType, setVenueType] = useState(eventDraft.venueType || '');
+  const [eventDescription, setEventDescription] = useState(eventDraft.eventDescription || '');
+  const [expectedGuests, setExpectedGuests] = useState(eventDraft.expectedGuests || '');
+  const [eventAddress, setEventAddress] = useState(eventDraft.eventAddress || '');
+  const [lga, setLga] = useState(eventDraft.lga || '');
+  const [town, setTown] = useState(eventDraft.town || '');
+  const [state, setState] = useState(eventDraft.state || '');
   const [showStateList, setShowStateList] = useState(false);
-  const [eventDate, setEventDate] = useState<Date | null>(null);
-  const [eventTime, setEventTime] = useState<Date | null>(null);
+  const [eventDate, setEventDate] = useState<Date | null>(eventDraft.eventDate ? new Date(eventDraft.eventDate) : null);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [additionalNotes, setAdditionalNotes] = useState('');
+  const [additionalNotes, setAdditionalNotes] = useState(eventDraft.additionalNotes || '');
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const saveDraft = (patch: Record<string, any>) => setEventDraft(patch);
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -80,7 +80,6 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
       e.expectedGuests = 'Enter a valid number of guests';
     if (!eventDate) e.eventDate = 'Event date is required';
     else if (eventDate < new Date()) e.eventDate = 'Event date must be in the future';
-    if (!eventTime) e.eventTime = 'Event time is required';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -90,30 +89,41 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
       Alert.alert('Missing information', 'Please fill in all required fields.');
       return;
     }
-    const timeStr = eventTime
-      ? eventTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-      : '';
-    navigation.navigate('Checkout', {
-      eventDetails: {
-        clientName: clientName.trim(),
-        phoneNumber: phoneNumber.trim(),
-        clientAddress: clientAddress.trim(),
-        eventType,
-        venueType,
-        eventDescription: eventDescription.trim(),
-        expectedGuests: Number(expectedGuests),
-        eventDate: eventDate!.toISOString(),
-        eventTime: timeStr,
-        location: {
-          address: eventAddress.trim(),
-          lga: lga.trim(),
-          town: town.trim(),
-          state: state.trim(),
-          country: 'Nigeria',
-        },
-        additionalNotes: additionalNotes.trim(),
+    const eventDetails = {
+      clientName: clientName.trim(),
+      phoneNumber: phoneNumber.trim(),
+      clientAddress: clientAddress.trim(),
+      eventType,
+      venueType,
+      eventDescription: eventDescription.trim(),
+      expectedGuests: Number(expectedGuests),
+      eventDate: eventDate!.toISOString(),
+      eventTime: '',
+      location: {
+        address: eventAddress.trim(),
+        lga: lga.trim(),
+        town: town.trim(),
+        state: state.trim(),
+        country: 'Nigeria',
       },
+      additionalNotes: additionalNotes.trim(),
+    };
+    saveDraft({
+      clientName: clientName.trim(),
+      phoneNumber: phoneNumber.trim(),
+      clientAddress: clientAddress.trim(),
+      eventType,
+      venueType,
+      eventDescription: eventDescription.trim(),
+      expectedGuests,
+      eventAddress: eventAddress.trim(),
+      lga: lga.trim(),
+      town: town.trim(),
+      state: state.trim(),
+      eventDate: eventDate!.toISOString(),
+      additionalNotes: additionalNotes.trim(),
     });
+    navigation.navigate('Checkout', { eventDetails });
   };
 
   return (
@@ -234,47 +244,6 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
               onChange={(_, date) => {
                 setShowDatePicker(Platform.OS === 'ios');
                 if (date) { setEventDate(date); setErrors((p) => ({ ...p, eventDate: '' })); }
-              }}
-            />
-          )
-        )}
-
-        <View style={{ marginBottom: 2 }}>
-          <TouchableOpacity
-            style={[styles.field, { borderColor: errors.eventTime ? colors.error : colors.border, backgroundColor: colors.surface }]}
-            onPress={() => setShowTimePicker(true)}
-            activeOpacity={0.8}
-          >
-            <MaterialCommunityIcons name="clock-outline" size={18} color={errors.eventTime ? colors.error : colors.primary} />
-            <Text style={[styles.input, { color: eventTime ? colors.text : colors.muted, fontFamily: appFont }]}>
-              {eventTime ? eventTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Select event time *'}
-            </Text>
-          </TouchableOpacity>
-          {errors.eventTime ? <Text style={[styles.errorText, { color: colors.error }]}>{errors.eventTime}</Text> : null}
-        </View>
-
-        {showTimePicker && (
-          Platform.OS === 'web' ? (
-            <input
-              type="time"
-              defaultValue={eventTime ? eventTime.toTimeString().slice(0, 5) : ''}
-              onChange={(e) => {
-                if (e.target.value) {
-                  const [h, m] = e.target.value.split(':').map(Number);
-                  const t = new Date(); t.setHours(h, m, 0, 0);
-                  setShowTimePicker(false);
-                  setEventTime(t); setErrors((p) => ({ ...p, eventTime: '' }));
-                }
-              }}
-              style={{ display: 'block', marginBottom: 8, padding: 8, borderRadius: 8, border: '1px solid #ccc', fontSize: 14 }}
-            />
-          ) : (
-            <NativeDateTimePicker
-              value={eventTime || new Date()}
-              mode="time"
-              onChange={(_, time) => {
-                setShowTimePicker(Platform.OS === 'ios');
-                if (time) { setEventTime(time); setErrors((p) => ({ ...p, eventTime: '' })); }
               }}
             />
           )

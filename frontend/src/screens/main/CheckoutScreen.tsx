@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import {
-  View, Text, SafeAreaView, ScrollView, TouchableOpacity,
+  View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCartStore } from '../../context/cartStore.js';
 import { useTheme } from '../../context/ThemeContext';
@@ -13,6 +14,7 @@ import { buildCheckoutBookingDetails } from '../../utils/cartUtils';
 export default function CheckoutScreen({ navigation, route }: { navigation: any; route: any }) {
   const eventDetails = route?.params?.eventDetails;
   const { items, removeItem, updateItemQuantity, clearCart, getTotalAmount } = useCartStore();
+  const clearEventDraft = useCartStore((s: any) => s.clearEventDraft);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
@@ -78,15 +80,24 @@ export default function CheckoutScreen({ navigation, route }: { navigation: any;
         bookingDetails,
       });
 
+      if (!response?.success) {
+        throw new Error(response?.message || 'Checkout failed');
+      }
+
       clearCart();
+      clearEventDraft();
 
       if (response?.bookings?.length > 0) {
-        Alert.alert('Booking Request Sent', 'Your booking has been submitted. You will be notified once the admin reviews it.');
+        Alert.alert('Booking Request Sent', 'Your booking has been submitted. You will be notified once the provider reviews it.');
         navigation.navigate('Bookings');
         return;
       }
 
-      throw new Error(response?.message || 'Checkout failed');
+      // success=true but no bookings created (e.g. service not found or location mismatch)
+      Alert.alert(
+        'No Bookings Created',
+        'Your cart items could not be booked. The services may be unavailable or outside the coverage area.',
+      );
     } catch (err: any) {
       Alert.alert('Checkout failed', err.message || 'Unable to complete checkout.');
     } finally {
@@ -101,7 +112,7 @@ export default function CheckoutScreen({ navigation, route }: { navigation: any;
   };
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
+    <SafeAreaView edges={['top', 'bottom']} style={[styles.screen, { backgroundColor: colors.bg }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.primary }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -126,8 +137,8 @@ export default function CheckoutScreen({ navigation, route }: { navigation: any;
           <Button title="Browse Services" onPress={() => navigation.navigate('Search')} variant="primary" size="lg" style={{ marginTop: 20 }} />
         </View>
       ) : (
-        <>
-          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.flex}>
+          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} style={styles.flex}>
             {/* Event details summary */}
             {eventDetails ? (
               <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -234,7 +245,7 @@ export default function CheckoutScreen({ navigation, route }: { navigation: any;
               style={{ flex: 1, marginLeft: 12 }}
             />
           </View>
-        </>
+        </View>
       )}
     </SafeAreaView>
   );
@@ -257,7 +268,8 @@ const styles = StyleSheet.create({
   headerTitle: { color: '#fff', fontSize: 20, fontWeight: '800', marginLeft: 14, flex: 1 },
   badge: { backgroundColor: '#fff', borderRadius: 999, width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
   badgeText: { color: '#1f7a4d', fontSize: 12, fontWeight: '800' },
-  content: { padding: 16, gap: 14, paddingBottom: 24 },
+  flex: { flex: 1 },
+  content: { padding: 16, gap: 14, paddingBottom: 120 },
   card: { borderWidth: 1, borderRadius: 20, padding: 16 },
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   cardTitle: { fontSize: 15, fontWeight: '800' },
@@ -280,10 +292,22 @@ const styles = StyleSheet.create({
   totalRow: { borderTopWidth: 1, marginTop: 4, paddingTop: 12 },
   totalLabel: { fontSize: 17, fontWeight: '800' },
   totalValue: { fontSize: 17, fontWeight: '800' },
-  footer: { flexDirection: 'row', alignItems: 'center', padding: 16, borderTopWidth: 1 },
-  footerTotal: { alignItems: 'flex-start' },
+  footer: { 
+    position: 'fixed', 
+    bottom: 80,
+    left: 0, 
+    right: 0,
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    padding: 16, 
+    borderTopWidth: 1,
+    minHeight: 70, 
+    justifyContent: 'space-between',
+    zIndex: 10,
+  },
+  footerTotal: { alignItems: 'flex-start', flexShrink: 1, marginRight: 12 },
   footerTotalLabel: { fontSize: 12, fontWeight: '600' },
-  footerTotalValue: { fontSize: 20, fontWeight: '900' },
+  footerTotalValue: { fontSize: 18, fontWeight: '900' },
   emptyWrap: { flex: 1, margin: 24, borderWidth: 1, borderRadius: 24, alignItems: 'center', justifyContent: 'center', padding: 32 },
   emptyTitle: { fontSize: 18, fontWeight: '800', marginTop: 16 },
   emptySubtitle: { fontSize: 14, textAlign: 'center', marginTop: 8, maxWidth: 260 },

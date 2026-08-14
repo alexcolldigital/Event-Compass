@@ -43,6 +43,8 @@ export default function RegisterProviderScreen({ navigation }: RegisterProviderS
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const { registerProvider, isLoading, error } = useAuthStore();
 
+  const onlyPhoneChars = (text: string) => text.replace(/[^0-9+\-() ]/g, '');
+
   const updateField = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
@@ -135,7 +137,7 @@ export default function RegisterProviderScreen({ navigation }: RegisterProviderS
               label="Phone Number"
               placeholder="+234 (0) 123 4567"
               value={formData.phoneNumber}
-              onChangeText={(text: string) => updateField('phoneNumber', text)}
+              onChangeText={(text: string) => updateField('phoneNumber', onlyPhoneChars(text))}
               keyboardType="phone-pad"
               icon="phone"
               error={errors.phoneNumber}

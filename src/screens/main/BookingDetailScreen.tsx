@@ -187,7 +187,7 @@ const BookingDetailScreen = () => {
     if (type === 'message') {
       const otherParty = isProvider
         ? { _id: String(client._id || client), firstName: client.firstName || '', lastName: client.lastName || '', role: 'client' }
-        : { _id: String(provider._id || provider), firstName: provider.firstName || '', lastName: provider.lastName || '', businessName: provider.businessName || '', role: 'service_provider' };
+        : { _id: String(provider._id || provider), firstName: provider.firstName || '', lastName: provider.lastName || '', businessName: provider.businessName || '', role: provider.role || 'service_provider' };
       if (!otherParty._id || otherParty._id === 'undefined') {
         Alert.alert('Unavailable', 'Cannot open chat for this booking yet.');
         return;
@@ -195,7 +195,7 @@ const BookingDetailScreen = () => {
       (navigation as any).navigate('Chat', { receiver: otherParty, booking: currentBooking });
       return;
     }
-    const contactValue = type === 'call' ? (isProvider ? client.phone : provider.phone) || '' : '';
+    const contactValue = type === 'call' ? (isProvider ? client.phoneNumber : provider.phoneNumber) || '' : '';
     if (!contactValue) {
       Alert.alert('Unavailable', 'Contact details are not available for this booking yet.');
       return;
@@ -306,7 +306,7 @@ const BookingDetailScreen = () => {
     ? `${client.firstName || ''} ${client.lastName || ''}`.trim() || 'Client'
     : provider.businessName || `${provider.firstName || ''} ${provider.lastName || ''}`.trim() || 'Service provider';
   const contactEmail = isProvider ? client.email : provider.email;
-  const contactPhone = isProvider ? client.phone : provider.phone;
+  const contactPhone = isProvider ? client.phoneNumber : provider.phoneNumber;
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}> 

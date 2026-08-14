@@ -148,11 +148,14 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
   const [cartToast, setCartToast] = useState<{ visible: boolean; name: string }>({ visible: false, name: '' });
   const toastOpacity = React.useRef(new Animated.Value(0)).current;
 
+  const toastTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const showCartToast = (name: string) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
     setCartToast({ visible: true, name });
-    Animated.sequence([
-      Animated.timing(toastOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
-    ]).start();
+    toastOpacity.setValue(0);
+    Animated.timing(toastOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    toastTimer.current = setTimeout(hideCartToast, 3000);
   };
 
   const hideCartToast = () => {
@@ -173,7 +176,8 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
   }
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}> 
+    <View style={[styles.screen, { backgroundColor: colors.bg }]}>
+    <SafeAreaView style={{ flex: 1 }}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}> 
         <View style={[styles.hero, { backgroundColor: colors.primary }]}> 
           <View style={styles.heroTopRow}>
@@ -241,7 +245,6 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Highlights</Text>
           <View style={styles.statsGrid}>
             <StatCard value={platformStats ? (platformStats.completedBookings >= 1000 ? `${(platformStats.completedBookings / 1000).toFixed(1)}K+` : `${platformStats.completedBookings}+`) : '—'} label="Events Completed" icon={<MaterialCommunityIcons name="calendar-check" size={22} color="#1f7a4d" />} />
-            <StatCard value={platformStats ? `${platformStats.verifiedVendors}+` : '—'} label="Verified Vendors" icon={<MaterialCommunityIcons name="shield-check" size={22} color="#2563eb" />} />
             <StatCard value={platformStats ? (platformStats.totalClients >= 1000 ? `${(platformStats.totalClients / 1000).toFixed(1)}K+` : `${platformStats.totalClients}+`) : '—'} label="Happy Customers" icon={<MaterialCommunityIcons name="account-group" size={22} color="#d97706" />} />
             <StatCard value={platformStats ? `${platformStats.averageRating}/5` : '—'} label="Average Rating" icon={<MaterialCommunityIcons name="star-circle" size={22} color="#db2777" />} />
           </View>
@@ -288,6 +291,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
           <Text style={[styles.bannerCopy, { color: colors.muted }]}>Discover exclusive discounts, seasonal packages, and fast booking availability.</Text>
         </TouchableOpacity>
       </ScrollView>
+    </SafeAreaView>
 
       {/* Add to cart toast popup */}
       {cartToast.visible && (
@@ -310,7 +314,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
           </View>
         </Animated.View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

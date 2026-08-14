@@ -14,6 +14,7 @@ import {
   StyleSheet,
   Platform,
   KeyboardAvoidingView,
+  SafeAreaView,
   Alert,
   ActivityIndicator,
   Image,
@@ -207,6 +208,7 @@ const ChatScreen = () => {
   const [draft, setDraft] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Record<string, string>>({});
   const [showAttachMenu, setShowAttachMenu] = useState(false);
 
@@ -221,8 +223,8 @@ const ChatScreen = () => {
     if (!conversationId) return;
     try {
       setIsLoading(true);
-      const res = await messageAPI.getMessages(conversationId);
-      setMessages(res.messages || []);
+      const res: any = await messageAPI.getMessages(conversationId);
+      setMessages(res?.messages || []);
       await messageAPI.markRead(conversationId);
     } catch {
       // silent — show empty state
@@ -287,6 +289,12 @@ const ChatScreen = () => {
             m._id === messageId ? { ...m, isDeleted: true, content: 'This message was deleted' } : m
           )
         );
+      });
+
+      socket.on('conversation_cleared', ({ conversationId: clearedId }: { conversationId: string }) => {
+        if (clearedId === conversationId) {
+          setMessages([]);
+        }
       });
     };
 
@@ -426,6 +434,33 @@ const ChatScreen = () => {
     ]);
   };
 
+  const handleClearConversation = () => {
+    if (!conversationId || !user || (user.role !== 'admin' && user.role !== 'service_provider')) return;
+
+    Alert.alert(
+      'Clear chat session',
+      'Confirm the client has no more questions. This will remove all messages in this chat session.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: isClearing ? 'Clearing...' : 'Clear chat',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsClearing(true);
+              await messageAPI.clearConversation(conversationId);
+              setMessages([]);
+            } catch (err: any) {
+              Alert.alert('Error', err?.message || 'Failed to clear the chat');
+            } finally {
+              setIsClearing(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   const receiverName = receiver
@@ -435,146 +470,162 @@ const ChatScreen = () => {
   const typingLabel = Object.values(typingUsers).join(', ');
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.screen, { backgroundColor: colors.bg }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={90}
-    >
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
-        </TouchableOpacity>
-        <View style={styles.headerInfo}>
-          <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-            <MaterialCommunityIcons name="account" size={20} color="#fff" />
-          </View>
-          <View>
-            <Text style={[styles.headerName, { color: colors.text }]} numberOfLines={1}>
-              {receiverName}
-            </Text>
-            {booking && (
-              <Text style={[styles.headerSub, { color: colors.muted }]}>
-                Booking #{booking.bookingNumber || ''}
-              </Text>
-            )}
-          </View>
-        </View>
-        <View style={[styles.secureTag, { backgroundColor: colors.surfaceAlt }]}>
-          <MaterialCommunityIcons name="shield-check" size={14} color={colors.primary} />
-          <Text style={[styles.secureText, { color: colors.primary }]}>Secure</Text>
-        </View>
-      </View>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]}>
+      <KeyboardAvoidingView
+        style={[styles.screen, { backgroundColor: colors.bg }]}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+      >
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
+          </TouchableOpacity>
 
-      {/* Booking context banner */}
-      {booking && (
-        <View style={[styles.bookingBanner, { backgroundColor: colors.surfaceAlt, borderBottomColor: colors.border }]}>
-          <MaterialCommunityIcons name="calendar-check" size={16} color={colors.primary} />
-          <Text style={[styles.bookingBannerText, { color: colors.muted }]}>
-            {booking.bookingNumber} · {booking.status}
-          </Text>
-        </View>
-      )}
-
-      {/* Messages */}
-      {isLoading ? (
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : (
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={(item) => item._id}
-          contentContainerStyle={styles.messageList}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
-          ListEmptyComponent={
-            <View style={styles.emptyWrap}>
-              <MaterialCommunityIcons name="message-outline" size={52} color={colors.muted} />
-              <Text style={[styles.emptyText, { color: colors.muted }]}>No messages yet</Text>
-              <Text style={[styles.emptySubText, { color: colors.muted }]}>Start the conversation below</Text>
+          <View style={styles.headerInfo}>
+            <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+              <MaterialCommunityIcons name="account" size={20} color="#fff" />
             </View>
-          }
-          renderItem={({ item }) => (
-            <MessageBubble
-              msg={item}
-              isMine={String(item.sender?._id) === String(user?._id)}
-              colors={colors}
-              onLongPress={() => handleLongPress(item)}
+            <View>
+              <Text style={[styles.headerName, { color: colors.text }]} numberOfLines={1}>
+                {receiverName}
+              </Text>
+              {booking && (
+                <Text style={[styles.headerSub, { color: colors.muted }]}>
+                  Booking #{booking.bookingNumber || ''}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          {(user?.role === 'admin' || user?.role === 'service_provider') && (
+            <TouchableOpacity
+              onPress={handleClearConversation}
+              disabled={isClearing}
+              style={[styles.clearButton, { backgroundColor: colors.surfaceAlt }]}
+            >
+              <Text style={[styles.clearButtonText, { color: colors.primary }]}>
+                {isClearing ? 'Clearing...' : 'Clear'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          <View style={[styles.secureTag, { backgroundColor: colors.surfaceAlt }]}>
+            <MaterialCommunityIcons name="shield-check" size={14} color={colors.primary} />
+            <Text style={[styles.secureText, { color: colors.primary }]}>Secure</Text>
+          </View>
+        </View>
+
+        {booking && (
+          <View style={[styles.bookingBanner, { backgroundColor: colors.surfaceAlt, borderBottomColor: colors.border }]}>
+            <MaterialCommunityIcons name="calendar-check" size={16} color={colors.primary} />
+            <Text style={[styles.bookingBannerText, { color: colors.muted }]}>
+              {booking.bookingNumber} · {booking.status}
+            </Text>
+          </View>
+        )}
+
+        <View style={styles.messageArea}>
+          {isLoading ? (
+            <View style={styles.loadingWrap}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          ) : (
+            <FlatList
+              ref={flatListRef}
+              data={messages}
+              keyExtractor={(item) => item._id}
+              contentContainerStyle={styles.messageList}
+              onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+              ListEmptyComponent={
+                <View style={styles.emptyWrap}>
+                  <MaterialCommunityIcons name="message-outline" size={52} color={colors.muted} />
+                  <Text style={[styles.emptyText, { color: colors.muted }]}>No messages yet</Text>
+                  <Text style={[styles.emptySubText, { color: colors.muted }]}>Start the conversation below</Text>
+                </View>
+              }
+              renderItem={({ item }) => (
+                <MessageBubble
+                  msg={item}
+                  isMine={String(item.sender?._id) === String(user?._id)}
+                  colors={colors}
+                  onLongPress={() => handleLongPress(item)}
+                />
+              )}
             />
           )}
-        />
-      )}
+        </View>
 
-      {/* Typing indicator */}
-      {typingLabel ? (
-        <View style={[styles.typingRow, { backgroundColor: colors.bg }]}>
-          <View style={styles.typingDots}>
-            {[0, 1, 2].map((i) => (
-              <View key={i} style={[styles.dot, { backgroundColor: colors.muted }]} />
-            ))}
+        {typingLabel ? (
+          <View style={[styles.typingRow, { backgroundColor: colors.bg }]}>
+            <View style={styles.typingDots}>
+              {[0, 1, 2].map((i) => (
+                <View key={i} style={[styles.dot, { backgroundColor: colors.muted }]} />
+              ))}
+            </View>
+            <Text style={[styles.typingText, { color: colors.muted }]}>{typingLabel} is typing…</Text>
           </View>
-          <Text style={[styles.typingText, { color: colors.muted }]}>{typingLabel} is typing…</Text>
-        </View>
-      ) : null}
+        ) : null}
 
-      {/* Attachment menu */}
-      {showAttachMenu && (
-        <View style={[styles.attachMenu, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <TouchableOpacity style={styles.attachOption} onPress={pickImage}>
-            <MaterialCommunityIcons name="image-multiple" size={24} color={colors.primary} />
-            <Text style={[styles.attachLabel, { color: colors.text }]}>Photo Library</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.attachOption} onPress={takePhoto}>
-            <MaterialCommunityIcons name="camera" size={24} color={colors.primary} />
-            <Text style={[styles.attachLabel, { color: colors.text }]}>Camera</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+        {showAttachMenu && (
+          <View style={[styles.attachMenu, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <TouchableOpacity style={styles.attachOption} onPress={pickImage}>
+              <MaterialCommunityIcons name="image-multiple" size={24} color={colors.primary} />
+              <Text style={[styles.attachLabel, { color: colors.text }]}>Photo Library</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.attachOption} onPress={takePhoto}>
+              <MaterialCommunityIcons name="camera" size={24} color={colors.primary} />
+              <Text style={[styles.attachLabel, { color: colors.text }]}>Camera</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-      {/* Input bar */}
-      <View style={[styles.inputBar, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
-        <TouchableOpacity
-          style={styles.attachBtn}
-          onPress={() => setShowAttachMenu((v) => !v)}
+        <View
+          style={[
+            styles.inputBar,
+            {
+              backgroundColor: colors.surface,
+              borderTopColor: colors.border,
+              paddingBottom: Platform.OS === 'android' ? 10 : 0,
+            },
+          ]}
         >
-          <MaterialCommunityIcons
-            name={showAttachMenu ? 'close' : 'paperclip'}
-            size={22}
-            color={colors.primary}
+          <TouchableOpacity style={styles.attachBtn} onPress={() => setShowAttachMenu((v) => !v)}>
+            <MaterialCommunityIcons name={showAttachMenu ? 'close' : 'paperclip'} size={22} color={colors.primary} />
+          </TouchableOpacity>
+
+          <TextInput
+            value={draft}
+            onChangeText={handleTyping}
+            placeholder="Type a message…"
+            placeholderTextColor={colors.muted}
+            multiline
+            maxLength={2000}
+            style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border }]}
           />
-        </TouchableOpacity>
 
-        <TextInput
-          value={draft}
-          onChangeText={handleTyping}
-          placeholder="Type a message…"
-          placeholderTextColor={colors.muted}
-          multiline
-          maxLength={2000}
-          style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border }]}
-        />
-
-        <TouchableOpacity
-          style={[styles.sendBtn, { backgroundColor: draft.trim() ? colors.primary : colors.surfaceAlt }]}
-          onPress={sendText}
-          disabled={!draft.trim() || isSending}
-        >
-          {isSending ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <MaterialCommunityIcons name="send" size={18} color={draft.trim() ? '#fff' : colors.muted} />
-          )}
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+          <TouchableOpacity
+            style={[styles.sendBtn, { backgroundColor: draft.trim() ? colors.primary : colors.surfaceAlt }]}
+            onPress={sendText}
+            disabled={!draft.trim() || isSending}
+          >
+            {isSending ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <MaterialCommunityIcons name="send" size={18} color={draft.trim() ? '#fff' : colors.muted} />
+            )}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1 },
   screen: { flex: 1 },
+  messageArea: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -591,6 +642,8 @@ const styles = StyleSheet.create({
   headerSub: { fontSize: 11, marginTop: 1, fontFamily: appFont },
   secureTag: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 },
   secureText: { fontSize: 11, fontWeight: '700' },
+  clearButton: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, marginRight: 6 },
+  clearButtonText: { fontSize: 11, fontWeight: '800', fontFamily: appFont },
   bookingBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1 },
   bookingBannerText: { fontSize: 12, fontWeight: '600', fontFamily: appFont },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },

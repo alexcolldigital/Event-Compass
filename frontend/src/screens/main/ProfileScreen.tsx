@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Image, Alert, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Image, Modal, StyleSheet, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../context/authStore.js';
 import Button from '../../components/Button.jsx';
@@ -29,6 +29,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [contactingSupport, setContactingSupport] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const handleContactSupport = async () => {
     setContactingSupport(true);
@@ -57,12 +58,9 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     primary: '#1f7a4d',
   };
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.error('Logout failed', error);
-    }
+  const confirmLogout = async () => {
+    setShowLogoutModal(false);
+    try { await logout(); } catch (error) { console.error('Logout failed', error); }
   };
 
   const menuItems: MenuItem[] = [
@@ -121,15 +119,33 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         </View>
 
         <TouchableOpacity
-          onPress={() => {
-            handleLogout();
-          }}
+          onPress={() => setShowLogoutModal(true)}
           style={styles.logoutButton}
           activeOpacity={0.85}
         >
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <Modal visible={showLogoutModal} transparent animationType="fade" onRequestClose={() => setShowLogoutModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalBox, { backgroundColor: colors.surface }]}>
+            <View style={styles.modalIconWrap}>
+              <MaterialCommunityIcons name="logout" size={32} color="#dc2626" />
+            </View>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Logout</Text>
+            <Text style={[styles.modalMessage, { color: colors.muted }]}>Are you sure you want to logout?</Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]} onPress={() => setShowLogoutModal(false)}>
+                <Text style={[styles.modalBtnText, { color: colors.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalBtn, styles.modalBtnDanger]} onPress={confirmLogout}>
+                <Text style={[styles.modalBtnText, { color: '#fff' }]}>Logout</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -165,4 +181,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
   },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
+  modalBox: { width: 300, borderRadius: 24, padding: 24, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 16 },
+  modalIconWrap: { width: 64, height: 64, borderRadius: 999, backgroundColor: '#fee2e2', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  modalTitle: { fontSize: 20, fontWeight: '800', marginBottom: 8 },
+  modalMessage: { fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  modalActions: { flexDirection: 'row', gap: 12, width: '100%' },
+  modalBtn: { flex: 1, paddingVertical: 13, borderRadius: 14, alignItems: 'center', borderWidth: 1 },
+  modalBtnDanger: { backgroundColor: '#dc2626', borderColor: '#dc2626' },
+  modalBtnText: { fontSize: 15, fontWeight: '800' },
 });

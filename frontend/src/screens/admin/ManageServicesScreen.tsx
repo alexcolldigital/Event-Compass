@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, Alert, TextInput, KeyboardTypeOptions,
   Modal, KeyboardAvoidingView, Platform, ScrollView, SafeAreaView, Image, ActivityIndicator, StyleSheet,
@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import Button from '../../components/Button.jsx';
 import Loading from '../../components/Loading.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { adminAPI } from '../../services/api.js';
 import { formatDate } from '../../utils/helpers.js';
 import { useTheme } from '../../context/ThemeContext';
@@ -87,8 +88,25 @@ const ManageServicesScreen = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Each picked image: { uri, uploading, uploaded, cloudUrl }
   const [pickedImages, setPickedImages] = useState<{ uri: string; uploading: boolean; cloudUrl: string }[]>([]);
+  const draftKey = 'admin_service_draft';
 
   useEffect(() => { loadServices(); }, []);
+
+  // Restore draft when Add modal opens
+  useEffect(() => {
+    if (showAddModal) {
+      AsyncStorage.getItem(draftKey).then((raw) => {
+        if (raw) { try { setFormData(JSON.parse(raw)); } catch {} }
+      });
+    }
+  }, [showAddModal]);
+
+  // Auto-save draft whenever formData changes (only while Add modal is open)
+  const isAddOpen = useRef(showAddModal);
+  useEffect(() => { isAddOpen.current = showAddModal; }, [showAddModal]);
+  useEffect(() => {
+    if (isAddOpen.current) AsyncStorage.setItem(draftKey, JSON.stringify(formData));
+  }, [formData]);
   useEffect(() => { filterServices(); }, [searchText, filterCategory, filterStatus, services]);
 
   const loadServices = async () => {
@@ -147,7 +165,7 @@ const ManageServicesScreen = () => {
     ]);
   };
 
-  const resetForm = () => { setFormData(DEFAULT_FORM); setFormErrors({}); setSelectedService(null); setPickedImages([]); };
+  const resetForm = () => { setFormData(DEFAULT_FORM); setFormErrors({}); setSelectedService(null); setPickedImages([]); AsyncStorage.removeItem(draftKey); };
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
@@ -229,6 +247,7 @@ const ManageServicesScreen = () => {
       }
 
       Alert.alert('Success', showEditModal ? 'Service updated successfully' : 'Service created successfully');
+      if (!showEditModal) AsyncStorage.removeItem(draftKey);
       setShowAddModal(false);
       setShowEditModal(false);
       resetForm();

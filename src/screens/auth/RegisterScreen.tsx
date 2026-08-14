@@ -35,6 +35,8 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string | null>>>({});
   const { register, isLoading, error } = useAuthStore();
 
+  const onlyPhoneChars = (text: string) => text.replace(/[^0-9+\-() ]/g, '');
+
   const updateField = (field: keyof FormData, value: string) => {
     setFormData({ ...formData, [field]: value });
     if (errors[field]) setErrors({ ...errors, [field]: null });
@@ -117,7 +119,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
               label="Phone Number"
               placeholder="+234 (0) 123 4567"
               value={formData.phoneNumber}
-              onChangeText={(text) => updateField('phoneNumber', text)}
+              onChangeText={(text) => updateField('phoneNumber', onlyPhoneChars(text))}
               keyboardType="phone-pad"
               icon="phone"
               error={errors.phoneNumber}

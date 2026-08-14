@@ -28,6 +28,9 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
     chipActive: isDark ? '#064e3b' : '#d1fae5',
   };
 
+  const onlyNumbers = (text: string) => text.replace(/[^0-9]/g, '');
+  const onlyPhoneChars = (text: string) => text.replace(/[^0-9+\-() ]/g, '');
+
   const [clientName, setClientName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [clientAddress, setClientAddress] = useState('');
@@ -107,7 +110,7 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
         {/* Client Info */}
         <SectionLabel label="Client Information" color={colors.muted} />
         <Field icon="account" placeholder="Client full name *" value={clientName} onChangeText={setClientName} />
-        <Field icon="phone" placeholder="Phone number *" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" />
+        <Field icon="phone" placeholder="Phone number *" value={phoneNumber} onChangeText={(t) => setPhoneNumber(onlyPhoneChars(t))} keyboardType="phone-pad" />
         <Field icon="home-outline" placeholder="Client address" value={clientAddress} onChangeText={setClientAddress} />
 
         {/* Event Info */}
@@ -130,7 +133,7 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
         </View>
 
         <Field icon="text" placeholder="Event description" value={eventDescription} onChangeText={setEventDescription} multiline />
-        <Field icon="account-group" placeholder="Expected number of guests *" value={expectedGuests} onChangeText={setExpectedGuests} keyboardType="numeric" />
+        <Field icon="account-group" placeholder="Expected number of guests *" value={expectedGuests} onChangeText={(t) => setExpectedGuests(onlyNumbers(t))} keyboardType="numeric" />
 
         {/* Date & Time */}
         <SectionLabel label="Date & Time" color={colors.muted} />

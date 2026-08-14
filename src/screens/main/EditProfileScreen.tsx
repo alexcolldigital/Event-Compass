@@ -24,6 +24,7 @@ import { useTheme } from '../../context/ThemeContext';
 
 const isValidEmail = (email) => /\S+@\S+\.\S+/.test(email);
 const isValidPhoneNumber = (phone) => /^\+?234\d{10}|0\d{10}$/.test(phone.replace(/[^\d+]/g, ''));
+const onlyPhoneChars = (text) => text.replace(/[^0-9+\-() ]/g, '');
 
 const EditProfileScreen = () => {
   const navigation = useNavigation();
@@ -221,7 +222,7 @@ const EditProfileScreen = () => {
               placeholder="+234 (0) 123 4567"
               value={formData.phoneNumber}
               onChangeText={(text) => {
-                setFormData({ ...formData, phoneNumber: text });
+                setFormData({ ...formData, phoneNumber: onlyPhoneChars(text) });
                 if (formErrors.phoneNumber) setFormErrors({ ...formErrors, phoneNumber: null });
               }}
               keyboardType="phone-pad"

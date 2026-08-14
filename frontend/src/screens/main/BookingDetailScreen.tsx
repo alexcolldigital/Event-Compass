@@ -143,7 +143,7 @@ const BookingDetailScreen = () => {
     if (type === 'message') {
       const otherParty = isProvider
         ? { _id: String(client._id || client), firstName: client.firstName || '', lastName: client.lastName || '', role: 'client' }
-        : { _id: String(provider._id || provider), firstName: provider.firstName || '', lastName: provider.lastName || '', businessName: provider.businessName || '', role: 'service_provider' };
+        : { _id: String(provider._id || provider), firstName: provider.firstName || '', lastName: provider.lastName || '', businessName: provider.businessName || '', role: provider.role || 'service_provider' };
       if (!otherParty._id || otherParty._id === 'undefined') {
         Alert.alert('Unavailable', 'Cannot open chat for this booking yet.');
         return;
@@ -151,7 +151,7 @@ const BookingDetailScreen = () => {
       (navigation as any).navigate('Chat', { receiver: otherParty, booking: currentBooking });
       return;
     }
-    const contactValue = type === 'call' ? (isProvider ? client.phone : provider.phone) || '' : '';
+    const contactValue = type === 'call' ? (isProvider ? client.phoneNumber : provider.phoneNumber) || '' : '';
     if (!contactValue) {
       Alert.alert('Unavailable', 'Contact details are not available for this booking yet.');
       return;
@@ -304,28 +304,6 @@ const BookingDetailScreen = () => {
           ) : null}
         </View>
 
-        {/* Trust & Communication */}
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Trust & Communication</Text>
-
-          {[
-            { icon: 'shield-check', label: 'Vendor verified', actionLabel: 'View badges', onPress: openVerification },
-            { icon: 'cash-multiple', label: 'Escrow status', actionLabel: 'Check status', onPress: openEscrowStatus },
-            { icon: 'message-text', label: 'Secure chat', actionLabel: 'Open', onPress: openChat },
-            { icon: 'alert-circle', label: 'Dispute', actionLabel: 'Submit evidence', onPress: openDispute },
-          ].map((item, i, arr) => (
-            <View key={item.label} style={[styles.trustRow, i < arr.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: 1 }]}>
-              <View style={styles.iconLabel}>
-                <MaterialCommunityIcons name={item.icon as any} size={18} color={colors.primary} />
-                <Text style={[styles.label, { color: colors.muted, marginLeft: 8 }]}>{item.label}</Text>
-              </View>
-              <TouchableOpacity onPress={item.onPress}>
-                <Text style={[styles.linkText, { color: colors.primary }]}>{item.actionLabel}</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
-
         {/* Pricing */}
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Pricing</Text>
@@ -471,7 +449,6 @@ const styles = StyleSheet.create({
   tagGreenText: { color: '#1f7a4d', fontSize: 11, fontWeight: '700' },
   tagGray: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   tagGrayText: { fontSize: 11, fontWeight: '700' },
-  trustRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
   linkText: { fontSize: 13, fontWeight: '700' },
   priceRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, paddingTop: 12, marginTop: 4, marginBottom: 12 },

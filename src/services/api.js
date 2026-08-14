@@ -234,6 +234,7 @@ export const messageAPI = {
   markRead: (conversationId) =>
     apiClient.patch(`/messages/conversation/${conversationId}/read`),
   deleteMessage: (id) => apiClient.delete(`/messages/${id}`),
+  clearConversation: (conversationId) => apiClient.delete(`/messages/conversation/${conversationId}`),
   getAdminContacts: () => apiClient.get('/auth/admin-contacts'),
 };
 

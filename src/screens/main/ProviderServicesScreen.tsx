@@ -112,6 +112,8 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
     }
   }, [route?.params?.showForm]);
 
+  const onlyNumbers = (text: string) => text.replace(/[^0-9]/g, '');
+
   const updateField = (field: string, value: string | boolean) => {
     setFormState((prev: any) => ({ ...prev, [field]: value }));
     if (formErrors[field]) {
@@ -443,7 +445,7 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
                   label="Base Price"
                   placeholder="150000"
                   value={formState.basePrice}
-                  onChangeText={(text) => updateField('basePrice', text)}
+                  onChangeText={(text) => updateField('basePrice', onlyNumbers(text))}
                   keyboardType="numeric"
                   icon="cash"
                   error={formErrors.basePrice}
@@ -509,7 +511,7 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
                   label="Minimum Booking"
                   placeholder="50000"
                   value={formState.minBookingAmount}
-                  onChangeText={(text) => updateField('minBookingAmount', text)}
+                  onChangeText={(text) => updateField('minBookingAmount', onlyNumbers(text))}
                   keyboardType="numeric"
                   icon="cash-minus"
                 />
@@ -519,7 +521,7 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
                   label="Discount"
                   placeholder="10000"
                   value={formState.discount}
-                  onChangeText={(text) => updateField('discount', text)}
+                  onChangeText={(text) => updateField('discount', onlyNumbers(text))}
                   keyboardType="numeric"
                   icon="sale"
                 />
@@ -529,7 +531,7 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
               label="Security Deposit"
               placeholder="50000"
               value={formState.securityDeposit}
-              onChangeText={(text) => updateField('securityDeposit', text)}
+              onChangeText={(text) => updateField('securityDeposit', onlyNumbers(text))}
               keyboardType="numeric"
               icon="shield-check-outline"
             />
@@ -539,7 +541,7 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
               label="Available Quantity"
               placeholder="200"
               value={formState.availableQuantity}
-              onChangeText={(text) => updateField('availableQuantity', text)}
+              onChangeText={(text) => updateField('availableQuantity', onlyNumbers(text))}
               keyboardType="numeric"
               icon="counter"
             />
@@ -555,15 +557,15 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
             {formState.enableInventory ? (
               <View style={styles.gridRow}>
                 <View style={styles.gridColumn}>
-                  <Input label="Available Stock" placeholder="150" value={formState.availableStock} onChangeText={(text) => updateField('availableStock', text)} keyboardType="numeric" icon="package-variant" />
+                  <Input label="Available Stock" placeholder="150" value={formState.availableStock} onChangeText={(text) => updateField('availableStock', onlyNumbers(text))} keyboardType="numeric" icon="package-variant" />
                 </View>
                 <View style={styles.gridColumn}>
-                  <Input label="Reserved Stock" placeholder="20" value={formState.reservedStock} onChangeText={(text) => updateField('reservedStock', text)} keyboardType="numeric" icon="lock-outline" />
+                  <Input label="Reserved Stock" placeholder="20" value={formState.reservedStock} onChangeText={(text) => updateField('reservedStock', onlyNumbers(text))} keyboardType="numeric" icon="lock-outline" />
                 </View>
               </View>
             ) : null}
             {formState.enableInventory ? (
-              <Input label="Damaged Stock" placeholder="5" value={formState.damagedStock} onChangeText={(text) => updateField('damagedStock', text)} keyboardType="numeric" icon="alert-circle-outline" />
+              <Input label="Damaged Stock" placeholder="5" value={formState.damagedStock} onChangeText={(text) => updateField('damagedStock', onlyNumbers(text))} keyboardType="numeric" icon="alert-circle-outline" />
             ) : null}
 
             <Text style={[styles.sectionLabel, { color: colors.text }]}>5. Availability</Text>
