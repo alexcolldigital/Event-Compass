@@ -1042,6 +1042,13 @@ button {
   }
 }
 
+/* Prevent content from being hidden behind fixed bottom tab bar on web */
+@media (max-width: 960px) {
+  body {
+    padding-bottom: 72px;
+  }
+}
+
 @media (max-width: 640px) {
   .ec-nav {
     width: min(100% - 24px, 1180px);

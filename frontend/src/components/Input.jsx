@@ -127,6 +127,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    overflow: 'hidden',
   },
   inputWrapFocused: {
     borderColor: '#16a34a',
@@ -144,6 +145,8 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
     minHeight: 48,
     color: '#172017',
     fontSize: 16,

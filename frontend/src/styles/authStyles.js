@@ -90,9 +90,11 @@ export const authStyles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: 14,
+    flexWrap: 'wrap',
   },
   flex: {
     flex: 1,
+    minWidth: 120,
   },
   backButton: {
     width: 46,

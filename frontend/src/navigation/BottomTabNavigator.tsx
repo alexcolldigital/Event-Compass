@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -377,6 +378,12 @@ export default function BottomTabNavigator() {
           shadowOpacity: 0.22,
           shadowRadius: 12,
           elevation: 10,
+          ...(Platform.OS === 'web' && {
+            position: 'fixed' as any,
+            bottom: 0,
+            left: 0,
+            right: 0,
+          }),
         },
       })}
     >
