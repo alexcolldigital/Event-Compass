@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Alert,
@@ -8,7 +8,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCartStore } from '../../context/cartStore.js';
 import { useTheme } from '../../context/ThemeContext';
 import Button from '../../components/Button.jsx';
-import { bookingAPI } from '../../services/api.js';
+import { bookingAPI, adminAPI } from '../../services/api.js';
 import { buildCheckoutBookingDetails } from '../../utils/cartUtils';
 
 const PAYMENT_PLANS = [
@@ -42,13 +42,26 @@ export default function CheckoutScreen({ navigation, route }: { navigation: any;
   const [isLoading, setIsLoading] = useState(false);
   const [paymentPlan, setPaymentPlan] = useState('full');
   const [selectedGateway, setSelectedGateway] = useState('paystack');
+  const [serviceFeeRate, setServiceFeeRate] = useState(10);
   const totalAmount = useMemo(() => getTotalAmount(), [items, getTotalAmount]);
 
+  useEffect(() => {
+    adminAPI.getCommissionSettings()
+      .then((res: any) => {
+        const rate = res?.commission?.serviceFeePercentage;
+        if (rate !== undefined) setServiceFeeRate(Number(rate));
+      })
+      .catch(() => {});
+  }, []);
+
+  const serviceFee = Math.round(totalAmount * serviceFeeRate / 100);
+  const totalWithFee = totalAmount + serviceFee;
+
   const depositAmount = useMemo(() => {
-    if (paymentPlan === 'deposit_20') return totalAmount * 0.2;
-    if (paymentPlan === 'split_50_50') return totalAmount * 0.5;
-    return totalAmount;
-  }, [paymentPlan, totalAmount]);
+    if (paymentPlan === 'deposit_20') return totalWithFee * 0.2;
+    if (paymentPlan === 'split_50_50') return totalWithFee * 0.5;
+    return totalWithFee;
+  }, [paymentPlan, totalWithFee]);
 
   const amountDueNow = depositAmount;
 
@@ -303,10 +316,14 @@ export default function CheckoutScreen({ navigation, route }: { navigation: any;
                 <Text style={[styles.summaryLabel, { color: colors.muted }]}>Subtotal</Text>
                 <Text style={[styles.summaryValue, { color: colors.text }]}>₦{totalAmount.toLocaleString()}</Text>
               </View>
+              <View style={styles.summaryRow}>
+                <Text style={[styles.summaryLabel, { color: colors.muted }]}>Service & Delivery Fee ({serviceFeeRate}%)</Text>
+                <Text style={[styles.summaryValue, { color: colors.text }]}>₦{serviceFee.toLocaleString()}</Text>
+              </View>
               {paymentPlan !== 'full' && (
                 <View style={styles.summaryRow}>
                   <Text style={[styles.summaryLabel, { color: colors.muted }]}>Balance (pay before event)</Text>
-                  <Text style={[styles.summaryValue, { color: colors.text }]}>₦{(totalAmount - amountDueNow).toLocaleString()}</Text>
+                  <Text style={[styles.summaryValue, { color: colors.text }]}>₦{(totalWithFee - amountDueNow).toLocaleString()}</Text>
                 </View>
               )}
               <View style={[styles.summaryRow, styles.totalRow, { borderTopColor: colors.border }]}>
@@ -320,10 +337,10 @@ export default function CheckoutScreen({ navigation, route }: { navigation: any;
           <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
             <View style={styles.footerTotal}>
               <Text style={[styles.footerTotalLabel, { color: colors.muted }]}>Due Now</Text>
-              <Text style={[styles.footerTotalValue, { color: colors.primary }]}>₦{amountDueNow.toLocaleString()}</Text>
+              <Text style={[styles.footerTotalValue, { color: colors.primary }]}>₦{Math.round(amountDueNow).toLocaleString()}</Text>
             </View>
             <Button
-              title={isLoading ? 'Submitting...' : 'Proceed to Payment'}
+              title={isLoading ? 'Submitting...' : 'Submit Booking'}
               onPress={handlePlaceOrder}
               isLoading={isLoading}
               variant="primary"

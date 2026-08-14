@@ -29,7 +29,6 @@ import HelpSupportScreen from '../screens/main/HelpSupportScreen';
 import AboutScreen from '../screens/main/AboutScreen';
 import CheckoutScreen from '../screens/main/CheckoutScreen';
 import EventDetailsScreen from '../screens/main/EventDetailsScreen';
-import EscrowStatusScreen from '../screens/main/EscrowStatusScreen';
 import ChatScreen from '../screens/main/ChatScreen';
 import DisputeEvidenceScreen from '../screens/main/DisputeEvidenceScreen';
 import VendorVerificationScreen from '../screens/main/VendorVerificationScreen';
@@ -148,11 +147,6 @@ function BookingsStack() {
       <Stack.Screen
         name="EventDetails"
         component={EventDetailsScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="EscrowStatus"
-        component={EscrowStatusScreen}
         options={{ animation: 'slide_from_right' }}
       />
       <Stack.Screen

@@ -17,13 +17,18 @@ export default function CommissionManagementScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [breakdown, setBreakdown] = useState(null);
-  const [form, setForm] = useState({ commissionRate: '10', minCommission: '0', maxCommission: '' });
+  const [form, setForm] = useState({ commissionRate: '10', minCommission: '0', maxCommission: '', serviceFeePercentage: '10' });
 
   useEffect(() => {
     Promise.all([adminAPI.getCommissionSettings(), adminAPI.getCommissionBreakdown()])
       .then(([s, b]) => {
         setBreakdown(b.breakdown);
-        setForm({ commissionRate: String(s.commission?.commissionRate || '10'), minCommission: String(s.commission?.minCommission || '0'), maxCommission: String(s.commission?.maxCommission || '') });
+        setForm({
+          commissionRate: String(s.commission?.commissionRate || '10'),
+          minCommission: String(s.commission?.minCommission || '0'),
+          maxCommission: String(s.commission?.maxCommission || ''),
+          serviceFeePercentage: String(s.commission?.serviceFeePercentage ?? '10'),
+        });
       })
       .catch(() => {})
       .finally(() => setIsLoading(false));
@@ -32,7 +37,12 @@ export default function CommissionManagementScreen() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await adminAPI.updateCommissionSettings({ commissionRate: parseFloat(form.commissionRate), minCommission: parseFloat(form.minCommission), maxCommission: form.maxCommission ? parseFloat(form.maxCommission) : undefined });
+      await adminAPI.updateCommissionSettings({
+        commissionRate: parseFloat(form.commissionRate),
+        minCommission: parseFloat(form.minCommission),
+        maxCommission: form.maxCommission ? parseFloat(form.maxCommission) : undefined,
+        serviceFeePercentage: parseFloat(form.serviceFeePercentage),
+      });
       Alert.alert('Success', 'Commission settings updated');
     } catch (e) { Alert.alert('Error', e.message); }
     finally { setIsSaving(false); }
@@ -73,7 +83,7 @@ export default function CommissionManagementScreen() {
 
         <View style={[adminStyles.card, { backgroundColor: c.surface, borderColor: c.border }]}>
           <Text style={[adminStyles.sectionTitle, { color: c.text, fontFamily: font }]}>Commission Settings</Text>
-          {[{ label: 'Commission Rate (%)', key: 'commissionRate', placeholder: 'e.g. 10', keyboard: 'decimal-pad' }, { label: 'Minimum Commission (₦)', key: 'minCommission', placeholder: 'e.g. 500', keyboard: 'decimal-pad' }, { label: 'Maximum Commission (₦, optional)', key: 'maxCommission', placeholder: 'Leave blank for no cap', keyboard: 'decimal-pad' }].map(f => (
+          {[{ label: 'Commission Rate (%)', key: 'commissionRate', placeholder: 'e.g. 10', keyboard: 'decimal-pad' }, { label: 'Minimum Commission (₦)', key: 'minCommission', placeholder: 'e.g. 500', keyboard: 'decimal-pad' }, { label: 'Maximum Commission (₦, optional)', key: 'maxCommission', placeholder: 'Leave blank for no cap', keyboard: 'decimal-pad' }, { label: 'Service & Delivery Fee (%)', key: 'serviceFeePercentage', placeholder: 'e.g. 10', keyboard: 'decimal-pad' }].map(f => (
             <View key={f.key}>
               <Text style={[adminStyles.formLabel, { color: c.text, fontFamily: font }]}>{f.label}</Text>
               <TextInput

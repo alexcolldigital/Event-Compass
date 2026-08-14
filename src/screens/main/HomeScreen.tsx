@@ -3,7 +3,7 @@
  * Minimalist marketplace experience with bento-inspired cards and rich imagery.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, TextInput, StyleSheet, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../context/authStore.js';
@@ -14,6 +14,7 @@ import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { MarketplaceCard, FeatureCard, StatCard } from '../../components/Card.jsx';
 import { useTheme } from '../../context/ThemeContext';
 import { serviceAPI } from '../../services/api.js';
+import { useFocusEffect } from '@react-navigation/native';
 
 const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
@@ -62,13 +63,15 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
     primary: isDark ? '#34d399' : '#1f7a4d',
   };
 
-  useEffect(() => {
-    getAllServices({ limit: 8 }).catch(() => {});
-    serviceAPI.getPublicStats().then((res: any) => {
-      setPlatformStats(res.stats);
-      setCategoryCountMap(res.categoryCountMap || {});
-    }).catch(() => {});
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      getAllServices({ limit: 8 }).catch(() => {});
+      serviceAPI.getPublicStats().then((res: any) => {
+        setPlatformStats(res.stats);
+        setCategoryCountMap(res.categoryCountMap || {});
+      }).catch(() => {});
+    }, [])
+  );
 
   const handleTabNavigate = (routeName: string, params?: Record<string, unknown>) => {
     const parent = navigation.getParent?.();

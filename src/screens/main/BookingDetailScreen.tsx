@@ -41,8 +41,6 @@ const BookingDetailScreen = () => {
     cancelBooking,
     completeBooking,
     createBookingPaymentSession,
-    releaseEscrow,
-    disputeEscrow,
     rejectBooking,
   } = useBookingStore();
   const { user, isAuthenticated } = useAuthStore();
@@ -193,41 +191,8 @@ const BookingDetailScreen = () => {
     );
   };
 
-  const handleReleaseEscrow = () => {
-    Alert.alert('Release escrow', 'Release the held funds to the service provider?', [
-      { text: 'Cancel', onPress: () => {} },
-      {
-        text: 'Release',
-        onPress: async () => {
-          try {
-            await releaseEscrow(bookingId);
-            Alert.alert('Success', 'Escrow released to the provider.');
-          } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to release escrow';
-            Alert.alert('Error', message);
-          }
-        },
-      },
-    ]);
-  };
-
-  const handleDisputeEscrow = () => {
-    Alert.alert('Dispute escrow', 'Open a dispute for this booking?', [
-      { text: 'Cancel', onPress: () => {} },
-      {
-        text: 'Continue',
-        onPress: async () => {
-          try {
-            await disputeEscrow(bookingId, 'Escrow dispute raised by the user.');
-            Alert.alert('Success', 'Escrow dispute opened.');
-          } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to dispute escrow';
-            Alert.alert('Error', message);
-          }
-        },
-      },
-    ]);
-  };
+  const handleReleaseEscrow = () => {};
+  const handleDisputeEscrow = () => {};
 
   const handleContactAction = (type) => {
     if (type === 'message') {
@@ -291,7 +256,6 @@ const BookingDetailScreen = () => {
   const totalAmount = currentBooking.totalAmount || pricing.totalAmount || 0;
   const escrow = currentBooking.escrow || {};
   const isPending = currentBooking.status === BOOKING_STATUS.PENDING;
-  const isConfirmed = currentBooking.status === BOOKING_STATUS.CONFIRMED;
   const isCancelled = currentBooking.status === BOOKING_STATUS.CANCELLED;
 
   const getStatusMeta = (status) => {
@@ -310,44 +274,6 @@ const BookingDetailScreen = () => {
   };
 
   const statusMeta = getStatusMeta(currentBooking.status);
-  const escrowStateMeta = (() => {
-    if (!escrow.enabled) {
-      return {
-        label: 'Disabled',
-        description: 'Escrow protection is not enabled for this booking.',
-        backgroundColor: '#f3f4f6',
-        textColor: '#4b5563',
-        borderColor: 'rgba(15,23,42,0.08)',
-      };
-    }
-
-    switch (escrow.releaseStatus) {
-      case 'released':
-        return {
-          label: 'Released',
-          description: 'The escrow funds have been released to the provider.',
-          backgroundColor: '#ecfdf3',
-          textColor: '#15803d',
-          borderColor: 'rgba(22,163,74,0.2)',
-        };
-      case 'disputed':
-        return {
-          label: 'Disputed',
-          description: 'Escrow is under dispute and requires review.',
-          backgroundColor: '#fef2f2',
-          textColor: '#dc2626',
-          borderColor: 'rgba(220,38,38,0.2)',
-        };
-      default:
-        return {
-          label: 'Held',
-          description: 'The payment is safely held in escrow until the booking is completed or resolved.',
-          backgroundColor: '#eff6ff',
-          textColor: '#2563eb',
-          borderColor: 'rgba(37,99,235,0.18)',
-        };
-    }
-  })();
   const contactName = isProvider
     ? `${client.firstName || ''} ${client.lastName || ''}`.trim() || 'Client'
     : provider.businessName || `${provider.firstName || ''} ${provider.lastName || ''}`.trim() || 'Service provider';
@@ -385,13 +311,6 @@ const BookingDetailScreen = () => {
               <MaterialCommunityIcons name="account-group" size={18} color={colors.primary} />
               <Text style={[styles.metricText, { color: colors.text }]}>{quantity} guest{quantity > 1 ? 's' : ''}</Text>
             </View>
-          </View>
-
-          <View style={[styles.escrowBanner, { backgroundColor: escrowStateMeta.backgroundColor, borderColor: escrowStateMeta.borderColor }]}> 
-            <View style={styles.escrowBadge}> 
-              <Text style={[styles.escrowBadgeText, { color: escrowStateMeta.textColor }]}>Escrow {escrowStateMeta.label}</Text>
-            </View>
-            <Text style={[styles.escrowDescription, { color: escrowStateMeta.textColor }]}>{escrowStateMeta.description}</Text>
           </View>
         </Card>
 
@@ -445,7 +364,7 @@ const BookingDetailScreen = () => {
             </View>
           ) : null}
           <View style={styles.priceRow}> 
-            <Text style={[styles.priceLabel, { color: colors.muted }]}>Tax</Text>
+            <Text style={[styles.priceLabel, { color: colors.muted }]}>Service & Delivery Fee</Text>
             <Text style={[styles.priceValue, { color: colors.text }]}>{formatCurrency(tax)}</Text>
           </View>
 
@@ -460,19 +379,6 @@ const BookingDetailScreen = () => {
               <Text style={{ color: currentBooking.payment?.status === 'completed' ? '#15803d' : currentBooking.payment?.status === 'pending' ? '#92400e' : '#991b1b', fontSize: 12, fontWeight: '700', textTransform: 'capitalize' }}>{currentBooking.payment?.status || 'Pending'}</Text>
             </View>
           </View>
-
-          <View style={[styles.paymentBanner, { backgroundColor: colors.surface, marginTop: 8 }]}> 
-            <Text style={[styles.paymentLabel, { color: colors.muted }]}>Escrow</Text>
-            <View style={[styles.paymentPill, { backgroundColor: escrow.enabled ? '#dcfce7' : '#f3f4f6' }]}> 
-              <Text style={{ color: escrow.enabled ? '#15803d' : '#4b5563', fontSize: 12, fontWeight: '700' }}>{escrow.enabled ? escrow.releaseStatus === 'held' ? 'Funds held' : 'Enabled' : 'Disabled'}</Text>
-            </View>
-          </View>
-          {escrow.enabled ? (
-            <View style={[styles.paymentBanner, { backgroundColor: colors.surface, marginTop: 8 }]}> 
-              <Text style={[styles.paymentLabel, { color: colors.muted }]}>Escrow policy</Text>
-              <Text style={{ color: colors.text, fontSize: 12, fontWeight: '700', textAlign: 'right' }}>{escrow.releaseTime === 'after_customer_confirmation' ? 'Released after event completion' : escrow.releaseTime === '48_hours' ? '48 Hours hold' : escrow.releaseTime}</Text>
-            </View>
-          ) : null}
         </Card>
 
         <Card variant="outlined" style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
@@ -530,9 +436,6 @@ const BookingDetailScreen = () => {
           {isProvider && !isPending && !isCancelled ? (
             <View style={styles.buttonStack}> 
               <Button title="Mark as completed" onPress={handleCompleteBooking} variant="primary" fullWidth />
-              {currentBooking.escrow?.enabled && currentBooking.escrow?.releaseStatus === 'held' ? (
-                <Button title="Release escrow" onPress={handleReleaseEscrow} variant="secondary" fullWidth />
-              ) : null}
             </View>
           ) : null}
 
@@ -555,9 +458,6 @@ const BookingDetailScreen = () => {
           {isClient && !isPending && !isCancelled && currentBooking.payment?.status === 'completed' ? (
             <View style={styles.buttonStack}> 
               <Button title="Payment completed" variant="outline" fullWidth disabled />
-              {currentBooking.escrow?.enabled && currentBooking.escrow?.releaseStatus === 'held' ? (
-                <Button title="Dispute escrow" onPress={handleDisputeEscrow} variant="danger" fullWidth />
-              ) : null}
               <Button title="Cancel booking" onPress={() => setShowCancelForm(true)} variant="danger" fullWidth />
             </View>
           ) : null}
@@ -609,6 +509,10 @@ const styles = StyleSheet.create({
   heroMetrics: { flexDirection: 'row', marginTop: 14, flexWrap: 'wrap' },
   metricBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(31,122,77,0.08)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 8, marginRight: 8, marginBottom: 8 },
   metricText: { marginLeft: 6, fontSize: 12, fontWeight: '700' },
+  escrowBanner: { marginTop: 14, borderRadius: 18, borderWidth: 1, padding: 12 },
+  escrowBadge: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: 'rgba(255,255,255,0.7)' },
+  escrowBadgeText: { fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8 },
+  escrowDescription: { fontSize: 13, fontWeight: '700', marginTop: 8, lineHeight: 18 },
   escrowBanner: { marginTop: 14, borderRadius: 18, borderWidth: 1, padding: 12 },
   escrowBadge: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: 'rgba(255,255,255,0.7)' },
   escrowBadgeText: { fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8 },

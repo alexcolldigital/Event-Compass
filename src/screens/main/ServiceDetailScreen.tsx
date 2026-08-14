@@ -133,7 +133,8 @@ const ServiceDetailScreen = () => {
     addItem({
       serviceId: currentService._id,
       name: currentService.name,
-      price: currentService.pricing?.basePrice || 0,
+      price: isPriceOnRequest ? 0 : (currentService.pricing?.basePrice || 0),
+      priceOnRequest: isPriceOnRequest,
       quantity,
       specialRequirements: '',
     });
@@ -176,7 +177,8 @@ const ServiceDetailScreen = () => {
     );
   }
 
-  const totalPrice = currentService.pricing?.basePrice * quantity || 0;
+  const isPriceOnRequest = currentService.priceOnRequest === true || !currentService.pricing?.basePrice;
+  const totalPrice = isPriceOnRequest ? 0 : (currentService.pricing?.basePrice * quantity || 0);
   const tax = totalPrice * 0.05;
   const finalPrice = totalPrice + tax;
 
@@ -221,9 +223,18 @@ const ServiceDetailScreen = () => {
             </View>
           </View>
           <View style={styles.priceBlock}>
-            <Text style={[styles.priceLabel, { color: colors.muted }]}>Starting from</Text>
-            <Text style={[styles.price, { color: colors.primary }]}>₦{currentService.pricing?.basePrice?.toLocaleString() || '0'}</Text>
-            <Text style={[styles.unitText, { color: colors.muted }]}>per {currentService.unit || 'booking'}</Text>
+            {isPriceOnRequest ? (
+              <View style={[styles.porBadge, { backgroundColor: '#fff7ed', borderColor: '#fed7aa' }]}>
+                <MaterialCommunityIcons name="tag-outline" size={16} color="#c2410c" />
+                <Text style={[styles.porText, { color: '#c2410c' }]}>Price not static — cost set on confirmation</Text>
+              </View>
+            ) : (
+              <>
+                <Text style={[styles.priceLabel, { color: colors.muted }]}>Starting from</Text>
+                <Text style={[styles.price, { color: colors.primary }]}>₦{currentService.pricing?.basePrice?.toLocaleString()}</Text>
+                <Text style={[styles.unitText, { color: colors.muted }]}>per {currentService.unit || 'booking'}</Text>
+              </>
+            )}
           </View>
         </Card>
 
@@ -278,10 +289,19 @@ const ServiceDetailScreen = () => {
               </TouchableOpacity>
             ))}
           </View>
-          <View style={[styles.priceBox, { backgroundColor: colors.surfaceAlt }]}> 
-            <View style={styles.priceLine}><Text style={[styles.priceLabel, { color: colors.muted }]}>Subtotal</Text><Text style={[styles.priceKey, { color: colors.text }]}>₦{totalPrice.toLocaleString()}</Text></View>
-            <View style={styles.priceLine}><Text style={[styles.priceLabel, { color: colors.muted }]}>Tax (5%)</Text><Text style={[styles.priceKey, { color: colors.text }]}>₦{tax.toLocaleString()}</Text></View>
-            <View style={styles.priceLine}><Text style={[styles.priceLabel, { color: colors.text }]}>Total</Text><Text style={[styles.total, { color: colors.primary }]}>₦{finalPrice.toLocaleString()}</Text></View>
+          <View style={[styles.priceBox, { backgroundColor: colors.surfaceAlt }]}>
+            {isPriceOnRequest ? (
+              <View style={[styles.porBadge, { backgroundColor: '#fff7ed', borderColor: '#fed7aa', alignSelf: 'stretch' }]}>
+                <MaterialCommunityIcons name="information-outline" size={16} color="#c2410c" />
+                <Text style={[styles.porText, { color: '#c2410c', flex: 1 }]}>Price will be set by admin upon confirmation and added to your total.</Text>
+              </View>
+            ) : (
+              <>
+                <View style={styles.priceLine}><Text style={[styles.priceLabel, { color: colors.muted }]}>Subtotal</Text><Text style={[styles.priceKey, { color: colors.text }]}>₦{totalPrice.toLocaleString()}</Text></View>
+                <View style={styles.priceLine}><Text style={[styles.priceLabel, { color: colors.muted }]}>Tax (5%)</Text><Text style={[styles.priceKey, { color: colors.text }]}>₦{tax.toLocaleString()}</Text></View>
+                <View style={styles.priceLine}><Text style={[styles.priceLabel, { color: colors.text }]}>Total</Text><Text style={[styles.total, { color: colors.primary }]}>₦{finalPrice.toLocaleString()}</Text></View>
+              </>
+            )}
           </View>
           <View style={[styles.locationBox, { backgroundColor: colors.surfaceAlt }]}> 
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Service location</Text>
@@ -427,6 +447,8 @@ const styles = StyleSheet.create({
   actionRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   checkbox: { width: 20, height: 20, borderRadius: 4, borderWidth: 1.5, borderColor: '#1f7a4d', marginTop: 2, alignItems: 'center', justifyContent: 'center' },
   checkboxActive: { backgroundColor: '#1f7a4d' },
+  porBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8 },
+  porText: { fontSize: 13, fontWeight: '700' },
   confirmationBanner: { borderRadius: 16, padding: 14, marginBottom: 14, borderWidth: 1 },
   confirmationText: { fontSize: 14, fontWeight: '700' },
   inputGroup: { marginTop: 8 },

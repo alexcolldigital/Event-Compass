@@ -18,7 +18,7 @@ export default function CommissionManagementScreen() {
   const [breakdown, setBreakdown] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [form, setForm] = useState({ commissionRate: '', minCommission: '', maxCommission: '' });
+  const [form, setForm] = useState({ commissionRate: '', minCommission: '', maxCommission: '', serviceFeePercentage: '' });
 
   useEffect(() => {
     Promise.all([adminAPI.getCommissionSettings(), adminAPI.getCommissionBreakdown()])
@@ -29,6 +29,7 @@ export default function CommissionManagementScreen() {
           commissionRate: String(s.commission?.commissionRate || '10'),
           minCommission: String(s.commission?.minCommission || '0'),
           maxCommission: String(s.commission?.maxCommission || ''),
+          serviceFeePercentage: String(s.commission?.serviceFeePercentage ?? '10'),
         });
       })
       .catch(() => {})
@@ -42,6 +43,7 @@ export default function CommissionManagementScreen() {
         commissionRate: parseFloat(form.commissionRate),
         minCommission: parseFloat(form.minCommission),
         maxCommission: form.maxCommission ? parseFloat(form.maxCommission) : undefined,
+        serviceFeePercentage: parseFloat(form.serviceFeePercentage),
       });
       setSettings(res.commission);
       Alert.alert('Success', 'Commission settings updated');
@@ -65,6 +67,7 @@ export default function CommissionManagementScreen() {
     { label: 'Commission Rate (%)', key: 'commissionRate', placeholder: 'e.g. 10' },
     { label: 'Minimum Commission (₦)', key: 'minCommission', placeholder: 'e.g. 500' },
     { label: 'Maximum Commission (₦, optional)', key: 'maxCommission', placeholder: 'Leave blank for no cap' },
+    { label: 'Service & Delivery Fee (%)', key: 'serviceFeePercentage', placeholder: 'e.g. 10' },
   ];
 
   return (
@@ -81,7 +84,7 @@ export default function CommissionManagementScreen() {
           <Text style={[adminStyles.heroEyebrow, { fontFamily: appFont }]}>ADMIN</Text>
           <Text style={[adminStyles.heroTitle, { fontFamily: appFont }]}>Commission Management</Text>
           <Text style={[adminStyles.heroSubtitle, { fontFamily: appFont }]}>
-            Current rate: {settings?.commissionRate || 10}%
+            Commission: {settings?.commissionRate || 10}% · Service Fee: {settings?.serviceFeePercentage ?? 10}%
           </Text>
         </View>
 

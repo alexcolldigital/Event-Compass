@@ -18,6 +18,7 @@ import {
   Platform,
   KeyboardTypeOptions,
   StyleSheet,
+  Image,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -27,6 +28,76 @@ import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { adminAPI } from '../../services/api.js';
 import { COLORS, USER_ROLES, SERVICE_PROVIDER_TYPES } from '../../utils/constants.js';
 import { formatDate } from '../../utils/helpers.js';
+
+// Same category order as HomeScreen featureCategories
+const APP_CATEGORY_ORDER = [
+  'Canopies and Tent',
+  'Chairs',
+  'Tables',
+  'Event Planners and Managers',
+  'Events Services Providers and Vendors',
+  'Events Facilitators and Agents',
+  'Special Events Hosts and Organizers',
+  'Events Venues',
+  'Event Decorators',
+  'Make-up Artists',
+  'Ushers',
+  'Bouncers',
+  'Events Facilities Rental and Hiring Companies',
+  'Ice Chilling Services',
+  'Refrigerated Vans/Cooling Vans Providers',
+  'Food Caterers',
+  'Drinks Suppliers',
+  'Music (D-J and Live Performances)',
+  'MCs and Compares',
+  'Comedians and Entertainers',
+];
+
+const CATEGORY_ICONS: Record<string, string> = {
+  'Canopies and Tent': 'tent',
+  'Chairs': 'seat',
+  'Tables': 'table-furniture',
+  'Event Planners and Managers': 'clipboard-list',
+  'Events Services Providers and Vendors': 'store',
+  'Events Facilitators and Agents': 'handshake',
+  'Special Events Hosts and Organizers': 'account-star',
+  'Events Venues': 'home-city',
+  'Event Decorators': 'palette',
+  'Make-up Artists': 'face-woman-shimmer',
+  'Ushers': 'account-tie',
+  'Bouncers': 'shield-account',
+  'Events Facilities Rental and Hiring Companies': 'warehouse',
+  'Ice Chilling Services': 'snowflake',
+  'Refrigerated Vans/Cooling Vans Providers': 'truck-snowflake',
+  'Food Caterers': 'silverware-fork-knife',
+  'Drinks Suppliers': 'bottle-wine',
+  'Music (D-J and Live Performances)': 'music',
+  'MCs and Compares': 'microphone',
+  'Comedians and Entertainers': 'emoticon-happy',
+};
+
+const CATEGORY_COLORS: Record<string, string> = {
+  'Canopies and Tent': '#2f855a',
+  'Chairs': '#4c51bf',
+  'Tables': '#d97706',
+  'Event Planners and Managers': '#db2777',
+  'Events Services Providers and Vendors': '#0f766e',
+  'Events Facilitators and Agents': '#2563eb',
+  'Special Events Hosts and Organizers': '#b45309',
+  'Events Venues': '#7c3aed',
+  'Event Decorators': '#db2777',
+  'Make-up Artists': '#ec4899',
+  'Ushers': '#0f766e',
+  'Bouncers': '#374151',
+  'Events Facilities Rental and Hiring Companies': '#b45309',
+  'Ice Chilling Services': '#2563eb',
+  'Refrigerated Vans/Cooling Vans Providers': '#0f766e',
+  'Food Caterers': '#4c51bf',
+  'Drinks Suppliers': '#7c3aed',
+  'Music (D-J and Live Performances)': '#d97706',
+  'MCs and Compares': '#db2777',
+  'Comedians and Entertainers': '#b45309',
+};
 
 // Type definitions
 interface Service {
@@ -115,6 +186,7 @@ interface FormErrors {
 
 interface ApiError {
   message?: string;
+  error?: string | unknown;
   [key: string]: unknown;
 }
 
@@ -154,11 +226,13 @@ const ManageServicesScreen = () => {
 
   const [services, setServices] = useState<Service[]>([]);
   const [filteredServices, setFilteredServices] = useState<Service[]>([]);
+  const [groupByCategory, setGroupByCategory] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [expandedServiceId, setExpandedServiceId] = useState<string | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -241,6 +315,15 @@ const ManageServicesScreen = () => {
       filtered = filtered.filter((service) => (service.isActive ? 'active' : 'inactive') === filterStatus);
     }
 
+    // Sort by app category order
+    filtered = [...filtered].sort((a, b) => {
+      const ai = APP_CATEGORY_ORDER.findIndex(c => c.toLowerCase() === (a.serviceType || a.category || '').toLowerCase());
+      const bi = APP_CATEGORY_ORDER.findIndex(c => c.toLowerCase() === (b.serviceType || b.category || '').toLowerCase());
+      const aIdx = ai === -1 ? 999 : ai;
+      const bIdx = bi === -1 ? 999 : bi;
+      return aIdx - bIdx;
+    });
+
     setFilteredServices(filtered);
   };
 
@@ -277,15 +360,15 @@ const ManageServicesScreen = () => {
       'Delete Service',
       `Are you sure you want to delete "${service.name}"? This action cannot be undone.`,
       [
-        { text: 'Cancel', onPress: () => {} },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             try {
               await adminAPI.deleteService(service._id);
-              const updatedServices = services.filter((s) => s._id !== service._id);
-              setServices(updatedServices);
+              setServices((prev) => prev.filter((s) => s._id !== service._id));
+              setExpandedServiceId(null);
               Alert.alert('Success', 'Service deleted successfully');
             } catch (err) {
               const error = err as ApiError;
@@ -304,6 +387,7 @@ const ManageServicesScreen = () => {
 
   const handleOpenEditModal = (service: Service) => {
     setSelectedService(service);
+    setExpandedServiceId(null);
     setFormData({
       name: service.name || '',
       description: service.description || '',
@@ -338,6 +422,8 @@ const ManageServicesScreen = () => {
   };
 
   const resetForm = () => {
+    setExpandedServiceId(null);
+    setSelectedService(null);
     setFormData({
       name: '',
       description: '',
@@ -369,7 +455,6 @@ const ManageServicesScreen = () => {
       cancellationDetails: '',
     });
     setFormErrors({});
-    setSelectedService(null);
   };
 
   const validateForm = () => {
@@ -377,7 +462,8 @@ const ManageServicesScreen = () => {
     if (!formData.name.trim()) errors.name = 'Name is required';
     if (!formData.description.trim()) errors.description = 'Description is required';
     if (!formData.serviceType.trim()) errors.serviceType = 'Service type is required';
-    if (!formData.pricing.basePrice || parseFloat(formData.pricing.basePrice) < 0) {
+    const price = parseFloat(formData.pricing.basePrice);
+    if (!formData.pricing.basePrice || isNaN(price) || price < 0) {
       errors.pricing = 'Valid base price is required';
     }
     setFormErrors(errors);
@@ -409,19 +495,21 @@ const ManageServicesScreen = () => {
 
       if (showEditModal && selectedService) {
         await adminAPI.updateService(selectedService._id, submitData);
+        setShowEditModal(false);
+        resetForm();
+        await loadServices();
         Alert.alert('Success', 'Service updated successfully');
+        setExpandedServiceId(null);
       } else {
         await adminAPI.createService(submitData);
+        setShowAddModal(false);
+        resetForm();
+        await loadServices();
         Alert.alert('Success', 'Service created successfully');
       }
-
-      setShowAddModal(false);
-      setShowEditModal(false);
-      resetForm();
-      loadServices();
     } catch (err) {
       const error = err as ApiError;
-      Alert.alert('Error', error.message || 'Failed to save service');
+      Alert.alert('Error', error.message || error.error as string || 'Failed to save service. Check all required fields.');
     } finally {
       setIsSubmitting(false);
     }
@@ -430,55 +518,72 @@ const ManageServicesScreen = () => {
   const ServiceCard = ({ service }: ServiceCardProps) => {
     const isActive = service.isActive !== false;
     const isFeatured = service.isFeatured || false;
+    const isAvailable = service.availability?.isAvailable !== false;
+    const imageUrl = (service.images as any)?.[0]?.url || (service.images as any)?.[0];
+    const categoryKey = service.serviceType || service.category || '';
+    const iconName = CATEGORY_ICONS[categoryKey] || CATEGORY_ICONS[Object.keys(CATEGORY_ICONS).find(k => k.toLowerCase() === categoryKey.toLowerCase()) || ''] || 'briefcase';
+    const iconColor = CATEGORY_COLORS[categoryKey] || CATEGORY_COLORS[Object.keys(CATEGORY_COLORS).find(k => k.toLowerCase() === categoryKey.toLowerCase()) || ''] || '#16a34a';
 
     return (
       <TouchableOpacity
-        onPress={() => setSelectedService(selectedService?._id === service._id ? null : service)}
+        onPress={() => setExpandedServiceId(expandedServiceId === service._id ? null : service._id)}
         style={styles.serviceCard}
+        activeOpacity={0.85}
       >
-        <View style={styles.cardHeader}>
-          <View style={styles.iconContainer}>
-            <MaterialCommunityIcons name="briefcase" size={24} color="white" />
+        {/* Image / Icon header — matches app MarketplaceCard */}
+        <View style={styles.cardImageContainer}>
+          {imageUrl ? (
+            <Image source={{ uri: imageUrl }} style={styles.cardImage} resizeMode="cover" />
+          ) : (
+            <View style={[styles.cardImagePlaceholder, { backgroundColor: iconColor + '22' }]}>
+              <MaterialCommunityIcons name={iconName as any} size={36} color={iconColor} />
+            </View>
+          )}
+          {/* Availability badge — top-left */}
+          <View style={[styles.availabilityBadge, isAvailable ? styles.availableBadge : styles.unavailableBadge]}>
+            <Text style={styles.availabilityText}>{isAvailable ? 'Available' : 'Unavailable'}</Text>
           </View>
-          <View style={styles.cardContent}>
-            <View style={styles.nameRow}>
-              <Text style={styles.serviceName}>{service.name}</Text>
-              <View style={styles.badgeContainer}>
-                {isFeatured && (
-                  <View style={styles.featuredBadge}>
-                    <MaterialCommunityIcons name="star" size={12} color="#f59e0b" />
-                    <Text style={styles.featuredText}>Featured</Text>
-                  </View>
-                )}
+          {isFeatured && (
+            <View style={styles.featuredBadgeOverlay}>
+              <MaterialCommunityIcons name="star" size={12} color="#f59e0b" />
+              <Text style={styles.featuredText}>Featured</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.cardBody}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardContent}>
+              <View style={styles.nameRow}>
+                <Text style={styles.serviceName} numberOfLines={1}>{service.name}</Text>
                 <View style={[styles.statusBadge, isActive ? styles.activeBadge : styles.inactiveBadge]}>
                   <Text style={[styles.statusText, isActive ? styles.activeText : styles.inactiveText]}>
                     {isActive ? 'Active' : 'Inactive'}
                   </Text>
                 </View>
               </View>
+              <Text style={styles.serviceType} numberOfLines={1}>{service.serviceType || service.category}</Text>
+              {service.provider && (
+                <Text style={styles.providerText} numberOfLines={1}>
+                  {typeof service.provider === 'object'
+                    ? service.provider.businessName || `${service.provider.firstName} ${service.provider.lastName}`
+                    : service.provider}
+                </Text>
+              )}
+              <View style={styles.priceRow}>
+                <Text style={styles.priceText}>₦{service.pricing?.basePrice?.toLocaleString() || 0}</Text>
+                <Text style={styles.priceUnit}>/ {service.pricing?.unit || 'booking'}</Text>
+              </View>
             </View>
-            {service.provider && (
-              <Text style={styles.providerText}>
-                Provider:{' '}
-                {typeof service.provider === 'object'
-                  ? service.provider.businessName || `${service.provider.firstName} ${service.provider.lastName}`
-                  : service.provider}
-              </Text>
-            )}
-            <Text style={styles.serviceType}>{service.serviceType}</Text>
-            <Text style={styles.priceText}>
-              ₦{service.pricing?.basePrice?.toLocaleString() || 0} / {service.pricing?.unit || 'fixed'}
-            </Text>
+            <MaterialCommunityIcons
+              name={expandedServiceId === service._id ? 'chevron-up' : 'chevron-down'}
+              size={20}
+              color="#d1d5db"
+              style={{ alignSelf: 'flex-start', marginTop: 2 }}
+            />
           </View>
 
-          <MaterialCommunityIcons
-            name={selectedService?._id === service._id ? 'chevron-up' : 'chevron-down'}
-            size={24}
-            color="#d1d5db"
-          />
-        </View>
-
-        {selectedService?._id === service._id && (
+        {expandedServiceId === service._id && (
           <View style={styles.additionalInfo}>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Category</Text>
@@ -526,14 +631,14 @@ const ManageServicesScreen = () => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.editAction}
+                style={[styles.actionButton, styles.editAction]}
                 onPress={() => handleOpenEditModal(service)}
               >
                 <Text style={styles.editActionText}>Edit</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.deleteAction}
+                style={[styles.actionButton, styles.deleteAction]}
                 onPress={() => handleDeleteService(service)}
               >
                 <Text style={styles.deleteActionText}>Delete</Text>
@@ -541,6 +646,7 @@ const ManageServicesScreen = () => {
             </View>
           </View>
         )}
+        </View>
       </TouchableOpacity>
     );
   };
@@ -634,7 +740,14 @@ const ManageServicesScreen = () => {
       )}
 
       <View style={styles.filterContainer}>
-        <View style={styles.searchInputContainer}>
+        <TouchableOpacity
+          style={[styles.groupToggle, groupByCategory && styles.groupToggleActive]}
+          onPress={() => setGroupByCategory(!groupByCategory)}
+        >
+          <MaterialCommunityIcons name="format-list-group" size={16} color={groupByCategory ? 'white' : '#374151'} />
+          <Text style={[styles.groupToggleText, groupByCategory && styles.groupToggleTextActive]}>Group by Category</Text>
+        </TouchableOpacity>
+        <View style={[styles.searchInputContainer, { marginTop: 10 }]}>
           <MaterialCommunityIcons name="magnify" size={20} color={COLORS.gray[400]} />
           <TextInput
             placeholder="Search by name, type, provider..."
@@ -728,20 +841,70 @@ const ManageServicesScreen = () => {
         </View>
       </View>
 
-      <FlatList
-        data={filteredServices}
-        keyExtractor={(item) => item._id}
-        renderItem={({ item }) => <ServiceCard service={item} />}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <MaterialCommunityIcons name="briefcase-off" size={48} color={COLORS.gray[300]} />
-            <Text style={styles.emptyText}>No services found</Text>
-            <Text style={styles.emptySubtext}>Try adjusting your filters</Text>
-          </View>
-        }
-        scrollEnabled={true}
-      />
+      {groupByCategory ? (
+        <ScrollView contentContainerStyle={styles.listContent}>
+          {APP_CATEGORY_ORDER.map((cat) => {
+            const catServices = filteredServices.filter(s =>
+              (s.serviceType || s.category || '').toLowerCase() === cat.toLowerCase()
+            );
+            if (catServices.length === 0) return null;
+            return (
+              <View key={cat} style={styles.categoryGroup}>
+                <View style={styles.categoryGroupHeader}>
+                  <MaterialCommunityIcons
+                    name={(CATEGORY_ICONS[cat] || 'briefcase') as any}
+                    size={18}
+                    color={CATEGORY_COLORS[cat] || '#16a34a'}
+                  />
+                  <Text style={styles.categoryGroupTitle}>{cat}</Text>
+                  <Text style={styles.categoryGroupCount}>{catServices.length}</Text>
+                </View>
+                {catServices.map(s => <ServiceCard key={s._id} service={s} />)}
+              </View>
+            );
+          })}
+          {/* Uncategorised */}
+          {(() => {
+            const others = filteredServices.filter(s => {
+              const key = (s.serviceType || s.category || '').toLowerCase();
+              return !APP_CATEGORY_ORDER.some(c => c.toLowerCase() === key);
+            });
+            if (others.length === 0) return null;
+            return (
+              <View style={styles.categoryGroup}>
+                <View style={styles.categoryGroupHeader}>
+                  <MaterialCommunityIcons name="briefcase" size={18} color="#6b7280" />
+                  <Text style={styles.categoryGroupTitle}>Other</Text>
+                  <Text style={styles.categoryGroupCount}>{others.length}</Text>
+                </View>
+                {others.map(s => <ServiceCard key={s._id} service={s} />)}
+              </View>
+            );
+          })()}
+          {filteredServices.length === 0 && (
+            <View style={styles.emptyState}>
+              <MaterialCommunityIcons name="briefcase-off" size={48} color={COLORS.gray[300]} />
+              <Text style={styles.emptyText}>No services found</Text>
+              <Text style={styles.emptySubtext}>Try adjusting your filters</Text>
+            </View>
+          )}
+        </ScrollView>
+      ) : (
+        <FlatList
+          data={filteredServices}
+          keyExtractor={(item) => item._id}
+          renderItem={({ item }) => <ServiceCard service={item} />}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <MaterialCommunityIcons name="briefcase-off" size={48} color={COLORS.gray[300]} />
+              <Text style={styles.emptyText}>No services found</Text>
+              <Text style={styles.emptySubtext}>Try adjusting your filters</Text>
+            </View>
+          }
+          scrollEnabled={true}
+        />
+      )}
 
       <Modal visible={showAddModal} animationType="slide" transparent={false}>
         <KeyboardAvoidingView
@@ -1221,49 +1384,53 @@ const styles = StyleSheet.create({
   },
   serviceCard: {
     backgroundColor: 'white',
-    padding: 12,
-    borderRadius: 8,
+    borderRadius: 12,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: '#e5e7eb',
+    overflow: 'hidden',
   },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+  cardImageContainer: {
+    width: '100%',
+    height: 140,
+    position: 'relative',
   },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    backgroundColor: '#16a34a',
-    borderRadius: 8,
+  cardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  cardImagePlaceholder: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
-  cardContent: {
-    flex: 1,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  serviceName: {
-    color: '#1f2937',
-    fontWeight: '600',
-    flex: 1,
-    marginRight: 8,
-  },
-  badgeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  featuredBadge: {
-    backgroundColor: '#fef3c7',
+  availabilityBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
+    borderRadius: 9999,
+  },
+  availableBadge: {
+    backgroundColor: 'rgba(22,163,74,0.85)',
+  },
+  unavailableBadge: {
+    backgroundColor: 'rgba(185,28,28,0.85)',
+  },
+  availabilityText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  featuredBadgeOverlay: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(254,243,199,0.92)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 9999,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1272,7 +1439,32 @@ const styles = StyleSheet.create({
     color: '#b45309',
     fontSize: 10,
     fontWeight: '600',
-    marginLeft: 4,
+    marginLeft: 3,
+  },
+  cardBody: {
+    padding: 12,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  cardContent: {
+    flex: 1,
+    marginRight: 8,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  serviceName: {
+    color: '#1f2937',
+    fontWeight: '700',
+    fontSize: 15,
+    flex: 1,
+    marginRight: 8,
   },
   statusBadge: {
     paddingHorizontal: 8,
@@ -1298,18 +1490,76 @@ const styles = StyleSheet.create({
   providerText: {
     color: '#6b7280',
     fontSize: 12,
-    marginTop: 4,
+    marginTop: 2,
   },
   serviceType: {
     color: '#9ca3af',
     fontSize: 12,
-    marginTop: 4,
+    marginTop: 2,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginTop: 6,
   },
   priceText: {
     color: '#16a34a',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  priceUnit: {
+    color: '#9ca3af',
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  groupToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    backgroundColor: 'white',
+    gap: 6,
+  },
+  groupToggleActive: {
+    backgroundColor: '#16a34a',
+    borderColor: '#16a34a',
+  },
+  groupToggleText: {
+    fontSize: 13,
     fontWeight: '600',
+    color: '#374151',
+  },
+  groupToggleTextActive: {
+    color: 'white',
+  },
+  categoryGroup: {
+    marginBottom: 16,
+  },
+  categoryGroupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  categoryGroupTitle: {
+    flex: 1,
     fontSize: 14,
-    marginTop: 4,
+    fontWeight: '700',
+    color: '#1f2937',
+  },
+  categoryGroupCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6b7280',
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 9999,
   },
   additionalInfo: {
     marginTop: 12,
@@ -1368,10 +1618,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#dcfce7',
   },
   editAction: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#16a34a',
+    backgroundColor: '#f0fdf4',
   },
   deleteAction: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
     backgroundColor: '#fee2e2',
   },
   actionButtonText: {

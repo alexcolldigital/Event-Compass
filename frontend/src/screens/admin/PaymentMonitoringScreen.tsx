@@ -43,6 +43,8 @@ export default function PaymentMonitoringScreen() {
 
   const PaymentCard = ({ item }) => {
     const color = STATUS_COLORS[item.status] || '#6b7280';
+    const paymentType = item.metadata?.paymentType || 'full';
+    const typeColor = { full: '#10b981', deposit: '#f59e0b', balance: '#6366f1' }[paymentType] || '#6b7280';
     return (
       <View style={[adminStyles.card, { backgroundColor: C.surface, borderColor: C.border }]}>
         <View style={adminStyles.cardRow}>
@@ -51,9 +53,17 @@ export default function PaymentMonitoringScreen() {
             <Text style={{ color: C.muted, fontSize: 12, marginTop: 2, fontFamily: appFont }}>
               {item.payer?.firstName} {item.payer?.lastName} → {item.payee?.businessName || `${item.payee?.firstName} ${item.payee?.lastName}`}
             </Text>
+            {item.booking?.bookingNumber ? (
+              <Text style={{ color: C.muted, fontSize: 12, marginTop: 1, fontFamily: appFont }}>Booking: {item.booking.bookingNumber}</Text>
+            ) : null}
           </View>
-          <View style={[adminStyles.badge, { backgroundColor: color + '20' }]}>
-            <Text style={[adminStyles.badgeText, { color, textTransform: 'capitalize' }]}>{item.status}</Text>
+          <View style={{ alignItems: 'flex-end', gap: 4 }}>
+            <View style={[adminStyles.badge, { backgroundColor: color + '20' }]}>
+              <Text style={[adminStyles.badgeText, { color, textTransform: 'capitalize' }]}>{item.status}</Text>
+            </View>
+            <View style={[adminStyles.badge, { backgroundColor: typeColor + '20' }]}>
+              <Text style={[adminStyles.badgeText, { color: typeColor, textTransform: 'capitalize' }]}>{paymentType}</Text>
+            </View>
           </View>
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.border }}>

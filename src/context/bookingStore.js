@@ -239,50 +239,6 @@ export const useBookingStore = create((set, get) => ({
     }
   },
 
-  // Release escrow funds
-  releaseEscrow: async (id) => {
-    try {
-      set({ isLoading: true, error: null });
-      const response = await bookingAPI.releaseEscrow(id);
-
-      const state = get();
-      const updatedBookings = state.bookings.map((b) => (b._id === id ? response.booking : b));
-
-      set({
-        bookings: updatedBookings,
-        currentBooking: response.booking,
-        isLoading: false,
-      });
-
-      return response;
-    } catch (error) {
-      set({ error: error.message, isLoading: false });
-      throw error;
-    }
-  },
-
-  // Open escrow dispute
-  disputeEscrow: async (id, reason) => {
-    try {
-      set({ isLoading: true, error: null });
-      const response = await bookingAPI.disputeEscrow(id, { reason });
-
-      const state = get();
-      const updatedBookings = state.bookings.map((b) => (b._id === id ? response.booking : b));
-
-      set({
-        bookings: updatedBookings,
-        currentBooking: response.booking,
-        isLoading: false,
-      });
-
-      return response;
-    } catch (error) {
-      set({ error: error.message, isLoading: false });
-      throw error;
-    }
-  },
-
   // Clear error
   clearError: () => set({ error: null }),
 }));

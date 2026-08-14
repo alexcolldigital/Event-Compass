@@ -1,17 +1,27 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, StyleSheet, Alert, TextInput, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useCartStore } from '../../context/cartStore.js';
 import { useTheme } from '../../context/ThemeContext';
 import Button from '../../components/Button.jsx';
-import { bookingAPI } from '../../services/api.js';
+import { bookingAPI, adminAPI } from '../../services/api.js';
 import { buildCheckoutBookingDetails } from '../../utils/cartUtils';
 
 const CheckoutScreen = ({ navigation }: { navigation: any }) => {
   const { items, removeItem, updateItemQuantity, clearCart, getTotalAmount } = useCartStore();
   const { theme } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
+  const [serviceFeeRate, setServiceFeeRate] = useState(10);
+
+  useEffect(() => {
+    adminAPI.getCommissionSettings()
+      .then((res: any) => {
+        const rate = res?.commission?.serviceFeePercentage;
+        if (rate !== undefined) setServiceFeeRate(Number(rate));
+      })
+      .catch(() => {});
+  }, []);
 
   const colors = {
     bg: theme === 'dark' ? '#050816' : '#f8fafc',
@@ -202,12 +212,12 @@ const CheckoutScreen = ({ navigation }: { navigation: any }) => {
               <Text style={[styles.summaryText, { color: colors.text }]}>₦{totalAmount.toLocaleString()}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={[styles.summaryText, { color: colors.muted }]}>Tax</Text>
-              <Text style={[styles.summaryText, { color: colors.text }]}>₦0</Text>
+              <Text style={[styles.summaryText, { color: colors.muted }]}>Service & Delivery Fee ({serviceFeeRate}%)</Text>
+              <Text style={[styles.summaryText, { color: colors.text }]}>₦{Math.round(totalAmount * serviceFeeRate / 100).toLocaleString()}</Text>
             </View>
             <View style={styles.summaryRow}> 
               <Text style={[styles.totalText, { color: colors.primary }]}>Total</Text>
-              <Text style={[styles.totalText, { color: colors.primary }]}>₦{totalAmount.toLocaleString()}</Text>
+              <Text style={[styles.totalText, { color: colors.primary }]}>₦{Math.round(totalAmount * (1 + serviceFeeRate / 100)).toLocaleString()}</Text>
             </View>
           </View>
           <Button title="Place booking order" onPress={handlePlaceOrder} isLoading={isLoading} fullWidth variant="primary" />
