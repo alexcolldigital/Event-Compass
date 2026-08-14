@@ -114,8 +114,8 @@ export const serviceAPI = {
 export const bookingAPI = {
   createBooking: (data) => apiClient.post('/bookings', data),
   checkoutCart: (data) => apiClient.post('/bookings/checkout', data),
-  createBookingPaymentSession: (bookingId, origin) =>
-    apiClient.post(`/bookings/${bookingId}/payment-session`, { origin }),
+  createBookingPaymentSession: (bookingId, origin, gateway) =>
+    apiClient.post(`/bookings/${bookingId}/payment-session`, { origin, gateway }),
   markBookingPaymentSuccess: (bookingId) =>
     apiClient.post(`/bookings/${bookingId}/payment-success`),
   getBookingById: (id) => apiClient.get(`/bookings/${id}`),
@@ -124,6 +124,7 @@ export const bookingAPI = {
   getMyProviderBookings: (query) =>
     apiClient.get('/bookings/provider/my-bookings', { params: query }),
   confirmBooking: (id) => apiClient.patch(`/bookings/${id}/confirm`),
+  rejectBooking: (id, data) => apiClient.patch(`/bookings/${id}/reject`, data),
   cancelBooking: (id, data) => apiClient.patch(`/bookings/${id}/cancel`, data),
   completeBooking: (id) => apiClient.patch(`/bookings/${id}/complete`),
   releaseEscrow: (id) => apiClient.patch(`/bookings/${id}/release-escrow`),

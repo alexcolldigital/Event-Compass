@@ -98,6 +98,24 @@ export const useBookingStore = create((set, get) => ({
     }
   },
 
+  // Reject booking (provider)
+  rejectBooking: async (id, reason) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await bookingAPI.rejectBooking(id, { reason });
+      const state = get();
+      set({
+        bookings: state.bookings.map((b) => (b._id === id ? response.booking : b)),
+        currentBooking: response.booking,
+        isLoading: false,
+      });
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
   // Confirm booking
   confirmBooking: async (id) => {
     try {
@@ -170,20 +188,53 @@ export const useBookingStore = create((set, get) => ({
     }
   },
 
-  // Mark payment as successful and escrow the funds
-  markBookingPaymentSuccess: async (id) => {
+  // Create payment session
+  createBookingPaymentSession: async (id, origin, gateway) => {
     try {
       set({ isLoading: true, error: null });
-      const response = await bookingAPI.markBookingPaymentSuccess(id);
+      const response = await bookingAPI.createBookingPaymentSession(id, origin, gateway);
+      set({ isLoading: false });
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  // Release escrow
+  releaseEscrow: async (id) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await bookingAPI.releaseEscrow(id);
+      set({ currentBooking: response.booking, isLoading: false });
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  // Dispute escrow
+  disputeEscrow: async (id, data) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await bookingAPI.disputeEscrow(id, data);
+      set({ currentBooking: response.booking, isLoading: false });
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  // Mark payment as successful and escrow the funds
+  markBookingPaymentSuccess: async (id, paymentType = 'full') => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await bookingAPI.markBookingPaymentSuccess(id, paymentType);
       const state = get();
       const updatedBookings = state.bookings.map((b) => b._id === id ? response.booking : b);
-
-      set({
-        bookings: updatedBookings,
-        currentBooking: response.booking,
-        isLoading: false,
-      });
-
+      set({ bookings: updatedBookings, currentBooking: response.booking, isLoading: false });
       return response;
     } catch (error) {
       set({ error: error.message, isLoading: false });

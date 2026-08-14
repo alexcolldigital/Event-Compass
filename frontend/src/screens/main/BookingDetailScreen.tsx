@@ -75,8 +75,11 @@ const BookingDetailScreen = () => {
         text: 'Confirm',
         onPress: async () => {
           try {
-            await confirmBooking(bookingId);
-            Alert.alert('Success', 'Booking confirmed!');
+            const response = await confirmBooking(bookingId);
+            Alert.alert('Booking Confirmed', 'The booking has been confirmed. The client will now be prompted to complete payment.');
+            if (response?.checkoutUrl) {
+              (navigation as any).navigate('WebCheckout', { url: response.checkoutUrl, bookingId });
+            }
           } catch (err) {
             Alert.alert('Error', err instanceof Error ? err.message : 'Failed to confirm booking');
           }
@@ -124,14 +127,45 @@ const BookingDetailScreen = () => {
     ]);
   };
 
-  const handlePayNow = async () => {
+  const handlePayNow = async (paymentType: 'deposit' | 'balance' | 'full' = 'full', gateway?: string) => {
     try {
       setIsPaymentLoading(true);
       const origin = process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:19007';
-      const response = await createBookingPaymentSession(bookingId, origin);
-      const sessionUrl = response.checkoutUrl || response.session?.url;
-      if (!sessionUrl) throw new Error('Unable to create payment session');
-      navigation.navigate('WebCheckout', { checkoutUrl: sessionUrl, bookingId });
+      const response = await createBookingPaymentSession(bookingId, origin, gateway);
+      const sessionUrl = response?.checkoutUrl || response?.session?.url;
+      if (!sessionUrl) throw new Error('No payment URL returned. Please try again.');
+      const amountDue = response?.amountDue ||
+        (paymentType === 'deposit' ? currentBooking?.depositAmount :
+         paymentType === 'balance' ? currentBooking?.balanceDue :
+         currentBooking?.pricing?.totalAmount);
+      (navigation as any).navigate('WebCheckout', {
+        url: sessionUrl,
+        bookingId,
+        gateway: response?.gateway || gateway || 'paystack',
+        paymentType,
+        amountDue,
+      });
+    } catch (err) {
+      Alert.alert('Payment Error', err instanceof Error ? err.message : 'Unable to initiate payment right now');
+    } finally {
+      setIsPaymentLoading(false);
+    }
+  };
+
+  const handlePayBalance = async (gateway: string) => {
+    try {
+      setIsPaymentLoading(true);
+      const origin = process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:19007';
+      const response = await createBookingPaymentSession(bookingId, origin, gateway);
+      const sessionUrl = response?.checkoutUrl || response?.session?.url;
+      if (!sessionUrl) throw new Error('No payment URL returned. Please try again.');
+      (navigation as any).navigate('WebCheckout', {
+        url: sessionUrl,
+        bookingId,
+        gateway: response?.gateway || gateway,
+        paymentType: 'balance',
+        amountDue: response?.amountDue || currentBooking?.balanceDue,
+      });
     } catch (err) {
       Alert.alert('Payment Error', err instanceof Error ? err.message : 'Unable to initiate payment right now');
     } finally {
@@ -332,6 +366,30 @@ const BookingDetailScreen = () => {
               <Text style={[styles.pillText, { color: paymentPillText }]}>{paymentStatus || 'Pending'}</Text>
             </View>
           </View>
+
+          {/* Deposit / Balance breakdown for split plans */}
+          {(currentBooking.paymentPlan === 'split_50_50' || currentBooking.paymentPlan === 'deposit_20') && (
+            <View style={{ marginTop: 10, gap: 6 }}>
+              <View style={styles.priceRow}>
+                <Text style={[styles.label, { color: colors.muted }]}>Payment Plan</Text>
+                <Text style={[styles.value, { color: colors.text }]}>
+                  {currentBooking.paymentPlan === 'deposit_20' ? '20% Deposit' : '50% Deposit'}
+                </Text>
+              </View>
+              <View style={styles.priceRow}>
+                <Text style={[styles.label, { color: colors.muted }]}>Deposit Paid</Text>
+                <Text style={[styles.value, { color: currentBooking.depositPaid ? '#16a34a' : colors.danger }]}>
+                  {currentBooking.depositPaid ? `${formatCurrency(currentBooking.depositAmount)} ✓` : 'Not paid'}
+                </Text>
+              </View>
+              <View style={styles.priceRow}>
+                <Text style={[styles.label, { color: colors.muted }]}>Balance Due</Text>
+                <Text style={[styles.value, { color: currentBooking.balancePaid ? '#16a34a' : colors.danger }]}>
+                  {currentBooking.balancePaid ? `${formatCurrency(currentBooking.balanceDue)} ✓` : formatCurrency(currentBooking.balanceDue)}
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Party Information */}
@@ -379,17 +437,50 @@ const BookingDetailScreen = () => {
             <Button title="Cancel Booking" onPress={() => setShowCancelForm(true)} variant="danger" fullWidth />
           )}
 
+          {isClient && isPending && (
+            <View style={[styles.actionGap, { marginTop: 8 }]}>
+              <View style={{ backgroundColor: '#fff7ed', borderColor: '#fed7aa', borderWidth: 1, borderRadius: 14, padding: 12 }}>
+                <Text style={{ fontSize: 13, color: '#9a2c00', lineHeight: 18 }}>Your booking request has been sent. Payment will be available once the provider confirms your booking.</Text>
+              </View>
+            </View>
+          )}
+
           {isClient && isConfirmed && (
             <View style={styles.actionGap}>
-              {paymentStatus !== 'completed' ? (
-                <Button
-                  title={isPaymentLoading ? 'Opening Payment...' : 'Pay Now'}
-                  onPress={handlePayNow}
-                  isLoading={isPaymentLoading}
-                  variant="primary"
-                  fullWidth
-                />
-              ) : (
+              {/* Full payment */}
+              {currentBooking.paymentPlan === 'full' && paymentStatus !== 'completed' && (
+                <View style={styles.actionGap}>
+                  <Text style={[styles.label, { color: colors.muted, marginBottom: 4 }]}>Choose payment method:</Text>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <Button title="Pay via Paystack" onPress={() => handlePayNow('full', 'paystack')} isLoading={isPaymentLoading} variant="primary" style={{ flex: 1 }} />
+                    <Button title="Pay via Flutterwave" onPress={() => handlePayNow('full', 'flutterwave')} isLoading={isPaymentLoading} variant="outline" style={{ flex: 1 }} />
+                  </View>
+                </View>
+              )}
+
+              {/* Deposit plan - deposit not yet paid */}
+              {(currentBooking.paymentPlan === 'split_50_50' || currentBooking.paymentPlan === 'deposit_20') && !currentBooking.depositPaid && (
+                <View style={styles.actionGap}>
+                  <Text style={[styles.label, { color: colors.muted, marginBottom: 4 }]}>Pay deposit ({currentBooking.paymentPlan === 'deposit_20' ? '20%' : '50%'}) — {formatCurrency(currentBooking.depositAmount)}:</Text>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <Button title="Paystack" onPress={() => handlePayNow('deposit', 'paystack')} isLoading={isPaymentLoading} variant="primary" style={{ flex: 1 }} />
+                    <Button title="Flutterwave" onPress={() => handlePayNow('deposit', 'flutterwave')} isLoading={isPaymentLoading} variant="outline" style={{ flex: 1 }} />
+                  </View>
+                </View>
+              )}
+
+              {/* Deposit plan - deposit paid, balance not yet paid */}
+              {(currentBooking.paymentPlan === 'split_50_50' || currentBooking.paymentPlan === 'deposit_20') && currentBooking.depositPaid && !currentBooking.balancePaid && (
+                <View style={styles.actionGap}>
+                  <Text style={[styles.label, { color: colors.danger, marginBottom: 4 }]}>Balance due: {formatCurrency(currentBooking.balanceDue)} — must be paid before event date.</Text>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <Button title="Pay Balance via Paystack" onPress={() => handlePayBalance('paystack')} isLoading={isPaymentLoading} variant="primary" style={{ flex: 1 }} />
+                    <Button title="Flutterwave" onPress={() => handlePayBalance('flutterwave')} isLoading={isPaymentLoading} variant="outline" style={{ flex: 1 }} />
+                  </View>
+                </View>
+              )}
+
+              {paymentStatus === 'completed' && currentBooking.balancePaid && (
                 <Button title="Payment Completed" variant="outline" fullWidth />
               )}
               <Button title="Cancel Booking" onPress={() => setShowCancelForm(true)} variant="danger" fullWidth />

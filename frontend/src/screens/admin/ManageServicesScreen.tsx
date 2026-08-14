@@ -67,6 +67,206 @@ const DEFAULT_FORM = {
   tags: [], specifications: [], cancellationPolicy: 'moderate', cancellationDetails: '',
 };
 
+// ── Extracted components (defined outside parent to prevent remount on state change) ──
+
+const FormField = ({
+  label, name, keyboardType, multiline, nested, formData, setFormData, formErrors, C,
+}: {
+  label: string; name: string; keyboardType?: KeyboardTypeOptions; multiline?: boolean;
+  nested?: { parent: string; child: string }; formData: Record<string, any>;
+  setFormData: (d: Record<string, any>) => void; formErrors: Record<string, string>; C: any;
+}) => {
+  const kbType: KeyboardTypeOptions = keyboardType ?? 'default';
+  const isMultiline = multiline ?? false;
+  const value = nested ? (formData[nested.parent]?.[nested.child] || '') : (formData[name] || '');
+  const onChange = nested
+    ? (v: string) => setFormData({ ...formData, [nested.parent]: { ...formData[nested.parent], [nested.child]: v } })
+    : (v: string) => setFormData({ ...formData, [name]: v });
+  const errorMsg = formErrors[name] || (nested ? formErrors[nested.parent] : undefined);
+  return (
+    <View style={adminStyles.formField}>
+      <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>{label}</Text>
+      <TextInput
+        value={value}
+        onChangeText={onChange}
+        keyboardType={kbType}
+        multiline={isMultiline}
+        numberOfLines={isMultiline ? 4 : 1}
+        style={[isMultiline ? adminStyles.formInputMultiline : adminStyles.formInput, { color: C.text, borderColor: C.inputBorder, backgroundColor: C.surfaceAlt, fontFamily: appFont }]}
+        placeholderTextColor={C.muted}
+      />
+      {errorMsg && <Text style={adminStyles.formError}>{errorMsg}</Text>}
+    </View>
+  );
+};
+
+const Toggle = ({
+  label, value, onToggle, color, C,
+}: { label: string; value: boolean; onToggle: () => void; color?: string; C: any }) => (
+  <View style={[adminStyles.toggleRow, { backgroundColor: C.surfaceAlt }]}>
+    <Text style={[adminStyles.toggleLabel, { color: C.text, fontFamily: appFont }]}>{label}</Text>
+    <TouchableOpacity onPress={onToggle} style={[adminStyles.toggleSwitch, { backgroundColor: value ? (color ?? C.primary) : C.border }]}>
+      <View style={[adminStyles.toggleThumb, { marginLeft: value ? 24 : 4 }]} />
+    </TouchableOpacity>
+  </View>
+);
+
+const SelectField = ({
+  label, value, options, onSelect, error, C,
+}: { label: string; value: string; options: { label: string; value: string }[]; onSelect: (v: string) => void; error?: string; C: any }) => (
+  <View style={adminStyles.formField}>
+    <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>{label}</Text>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      <View style={{ flexDirection: 'row', gap: 8, paddingVertical: 4 }}>
+        {options.map((opt) => (
+          <TouchableOpacity
+            key={opt.value}
+            onPress={() => onSelect(opt.value)}
+            style={[{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
+              value === opt.value
+                ? { backgroundColor: C.primary, borderColor: C.primary }
+                : { backgroundColor: C.surfaceAlt, borderColor: C.inputBorder }]}
+          >
+            <Text style={{ color: value === opt.value ? '#fff' : C.text, fontSize: 12, fontFamily: appFont, fontWeight: '600' }}>{opt.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </ScrollView>
+    {error && <Text style={adminStyles.formError}>{error}</Text>}
+  </View>
+);
+
+const ImageSection = ({
+  pickedImages, setPickedImages, pickImages, C,
+}: { pickedImages: { uri: string; uploading: boolean; cloudUrl: string }[]; setPickedImages: any; pickImages: () => void; C: any }) => (
+  <View style={adminStyles.formSection}>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+      <Text style={[adminStyles.formSectionTitle, { color: C.text, fontFamily: appFont }]}>Images ({pickedImages.length}/12)</Text>
+      {pickedImages.length < 12 && (
+        <TouchableOpacity
+          onPress={pickImages}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }}
+        >
+          <MaterialCommunityIcons name="image-plus" size={14} color="#fff" />
+          <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700', fontFamily: appFont }}>Add Photos</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+    <Text style={{ color: C.muted, fontSize: 12, marginBottom: 12, fontFamily: appFont }}>Pick up to 12 photos from your device. First photo is the cover.</Text>
+    {pickedImages.length === 0 ? (
+      <TouchableOpacity
+        onPress={pickImages}
+        style={{ borderWidth: 2, borderColor: C.inputBorder, borderStyle: 'dashed', borderRadius: 16, paddingVertical: 32, alignItems: 'center', gap: 8 }}
+      >
+        <MaterialCommunityIcons name="image-multiple-outline" size={40} color={C.muted} />
+        <Text style={{ color: C.muted, fontSize: 13, fontWeight: '600', fontFamily: appFont }}>Tap to pick photos</Text>
+      </TouchableOpacity>
+    ) : (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={{ flexDirection: 'row', gap: 10, paddingVertical: 4 }}>
+          {pickedImages.map((img, index) => (
+            <View key={index} style={{ position: 'relative' }}>
+              <Image source={{ uri: img.cloudUrl || img.uri }} style={{ width: 90, height: 90, borderRadius: 14, backgroundColor: C.surfaceAlt }} />
+              {index === 0 && (
+                <View style={{ position: 'absolute', bottom: 4, left: 4, backgroundColor: C.primary, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 2 }}>
+                  <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>COVER</Text>
+                </View>
+              )}
+              {img.uploading && (
+                <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 14, alignItems: 'center', justifyContent: 'center' }}>
+                  <ActivityIndicator color="#fff" size="small" />
+                </View>
+              )}
+              <TouchableOpacity
+                onPress={() => setPickedImages((prev: any[]) => prev.filter((_: any, i: number) => i !== index))}
+                style={{ position: 'absolute', top: -6, right: -6, backgroundColor: '#ef4444', borderRadius: 999, width: 22, height: 22, alignItems: 'center', justifyContent: 'center' }}
+              >
+                <MaterialCommunityIcons name="close" size={13} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          ))}
+          {pickedImages.length < 12 && (
+            <TouchableOpacity
+              onPress={pickImages}
+              style={{ width: 90, height: 90, borderRadius: 14, borderWidth: 2, borderColor: C.inputBorder, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+            >
+              <MaterialCommunityIcons name="plus" size={24} color={C.muted} />
+              <Text style={{ color: C.muted, fontSize: 10, fontWeight: '700', fontFamily: appFont }}>Add</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </ScrollView>
+    )}
+  </View>
+);
+
+const ServiceForm = ({
+  formData, setFormData, formErrors, pickedImages, setPickedImages, pickImages,
+  showEditModal, isSubmitting, handleSubmit, setShowAddModal, setShowEditModal, C,
+}: {
+  formData: Record<string, any>; setFormData: (d: Record<string, any>) => void;
+  formErrors: Record<string, string>; pickedImages: any[]; setPickedImages: any;
+  pickImages: () => void; showEditModal: boolean; isSubmitting: boolean;
+  handleSubmit: () => void; setShowAddModal: (v: boolean) => void;
+  setShowEditModal: (v: boolean) => void; C: any;
+}) => {
+  const subCategoryOptions = formData.category
+    ? (CATEGORIES_WITH_SUBS[formData.category] || []).map((s) => ({ label: s, value: s }))
+    : [];
+  return (
+    <ScrollView style={{ flex: 1, padding: 16 }}>
+      <View style={adminStyles.formSection}>
+        <Text style={[adminStyles.formSectionTitle, { color: C.text, fontFamily: appFont }]}>Basic Information</Text>
+        <FormField label="Service Name *" name="name" formData={formData} setFormData={setFormData} formErrors={formErrors} C={C} />
+        <SelectField label="Service Type *" value={formData.serviceType} options={SERVICE_TYPES.map((t) => ({ label: t, value: t }))} onSelect={(v) => setFormData({ ...formData, serviceType: v })} error={formErrors.serviceType} C={C} />
+        <SelectField label="Category" value={formData.category} options={Object.keys(CATEGORIES_WITH_SUBS).map((c) => ({ label: c, value: c }))} onSelect={(v) => setFormData({ ...formData, category: v, subCategory: '' })} C={C} />
+        {subCategoryOptions.length > 0 && (
+          <SelectField label="Sub-category" value={formData.subCategory} options={subCategoryOptions} onSelect={(v) => setFormData({ ...formData, subCategory: v })} C={C} />
+        )}
+        <FormField label="Short Description" name="shortDescription" multiline formData={formData} setFormData={setFormData} formErrors={formErrors} C={C} />
+        <FormField label="Full Description *" name="description" multiline formData={formData} setFormData={setFormData} formErrors={formErrors} C={C} />
+      </View>
+      <View style={adminStyles.formSection}>
+        <Text style={[adminStyles.formSectionTitle, { color: C.text, fontFamily: appFont }]}>Pricing</Text>
+        <FormField label="Base Price (₦) *" name="pricing" nested={{ parent: 'pricing', child: 'basePrice' }} keyboardType="numeric" formData={formData} setFormData={setFormData} formErrors={formErrors} C={C} />
+        <SelectField label="Pricing Type" value={formData.pricing.unit} options={PRICING_UNITS} onSelect={(v) => setFormData({ ...formData, pricing: { ...formData.pricing, unit: v } })} C={C} />
+      </View>
+      <View style={adminStyles.formSection}>
+        <Text style={[adminStyles.formSectionTitle, { color: C.text, fontFamily: appFont }]}>Status</Text>
+        <Toggle label="Active" value={formData.isActive} onToggle={() => setFormData({ ...formData, isActive: !formData.isActive })} C={C} />
+        <Toggle label="Featured" value={formData.isFeatured} onToggle={() => setFormData({ ...formData, isFeatured: !formData.isFeatured })} color="#f59e0b" C={C} />
+        <Toggle label="Available for Booking" value={formData.availability.isAvailable} onToggle={() => setFormData({ ...formData, availability: { isAvailable: !formData.availability.isAvailable } })} color="#10b981" C={C} />
+      </View>
+      <View style={adminStyles.formSection}>
+        <Text style={[adminStyles.formSectionTitle, { color: C.text, fontFamily: appFont }]}>Cancellation Policy</Text>
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+          {['flexible', 'moderate', 'strict'].map((p) => (
+            <TouchableOpacity
+              key={p}
+              style={[{ flex: 1, paddingVertical: 8, borderRadius: 12, borderWidth: 1, alignItems: 'center' }, formData.cancellationPolicy === p ? { backgroundColor: C.primary, borderColor: C.primary } : { backgroundColor: C.surface, borderColor: C.inputBorder }]}
+              onPress={() => setFormData({ ...formData, cancellationPolicy: p })}
+            >
+              <Text style={{ color: formData.cancellationPolicy === p ? '#fff' : C.text, fontSize: 12, fontWeight: '700', fontFamily: appFont, textTransform: 'capitalize' }}>{p}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <FormField label="Cancellation Details" name="cancellationDetails" multiline formData={formData} setFormData={setFormData} formErrors={formErrors} C={C} />
+      </View>
+      <ImageSection pickedImages={pickedImages} setPickedImages={setPickedImages} pickImages={pickImages} C={C} />
+      <View style={adminStyles.modalActions}>
+        <TouchableOpacity style={[adminStyles.modalBtn, { borderWidth: 1, borderColor: C.inputBorder }]} onPress={() => { setShowAddModal(false); setShowEditModal(false); }}>
+          <Text style={[adminStyles.modalBtnText, { color: C.text, fontFamily: appFont }]}>Cancel</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[adminStyles.modalBtn, { backgroundColor: C.primary }]} onPress={handleSubmit} disabled={isSubmitting}>
+          <Text style={[adminStyles.modalBtnText, { color: '#fff', fontFamily: appFont }]}>{isSubmitting ? 'Saving...' : showEditModal ? 'Update' : 'Save'}</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+};
+
+// ── Main screen ──
+
 const ManageServicesScreen = () => {
   const navigation = useNavigation();
   const { theme } = useTheme();
@@ -200,10 +400,6 @@ const ManageServicesScreen = () => {
     }
   };
 
-  const removePickedImage = (index: number) => {
-    setPickedImages((prev) => prev.filter((_, i) => i !== index));
-  };
-
   const uploadPickedImages = async (serviceId: string) => {
     const toUpload = pickedImages.filter((img) => !img.cloudUrl);
     if (toUpload.length === 0) return;
@@ -259,209 +455,7 @@ const ManageServicesScreen = () => {
     }
   };
 
-  const FormField = ({ label, name, keyboardType, multiline, nested }: { label: string; name: string; keyboardType?: KeyboardTypeOptions; multiline?: boolean; nested?: { parent: string; child: string } }) => {
-    const kbType: KeyboardTypeOptions = keyboardType ?? 'default';
-    const isMultiline = multiline ?? false;
-    const value = nested ? (formData[nested.parent]?.[nested.child] || '') : (formData[name] || '');
-    const onChange = nested
-      ? (v: string) => setFormData({ ...formData, [nested.parent]: { ...formData[nested.parent], [nested.child]: v } })
-      : (v: string) => setFormData({ ...formData, [name]: v });
-    const errorMsg = formErrors[name] || (nested ? formErrors[nested.parent] : undefined);
-    return (
-      <View style={adminStyles.formField}>
-        <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>{label}</Text>
-        <TextInput
-          value={value}
-          onChangeText={onChange}
-          keyboardType={kbType}
-          multiline={isMultiline}
-          numberOfLines={isMultiline ? 4 : 1}
-          style={[isMultiline ? adminStyles.formInputMultiline : adminStyles.formInput, { color: C.text, borderColor: C.inputBorder, backgroundColor: C.surfaceAlt, fontFamily: appFont }]}
-          placeholderTextColor={C.muted}
-        />
-        {errorMsg && <Text style={adminStyles.formError}>{errorMsg}</Text>}
-      </View>
-    );
-  };
 
-  const Toggle = ({ label, value, onToggle, color = C.primary }: { label: string; value: boolean; onToggle: () => void; color?: string }) => (
-    <View style={[adminStyles.toggleRow, { backgroundColor: C.surfaceAlt }]}>
-      <Text style={[adminStyles.toggleLabel, { color: C.text, fontFamily: appFont }]}>{label}</Text>
-      <TouchableOpacity onPress={onToggle} style={[adminStyles.toggleSwitch, { backgroundColor: value ? color : C.border }]}>
-        <View style={[adminStyles.toggleThumb, { marginLeft: value ? 24 : 4 }]} />
-      </TouchableOpacity>
-    </View>
-  );
-
-  const SelectField = ({ label, value, options, onSelect, error }: { label: string; value: string; options: { label: string; value: string }[]; onSelect: (v: string) => void; error?: string }) => (
-    <View style={adminStyles.formField}>
-      <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>{label}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={{ flexDirection: 'row', gap: 8, paddingVertical: 4 }}>
-          {options.map((opt) => (
-            <TouchableOpacity
-              key={opt.value}
-              onPress={() => onSelect(opt.value)}
-              style={[{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
-                value === opt.value
-                  ? { backgroundColor: C.primary, borderColor: C.primary }
-                  : { backgroundColor: C.surfaceAlt, borderColor: C.inputBorder }]}
-            >
-              <Text style={{ color: value === opt.value ? '#fff' : C.text, fontSize: 12, fontFamily: appFont, fontWeight: '600' }}>{opt.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-      {error && <Text style={adminStyles.formError}>{error}</Text>}
-    </View>
-  );
-
-  const subCategoryOptions = formData.category
-    ? (CATEGORIES_WITH_SUBS[formData.category] || []).map((s) => ({ label: s, value: s }))
-    : [];
-
-  const ImageSection = () => (
-    <View style={adminStyles.formSection}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <Text style={[adminStyles.formSectionTitle, { color: C.text, fontFamily: appFont }]}>Images ({pickedImages.length}/12)</Text>
-        {pickedImages.length < 12 && (
-          <TouchableOpacity
-            onPress={pickImages}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }}
-          >
-            <MaterialCommunityIcons name="image-plus" size={14} color="#fff" />
-            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700', fontFamily: appFont }}>Add Photos</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-      <Text style={{ color: C.muted, fontSize: 12, marginBottom: 12, fontFamily: appFont }}>Pick up to 12 photos from your device. First photo is the cover.</Text>
-
-      {pickedImages.length === 0 ? (
-        <TouchableOpacity
-          onPress={pickImages}
-          style={{ borderWidth: 2, borderColor: C.inputBorder, borderStyle: 'dashed', borderRadius: 16, paddingVertical: 32, alignItems: 'center', gap: 8 }}
-        >
-          <MaterialCommunityIcons name="image-multiple-outline" size={40} color={C.muted} />
-          <Text style={{ color: C.muted, fontSize: 13, fontWeight: '600', fontFamily: appFont }}>Tap to pick photos</Text>
-        </TouchableOpacity>
-      ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={{ flexDirection: 'row', gap: 10, paddingVertical: 4 }}>
-            {pickedImages.map((img, index) => (
-              <View key={index} style={{ position: 'relative' }}>
-                <Image
-                  source={{ uri: img.cloudUrl || img.uri }}
-                  style={{ width: 90, height: 90, borderRadius: 14, backgroundColor: C.surfaceAlt }}
-                />
-                {index === 0 && (
-                  <View style={{ position: 'absolute', bottom: 4, left: 4, backgroundColor: C.primary, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 2 }}>
-                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>COVER</Text>
-                  </View>
-                )}
-                {img.uploading && (
-                  <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 14, alignItems: 'center', justifyContent: 'center' }}>
-                    <ActivityIndicator color="#fff" size="small" />
-                  </View>
-                )}
-                <TouchableOpacity
-                  onPress={() => removePickedImage(index)}
-                  style={{ position: 'absolute', top: -6, right: -6, backgroundColor: '#ef4444', borderRadius: 999, width: 22, height: 22, alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <MaterialCommunityIcons name="close" size={13} color="#fff" />
-                </TouchableOpacity>
-              </View>
-            ))}
-            {pickedImages.length < 12 && (
-              <TouchableOpacity
-                onPress={pickImages}
-                style={{ width: 90, height: 90, borderRadius: 14, borderWidth: 2, borderColor: C.inputBorder, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 4 }}
-              >
-                <MaterialCommunityIcons name="plus" size={24} color={C.muted} />
-                <Text style={{ color: C.muted, fontSize: 10, fontWeight: '700', fontFamily: appFont }}>Add</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </ScrollView>
-      )}
-    </View>
-  );
-
-  const ServiceForm = () => (
-    <ScrollView style={{ flex: 1, padding: 16 }}>
-      <View style={adminStyles.formSection}>
-        <Text style={[adminStyles.formSectionTitle, { color: C.text, fontFamily: appFont }]}>Basic Information</Text>
-        <FormField label="Service Name *" name="name" />
-        <SelectField
-          label="Service Type *"
-          value={formData.serviceType}
-          options={SERVICE_TYPES.map((t) => ({ label: t, value: t }))}
-          onSelect={(v) => setFormData({ ...formData, serviceType: v })}
-          error={formErrors.serviceType}
-        />
-        <SelectField
-          label="Category"
-          value={formData.category}
-          options={Object.keys(CATEGORIES_WITH_SUBS).map((c) => ({ label: c, value: c }))}
-          onSelect={(v) => setFormData({ ...formData, category: v, subCategory: '' })}
-        />
-        {subCategoryOptions.length > 0 && (
-          <SelectField
-            label="Sub-category"
-            value={formData.subCategory}
-            options={subCategoryOptions}
-            onSelect={(v) => setFormData({ ...formData, subCategory: v })}
-          />
-        )}
-        <FormField label="Short Description" name="shortDescription" multiline />
-        <FormField label="Full Description *" name="description" multiline />
-      </View>
-
-      <View style={adminStyles.formSection}>
-        <Text style={[adminStyles.formSectionTitle, { color: C.text, fontFamily: appFont }]}>Pricing</Text>
-        <FormField label="Base Price (₦) *" name="pricing" nested={{ parent: 'pricing', child: 'basePrice' }} keyboardType="numeric" />
-        <SelectField
-          label="Pricing Type"
-          value={formData.pricing.unit}
-          options={PRICING_UNITS}
-          onSelect={(v) => setFormData({ ...formData, pricing: { ...formData.pricing, unit: v } })}
-        />
-      </View>
-
-      <View style={adminStyles.formSection}>
-        <Text style={[adminStyles.formSectionTitle, { color: C.text, fontFamily: appFont }]}>Status</Text>
-        <Toggle label="Active" value={formData.isActive} onToggle={() => setFormData({ ...formData, isActive: !formData.isActive })} />
-        <Toggle label="Featured" value={formData.isFeatured} onToggle={() => setFormData({ ...formData, isFeatured: !formData.isFeatured })} color="#f59e0b" />
-        <Toggle label="Available for Booking" value={formData.availability.isAvailable} onToggle={() => setFormData({ ...formData, availability: { isAvailable: !formData.availability.isAvailable } })} color="#10b981" />
-      </View>
-
-      <View style={adminStyles.formSection}>
-        <Text style={[adminStyles.formSectionTitle, { color: C.text, fontFamily: appFont }]}>Cancellation Policy</Text>
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-          {['flexible', 'moderate', 'strict'].map((p) => (
-            <TouchableOpacity
-              key={p}
-              style={[{ flex: 1, paddingVertical: 8, borderRadius: 12, borderWidth: 1, alignItems: 'center' }, formData.cancellationPolicy === p ? { backgroundColor: C.primary, borderColor: C.primary } : { backgroundColor: C.surface, borderColor: C.inputBorder }]}
-              onPress={() => setFormData({ ...formData, cancellationPolicy: p })}
-            >
-              <Text style={{ color: formData.cancellationPolicy === p ? '#fff' : C.text, fontSize: 12, fontWeight: '700', fontFamily: appFont, textTransform: 'capitalize' }}>{p}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <FormField label="Cancellation Details" name="cancellationDetails" multiline />
-      </View>
-
-      <ImageSection />
-
-      <View style={adminStyles.modalActions}>
-        <TouchableOpacity style={[adminStyles.modalBtn, { borderWidth: 1, borderColor: C.inputBorder }]} onPress={() => { setShowAddModal(false); setShowEditModal(false); }}>
-          <Text style={[adminStyles.modalBtnText, { color: C.text, fontFamily: appFont }]}>Cancel</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[adminStyles.modalBtn, { backgroundColor: C.primary }]} onPress={handleSubmit} disabled={isSubmitting}>
-          <Text style={[adminStyles.modalBtnText, { color: '#fff', fontFamily: appFont }]}>{isSubmitting ? 'Saving...' : showEditModal ? 'Update' : 'Save'}</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
-  );
 
   const ServiceCard = ({ service }: { service: any }) => {
     const isActive = service.isActive !== false;
@@ -689,7 +683,20 @@ const ManageServicesScreen = () => {
                 <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont, textAlign: 'center' }]}>{title}</Text>
                 <View style={{ width: 24 }} />
               </View>
-              <ServiceForm />
+              <ServiceForm
+                formData={formData}
+                setFormData={setFormData}
+                formErrors={formErrors}
+                pickedImages={pickedImages}
+                setPickedImages={setPickedImages}
+                pickImages={pickImages}
+                showEditModal={showEditModal}
+                isSubmitting={isSubmitting}
+                handleSubmit={handleSubmit}
+                setShowAddModal={setShowAddModal}
+                setShowEditModal={setShowEditModal}
+                C={C}
+              />
             </SafeAreaView>
           </KeyboardAvoidingView>
         </Modal>

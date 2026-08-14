@@ -3,8 +3,9 @@
  * Main navigation for authenticated users with bottom tabs
  */
 
-import React from 'react';
-import { Platform } from 'react-native';
+import React, { useRef } from 'react';
+import { Platform, BackHandler } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -57,6 +58,7 @@ import AuditLogsScreen from '../screens/admin/AuditLogsScreen';
 
 // Import constants
 import { COLORS } from '../utils/constants';
+import { showToast } from '../utils/toast';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -64,27 +66,14 @@ const Stack = createNativeStackNavigator();
 // Home stack
 function HomeStack() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="HomeScreen" component={HomeScreen} />
-      <Stack.Screen
-        name="ServiceDetail"
-        component={ServiceDetailScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="EventDetails"
-        component={EventDetailsScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="Checkout"
-        component={CheckoutScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
+      <Stack.Screen name="ServiceDetail" component={ServiceDetailScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="EventDetails" component={EventDetailsScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="Checkout" component={CheckoutScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="WebCheckout" component={WebCheckoutScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="BookingDetail" component={BookingDetailScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="PaymentResult" component={PaymentResultScreen} options={{ animation: 'slide_from_right' }} />
     </Stack.Navigator>
   );
 }
@@ -92,27 +81,14 @@ function HomeStack() {
 // Search stack
 function SearchStack() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="SearchScreen" component={SearchScreen} />
-      <Stack.Screen
-        name="ServiceDetail"
-        component={ServiceDetailScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="EventDetails"
-        component={EventDetailsScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="Checkout"
-        component={CheckoutScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
+      <Stack.Screen name="ServiceDetail" component={ServiceDetailScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="EventDetails" component={EventDetailsScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="Checkout" component={CheckoutScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="WebCheckout" component={WebCheckoutScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="BookingDetail" component={BookingDetailScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="PaymentResult" component={PaymentResultScreen} options={{ animation: 'slide_from_right' }} />
     </Stack.Navigator>
   );
 }
@@ -312,6 +288,24 @@ export default function BottomTabNavigator() {
 
   const isAdmin = user?.role === 'admin';
 
+  const backPressedOnce = useRef(false);
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        if (backPressedOnce.current) {
+          BackHandler.exitApp();
+          return true;
+        }
+        backPressedOnce.current = true;
+        showToast('Press back again to exit');
+        setTimeout(() => { backPressedOnce.current = false; }, 2000);
+        return true;
+      };
+      BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+    }, [])
+  );
+
   const tabItems = isAdmin
     ? [
         { name: 'Admin', component: AdminStack, label: 'Admin' },
@@ -394,9 +388,6 @@ export default function BottomTabNavigator() {
           component={tab.component}
           options={{
             tabBarLabel: tab.label,
-            ...(tab.name === 'Profile' && {
-              unmountOnBlur: true,
-            }),
           }}
         />
       ))}

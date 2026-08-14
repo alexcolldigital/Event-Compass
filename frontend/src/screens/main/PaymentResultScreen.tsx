@@ -10,12 +10,14 @@ import Loading from '../../components/Loading.jsx';
 const PaymentResultScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const params = (route.params || {}) as { bookingId?: string; status?: 'success' | 'cancelled' | string };
+  const params = (route.params || {}) as { bookingId?: string; status?: 'success' | 'cancelled' | string; paymentType?: string };
   const status = params.status || 'success';
   const bookingId = params.bookingId || '';
+  const paymentType = params.paymentType || 'full';
   const { markBookingPaymentSuccess, currentBooking, getBookingById, isLoading } = useBookingStore();
   const { theme } = useTheme();
   const [isProcessing, setIsProcessing] = useState(status === 'success' && !!bookingId);
+  const [resultMessage, setResultMessage] = useState('');
 
   const colors = useMemo(
     () => ({
@@ -37,10 +39,10 @@ const PaymentResultScreen = () => {
         setIsProcessing(false);
         return;
       }
-
       try {
         setIsProcessing(true);
-        const result = await markBookingPaymentSuccess(bookingId);
+        const result = await markBookingPaymentSuccess(bookingId, paymentType);
+        setResultMessage(result?.message || '');
         if (result?.booking?._id) {
           await getBookingById(result.booking._id);
         }
@@ -50,9 +52,8 @@ const PaymentResultScreen = () => {
         setIsProcessing(false);
       }
     };
-
     finalizePayment();
-  }, [bookingId, status, markBookingPaymentSuccess, getBookingById]);
+  }, [bookingId, status, paymentType]);
 
   if (isLoading || isProcessing) {
     return <Loading fullScreen message="Finalizing your payment..." />;
@@ -73,9 +74,16 @@ const PaymentResultScreen = () => {
         </Text>
         <Text style={[styles.subtitle, { color: colors.muted }]}>
           {isSuccess
-            ? 'Your booking is secured in escrow and the provider can now confirm the reservation.'
+            ? paymentType === 'deposit'
+              ? 'Your deposit has been received. Remember to complete the balance payment before your event date.'
+              : paymentType === 'balance'
+              ? 'Your balance payment is confirmed. Your booking is now fully paid and secured.'
+              : 'Your booking is secured in escrow and the provider can now confirm the reservation.'
             : 'Your payment was not completed. You can retry or review your booking in the dashboard.'}
         </Text>
+        {resultMessage ? (
+          <Text style={[styles.bookingLabel, { color: colors.primary, marginTop: 8 }]}>{resultMessage}</Text>
+        ) : null}
         {bookingId && (
           <Text style={[styles.bookingLabel, { color: colors.muted }]}>Booking #{bookingId}</Text>
         )}

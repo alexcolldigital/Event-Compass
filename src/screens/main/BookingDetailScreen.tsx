@@ -43,6 +43,7 @@ const BookingDetailScreen = () => {
     createBookingPaymentSession,
     releaseEscrow,
     disputeEscrow,
+    rejectBooking,
   } = useBookingStore();
   const { user, isAuthenticated } = useAuthStore();
   const { theme } = useTheme();
@@ -50,7 +51,10 @@ const BookingDetailScreen = () => {
 
   const [cancelReason, setCancelReason] = useState('');
   const [showCancelForm, setShowCancelForm] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [showRejectForm, setShowRejectForm] = useState(false);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
+  const [selectedGateway, setSelectedGateway] = useState<'paystack' | 'flutterwave' | null>(null);
 
   const colors = {
     bg: isDark ? '#050816' : '#f5f7f2',
@@ -67,6 +71,29 @@ const BookingDetailScreen = () => {
     getBookingById(bookingId);
   }, [bookingId, isAuthenticated]);
 
+  const handleRejectBooking = async () => {
+    if (!rejectReason.trim()) {
+      Alert.alert('Error', 'Please provide a reason for rejecting this booking.');
+      return;
+    }
+    Alert.alert('Reject Booking', 'Are you sure you want to reject this booking?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Reject',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await rejectBooking(bookingId, rejectReason.trim());
+            Alert.alert('Booking Rejected', 'The booking has been rejected and the client has been notified.');
+            navigation.goBack();
+          } catch (err) {
+            Alert.alert('Error', err instanceof Error ? err.message : 'Failed to reject booking');
+          }
+        },
+      },
+    ]);
+  };
+
   const handleConfirmBooking = () => {
     Alert.alert('Confirm Booking', 'Are you sure you want to confirm this booking?', [
       { text: 'Cancel', onPress: () => {} },
@@ -74,8 +101,15 @@ const BookingDetailScreen = () => {
         text: 'Confirm',
         onPress: async () => {
           try {
-            await confirmBooking(bookingId);
-            Alert.alert('Success', 'Booking confirmed!');
+            const response = await confirmBooking(bookingId);
+            Alert.alert(
+              'Booking Confirmed',
+              'The booking has been confirmed. The client will now be prompted to complete payment.',
+            );
+            // If a checkout URL was generated, navigate to it so the client can pay
+            if (response?.checkoutUrl) {
+              navigation.navigate('WebCheckout', { url: response.checkoutUrl, bookingId });
+            }
           } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to confirm booking';
             Alert.alert('Error', message);
@@ -127,24 +161,36 @@ const BookingDetailScreen = () => {
     ]);
   };
 
-  const handlePayNow = async () => {
+  const handlePayNow = async (gateway?: 'paystack' | 'flutterwave') => {
     try {
       setIsPaymentLoading(true);
       const origin = process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:19007';
-      const response = await createBookingPaymentSession(bookingId, origin);
+      const response = await createBookingPaymentSession(bookingId, origin, gateway);
       const sessionUrl = response.checkoutUrl || response.session?.url;
 
       if (!sessionUrl) {
         throw new Error('Unable to create payment session');
       }
 
-      navigation.navigate('WebCheckout', { checkoutUrl: sessionUrl, bookingId });
+      navigation.navigate('WebCheckout', { url: sessionUrl, bookingId });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unable to initiate payment right now';
       Alert.alert('Payment Error', message);
     } finally {
       setIsPaymentLoading(false);
     }
+  };
+
+  const handleSelectGatewayAndPay = () => {
+    Alert.alert(
+      'Choose Payment Method',
+      'Select your preferred payment provider to complete this booking.',
+      [
+        { text: 'Paystack', onPress: () => handlePayNow('paystack') },
+        { text: 'Flutterwave', onPress: () => handlePayNow('flutterwave') },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
   };
 
   const handleReleaseEscrow = () => {
@@ -451,9 +497,33 @@ const BookingDetailScreen = () => {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Actions</Text>
 
           {isProvider && isPending ? (
-            <View style={styles.buttonStack}> 
+            <View style={styles.buttonStack}>
               <Button title="Confirm booking" onPress={handleConfirmBooking} variant="primary" fullWidth />
-              <Button title="Decline" onPress={() => setShowCancelForm(true)} variant="danger" fullWidth />
+              <Button title="Reject booking" onPress={() => setShowRejectForm(true)} variant="danger" fullWidth />
+            </View>
+          ) : null}
+
+          {showRejectForm && isPending ? (
+            <View style={[styles.cancelBox, { backgroundColor: '#fef2f2', borderColor: '#fecaca', marginTop: 8 }]}>
+              <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 8 }]}>Reason for rejection</Text>
+              <View style={[styles.textInputWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <TextInput
+                  placeholder="Enter a reason..."
+                  value={rejectReason}
+                  onChangeText={setRejectReason}
+                  multiline
+                  placeholderTextColor={colors.muted}
+                  style={[styles.textInput, { color: colors.text }]}
+                />
+              </View>
+              <View style={styles.cancelActions}>
+                <TouchableOpacity onPress={() => { setShowRejectForm(false); setRejectReason(''); }} style={[styles.secondaryAction, { borderColor: colors.border }]}>
+                  <Text style={[styles.secondaryActionText, { color: colors.text }]}>Back</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleRejectBooking} style={styles.primaryAction}>
+                  <Text style={styles.primaryActionText}>Confirm Reject</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ) : null}
 
@@ -467,17 +537,17 @@ const BookingDetailScreen = () => {
           ) : null}
 
           {isClient && isPending ? (
-            <View style={styles.buttonStack}> 
-              <View style={[styles.helperBox, { backgroundColor: '#fff7ed', borderColor: '#fed7aa' }]}> 
-                <Text style={styles.helperText}>Your booking is still awaiting provider confirmation. Payment will unlock after confirmation.</Text>
+            <View style={styles.buttonStack}>
+              <View style={[styles.helperBox, { backgroundColor: '#fff7ed', borderColor: '#fed7aa' }]}>
+                <Text style={styles.helperText}>Your booking request has been sent. Payment will be available once the provider confirms your booking.</Text>
               </View>
               <Button title="Cancel booking" onPress={() => setShowCancelForm(true)} variant="danger" fullWidth />
             </View>
           ) : null}
 
           {isClient && !isPending && !isCancelled && currentBooking.payment?.status !== 'completed' ? (
-            <View style={styles.buttonStack}> 
-              <Button title="Pay now" onPress={handlePayNow} variant="primary" fullWidth isLoading={isPaymentLoading} />
+            <View style={styles.buttonStack}>
+              <Button title="Pay now" onPress={handleSelectGatewayAndPay} variant="primary" fullWidth isLoading={isPaymentLoading} />
               <Button title="Cancel booking" onPress={() => setShowCancelForm(true)} variant="danger" fullWidth />
             </View>
           ) : null}

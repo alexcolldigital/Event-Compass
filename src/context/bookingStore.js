@@ -50,10 +50,10 @@ export const useBookingStore = create((set, get) => ({
   },
 
   // Create booking payment session
-  createBookingPaymentSession: async (id, origin) => {
+  createBookingPaymentSession: async (id, origin, gateway) => {
     try {
       set({ isLoading: true, error: null });
-      const response = await bookingAPI.createBookingPaymentSession(id, origin);
+      const response = await bookingAPI.createBookingPaymentSession(id, origin, gateway);
 
       const state = get();
       const updatedBooking = response.booking;
@@ -148,6 +148,24 @@ export const useBookingStore = create((set, get) => ({
     }
   },
 
+  // Reject booking (provider)
+  rejectBooking: async (id, reason) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await bookingAPI.rejectBooking(id, { reason });
+      const state = get();
+      set({
+        bookings: state.bookings.map((b) => (b._id === id ? response.booking : b)),
+        currentBooking: response.booking,
+        isLoading: false,
+      });
+      return response;
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
   // Confirm booking
   confirmBooking: async (id) => {
     try {
@@ -165,6 +183,7 @@ export const useBookingStore = create((set, get) => ({
         isLoading: false,
       });
 
+      // Return full response including checkoutUrl for the client
       return response;
     } catch (error) {
       set({ error: error.message, isLoading: false });

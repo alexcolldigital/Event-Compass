@@ -115,20 +115,26 @@ export const serviceAPI = {
 export const bookingAPI = {
   createBooking: (data) => apiClient.post('/bookings', data),
   checkoutCart: (data) => apiClient.post('/bookings/checkout', data),
-  createBookingPaymentSession: (bookingId, origin) =>
-    apiClient.post(`/bookings/${bookingId}/payment-session`, { origin }),
-  markBookingPaymentSuccess: (bookingId) =>
-    apiClient.post(`/bookings/${bookingId}/payment-success`),
+  createBookingPaymentSession: (bookingId, origin, gateway) =>
+    apiClient.post(`/bookings/${bookingId}/payment-session`, { origin, gateway }),
+  markBookingPaymentSuccess: (bookingId, paymentType = 'full') =>
+    apiClient.post(`/bookings/${bookingId}/payment-success`, { paymentType }),
   getBookingById: (id) => apiClient.get(`/bookings/${id}`),
   getMyClientBookings: (query) =>
     apiClient.get('/bookings/client/my-bookings', { params: query }),
   getMyProviderBookings: (query) =>
     apiClient.get('/bookings/provider/my-bookings', { params: query }),
   confirmBooking: (id) => apiClient.patch(`/bookings/${id}/confirm`),
+  rejectBooking: (id, data) => apiClient.patch(`/bookings/${id}/reject`, data),
   cancelBooking: (id, data) => apiClient.patch(`/bookings/${id}/cancel`, data),
   completeBooking: (id) => apiClient.patch(`/bookings/${id}/complete`),
   releaseEscrow: (id) => apiClient.patch(`/bookings/${id}/release-escrow`),
   disputeEscrow: (id, data) => apiClient.patch(`/bookings/${id}/dispute-escrow`, data),
+  payBalance: (id, data) => apiClient.patch(`/bookings/${id}/pay-balance`, data),
+  requestReschedule: (id, data) => apiClient.patch(`/bookings/${id}/reschedule`, data),
+  respondReschedule: (id, data) => apiClient.patch(`/bookings/${id}/reschedule/respond`, data),
+  requestRefund: (id, data) => apiClient.patch(`/bookings/${id}/refund`, data),
+  respondRefund: (id, data) => apiClient.patch(`/bookings/${id}/refund/respond`, data),
 };
 
 // Admin API calls

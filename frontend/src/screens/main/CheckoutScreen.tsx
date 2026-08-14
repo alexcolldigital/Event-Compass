@@ -11,6 +11,17 @@ import Button from '../../components/Button.jsx';
 import { bookingAPI } from '../../services/api.js';
 import { buildCheckoutBookingDetails } from '../../utils/cartUtils';
 
+const PAYMENT_PLANS = [
+  { key: 'full', label: 'Full Payment', desc: 'Pay 100% now' },
+  { key: 'split_50_50', label: '50% Deposit', desc: 'Pay 50% now, balance before event' },
+  { key: 'deposit_20', label: '20% Deposit', desc: 'Pay 20% now, balance before event' },
+];
+
+const GATEWAYS = [
+  { key: 'paystack', label: 'Paystack' },
+  { key: 'flutterwave', label: 'Flutterwave' },
+];
+
 export default function CheckoutScreen({ navigation, route }: { navigation: any; route: any }) {
   const eventDetails = route?.params?.eventDetails;
   const { items, removeItem, updateItemQuantity, clearCart, getTotalAmount } = useCartStore();
@@ -29,7 +40,17 @@ export default function CheckoutScreen({ navigation, route }: { navigation: any;
   };
 
   const [isLoading, setIsLoading] = useState(false);
+  const [paymentPlan, setPaymentPlan] = useState('full');
+  const [selectedGateway, setSelectedGateway] = useState('paystack');
   const totalAmount = useMemo(() => getTotalAmount(), [items, getTotalAmount]);
+
+  const depositAmount = useMemo(() => {
+    if (paymentPlan === 'deposit_20') return totalAmount * 0.2;
+    if (paymentPlan === 'split_50_50') return totalAmount * 0.5;
+    return totalAmount;
+  }, [paymentPlan, totalAmount]);
+
+  const amountDueNow = depositAmount;
 
   const eventDate = eventDetails?.eventDate
     ? new Date(eventDetails.eventDate)
@@ -77,7 +98,7 @@ export default function CheckoutScreen({ navigation, route }: { navigation: any;
           price: item.price || 0,
           name: item.name,
         })),
-        bookingDetails,
+        bookingDetails: { ...bookingDetails, paymentPlan, gateway: selectedGateway },
       });
 
       if (!response?.success) {
@@ -87,13 +108,25 @@ export default function CheckoutScreen({ navigation, route }: { navigation: any;
       clearCart();
       clearEventDraft();
 
+      // If checkout URL returned, open payment gateway
+      const firstCheckout = response?.checkouts?.[0];
+      if (firstCheckout?.checkoutUrl) {
+        navigation.navigate('WebCheckout', {
+          checkoutUrl: firstCheckout.checkoutUrl,
+          bookingId: String(firstCheckout.bookingId || ''),
+          gateway: firstCheckout.gateway || selectedGateway,
+          paymentType: paymentPlan === 'full' ? 'full' : 'deposit',
+          amountDue: amountDueNow,
+        });
+        return;
+      }
+
       if (response?.bookings?.length > 0) {
         Alert.alert('Booking Request Sent', 'Your booking has been submitted. You will be notified once the provider reviews it.');
         navigation.navigate('Bookings');
         return;
       }
 
-      // success=true but no bookings created (e.g. service not found or location mismatch)
       Alert.alert(
         'No Bookings Created',
         'Your cart items could not be booked. The services may be unavailable or outside the coverage area.',
@@ -212,6 +245,57 @@ export default function CheckoutScreen({ navigation, route }: { navigation: any;
               </View>
             ))}
 
+            {/* Payment Plan */}
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Payment Plan</Text>
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, gap: 10 }]}>
+              {PAYMENT_PLANS.map((plan) => (
+                <TouchableOpacity
+                  key={plan.key}
+                  onPress={() => setPaymentPlan(plan.key)}
+                  style={[
+                    styles.planOption,
+                    { borderColor: paymentPlan === plan.key ? colors.primary : colors.border },
+                    paymentPlan === plan.key && { backgroundColor: '#ecfdf3' },
+                  ]}
+                >
+                  <View style={styles.planRadio}>
+                    <View style={[styles.radioOuter, { borderColor: paymentPlan === plan.key ? colors.primary : colors.muted }]}>
+                      {paymentPlan === plan.key && <View style={[styles.radioInner, { backgroundColor: colors.primary }]} />}
+                    </View>
+                    <View>
+                      <Text style={[styles.planLabel, { color: colors.text }]}>{plan.label}</Text>
+                      <Text style={[styles.planDesc, { color: colors.muted }]}>{plan.desc}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Payment Gateway */}
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Pay With</Text>
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, flexDirection: 'row', gap: 12 }]}>
+              {GATEWAYS.map((gw) => (
+                <TouchableOpacity
+                  key={gw.key}
+                  onPress={() => setSelectedGateway(gw.key)}
+                  style={[
+                    styles.gatewayOption,
+                    { borderColor: selectedGateway === gw.key ? colors.primary : colors.border },
+                    selectedGateway === gw.key && { backgroundColor: '#ecfdf3' },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name="credit-card-outline"
+                    size={20}
+                    color={selectedGateway === gw.key ? colors.primary : colors.muted}
+                  />
+                  <Text style={[styles.gatewayLabel, { color: selectedGateway === gw.key ? colors.primary : colors.text }]}>
+                    {gw.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             {/* Order summary */}
             <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.cardTitle, { color: colors.text }]}>Order Summary</Text>
@@ -219,13 +303,15 @@ export default function CheckoutScreen({ navigation, route }: { navigation: any;
                 <Text style={[styles.summaryLabel, { color: colors.muted }]}>Subtotal</Text>
                 <Text style={[styles.summaryValue, { color: colors.text }]}>₦{totalAmount.toLocaleString()}</Text>
               </View>
-              <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: colors.muted }]}>Service fee</Text>
-                <Text style={[styles.summaryValue, { color: colors.text }]}>₦0</Text>
-              </View>
+              {paymentPlan !== 'full' && (
+                <View style={styles.summaryRow}>
+                  <Text style={[styles.summaryLabel, { color: colors.muted }]}>Balance (pay before event)</Text>
+                  <Text style={[styles.summaryValue, { color: colors.text }]}>₦{(totalAmount - amountDueNow).toLocaleString()}</Text>
+                </View>
+              )}
               <View style={[styles.summaryRow, styles.totalRow, { borderTopColor: colors.border }]}>
-                <Text style={[styles.totalLabel, { color: colors.primary }]}>Total</Text>
-                <Text style={[styles.totalValue, { color: colors.primary }]}>₦{totalAmount.toLocaleString()}</Text>
+                <Text style={[styles.totalLabel, { color: colors.primary }]}>Due Now</Text>
+                <Text style={[styles.totalValue, { color: colors.primary }]}>₦{amountDueNow.toLocaleString()}</Text>
               </View>
             </View>
           </ScrollView>
@@ -233,11 +319,11 @@ export default function CheckoutScreen({ navigation, route }: { navigation: any;
           {/* Footer CTA */}
           <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
             <View style={styles.footerTotal}>
-              <Text style={[styles.footerTotalLabel, { color: colors.muted }]}>Total</Text>
-              <Text style={[styles.footerTotalValue, { color: colors.primary }]}>₦{totalAmount.toLocaleString()}</Text>
+              <Text style={[styles.footerTotalLabel, { color: colors.muted }]}>Due Now</Text>
+              <Text style={[styles.footerTotalValue, { color: colors.primary }]}>₦{amountDueNow.toLocaleString()}</Text>
             </View>
             <Button
-              title={isLoading ? 'Submitting...' : 'Submit Booking Request'}
+              title={isLoading ? 'Submitting...' : 'Proceed to Payment'}
               onPress={handlePlaceOrder}
               isLoading={isLoading}
               variant="primary"
@@ -311,4 +397,12 @@ const styles = StyleSheet.create({
   emptyWrap: { flex: 1, margin: 24, borderWidth: 1, borderRadius: 24, alignItems: 'center', justifyContent: 'center', padding: 32 },
   emptyTitle: { fontSize: 18, fontWeight: '800', marginTop: 16 },
   emptySubtitle: { fontSize: 14, textAlign: 'center', marginTop: 8, maxWidth: 260 },
+  planOption: { borderWidth: 1.5, borderRadius: 14, padding: 12 },
+  planRadio: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  radioOuter: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  radioInner: { width: 10, height: 10, borderRadius: 5 },
+  planLabel: { fontSize: 14, fontWeight: '700' },
+  planDesc: { fontSize: 12, marginTop: 2 },
+  gatewayOption: { flex: 1, borderWidth: 1.5, borderRadius: 14, padding: 12, alignItems: 'center', gap: 6 },
+  gatewayLabel: { fontSize: 13, fontWeight: '700' },
 });
