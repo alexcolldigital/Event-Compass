@@ -91,6 +91,9 @@ export const authAPI = {
   addDevice: (deviceId, deviceName) => apiClient.post('/auth/devices', { deviceId, deviceName }),
   removeDevice: (deviceId) => apiClient.delete(`/auth/devices/${deviceId}`),
   saveFcmToken: (fcmToken) => apiClient.post('/auth/fcm-token', { fcmToken }),
+  getMyNotifications: (params) => apiClient.get('/auth/notifications', { params }),
+  markNotificationRead: (id) => apiClient.patch(`/auth/notifications/${id}/read`),
+  markAllNotificationsRead: () => apiClient.patch('/auth/notifications/read-all'),
 };
 
 // Service API calls
@@ -157,7 +160,8 @@ export const adminAPI = {
   // Bookings
   getAllBookings: (query) => apiClient.get('/admin/bookings', { params: query }),
   getBookingById: (id) => apiClient.get(`/admin/bookings/${id}`),
-  confirmBooking: (id) => apiClient.patch(`/admin/bookings/${id}/confirm`),
+  confirmBooking: (id, data?) => apiClient.patch(`/admin/bookings/${id}/confirm`, data || {}),
+  rejectBooking: (id, data) => apiClient.patch(`/admin/bookings/${id}/reject`, data),
   cancelBooking: (id, data) => apiClient.patch(`/admin/bookings/${id}/cancel`, data),
   completeBooking: (id) => apiClient.patch(`/admin/bookings/${id}/complete`),
 

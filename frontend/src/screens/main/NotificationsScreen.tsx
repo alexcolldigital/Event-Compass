@@ -1,21 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
   SafeAreaView,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   StyleSheet,
   Switch,
   Alert,
   Platform,
+  RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuthStore } from '../../context/authStore.js';
 import Button from '../../components/Button.jsx';
 import { authAPI } from '../../services/api';
+import { navigationRef } from '../../navigation/navigationRef';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -83,6 +88,10 @@ export default function NotificationsScreen({ navigation }: { navigation: any })
   const [newslettersEnabled, setNewslettersEnabled] = useState(true);
   const [prefs, setPrefs] = useState({ ...DEFAULT_PREFS });
   const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<'feed' | 'settings'>('feed');
+  const [feedItems, setFeedItems] = useState<any[]>([]);
+  const [feedLoading, setFeedLoading] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const notificationListener = useRef<any>(null);
   const responseListener = useRef<any>(null);
 
@@ -105,12 +114,18 @@ export default function NotificationsScreen({ navigation }: { navigation: any })
       }
     }
     registerForPushNotifications();
+    loadFeed();
 
-    notificationListener.current = Notifications.addNotificationReceivedListener(() => {});
+    notificationListener.current = Notifications.addNotificationReceivedListener(() => {
+      loadFeed();
+    });
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as any;
       if (data?.bookingId) {
-        navigation.navigate('BookingDetail', { bookingId: data.bookingId });
+        // Navigate using navigationRef to avoid stack issues
+        if (navigationRef.isReady()) {
+          navigationRef.navigate('Bookings' as never, { screen: 'BookingDetail', params: { bookingId: data.bookingId } } as never);
+        }
       }
     });
 
@@ -120,8 +135,34 @@ export default function NotificationsScreen({ navigation }: { navigation: any })
     };
   }, [user]);
 
+  const loadFeed = useCallback(async () => {
+    setFeedLoading(true);
+    try {
+      const res: any = await authAPI.getMyNotifications({ limit: 30 });
+      setFeedItems(res.notifications || []);
+      setUnreadCount(res.unreadCount || 0);
+    } catch (_) {}
+    setFeedLoading(false);
+  }, []);
+
+  const handleMarkRead = async (id: string) => {
+    try {
+      await authAPI.markNotificationRead(id);
+      setFeedItems((prev) => prev.map((n) => n._id === id ? { ...n, isRead: true } : n));
+      setUnreadCount((c) => Math.max(0, c - 1));
+    } catch (_) {}
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await authAPI.markAllNotificationsRead();
+      setFeedItems((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch (_) {}
+  };
+
   const registerForPushNotifications = async () => {
-    if (Platform.OS === 'web') return;
+    if (!Device.isDevice) return;
     const { status: existing } = await Notifications.getPermissionsAsync();
     let finalStatus = existing;
     if (existing !== 'granted') {
@@ -178,85 +219,172 @@ export default function NotificationsScreen({ navigation }: { navigation: any })
     />
   );
 
+  const NOTIF_ICONS: Record<string, string> = {
+    booking_accepted: 'calendar-check',
+    booking_rejected: 'calendar-remove',
+    booking_update: 'calendar-clock',
+    payment_confirmation: 'credit-card-check',
+    deposit_paid: 'cash-check',
+    booking_reminder: 'bell-ring',
+    cancellation_alert: 'calendar-remove',
+    promotional: 'tag-heart',
+    new_message: 'message-text',
+    general: 'bell',
+  };
+
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <View style={[styles.header, { backgroundColor: colors.primary }]}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
+      <View style={[styles.header, { backgroundColor: colors.primary }]}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.title}>Notifications</Text>
+        <Text style={styles.subtitle}>Manage how Event Compass keeps you informed.</Text>
+        {/* Tabs */}
+        <View style={styles.tabs}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'feed' && styles.tabActive]}
+            onPress={() => setActiveTab('feed')}
+          >
+            <Text style={[styles.tabText, activeTab === 'feed' && styles.tabTextActive]}>
+              Feed {unreadCount > 0 ? `(${unreadCount})` : ''}
+            </Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Notifications</Text>
-          <Text style={styles.subtitle}>Manage how Event Compass keeps you informed.</Text>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'settings' && styles.tabActive]}
+            onPress={() => setActiveTab('settings')}
+          >
+            <Text style={[styles.tabText, activeTab === 'settings' && styles.tabTextActive]}>Settings</Text>
+          </TouchableOpacity>
         </View>
+      </View>
 
-        {/* Email & Newsletter */}
-        <Text style={[styles.sectionLabel, { color: colors.muted }]}>EMAIL</Text>
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={styles.row}>
-            <View style={styles.rowText}>
-              <Text style={[styles.rowTitle, { color: colors.text }]}>Email notifications</Text>
-              <Text style={[styles.rowBody, { color: colors.muted }]}>Booking updates and service reminders.</Text>
-            </View>
-            {renderSwitch(emailEnabled, setEmailEnabled)}
-          </View>
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <View style={styles.row}>
-            <View style={styles.rowText}>
-              <Text style={[styles.rowTitle, { color: colors.text }]}>Newsletter emails</Text>
-              <Text style={[styles.rowBody, { color: colors.muted }]}>Tips, updates, and new service alerts.</Text>
-            </View>
-            {renderSwitch(newslettersEnabled, setNewslettersEnabled)}
-          </View>
-        </View>
-
-        {/* Push Notifications */}
-        <Text style={[styles.sectionLabel, { color: colors.muted }]}>PUSH NOTIFICATIONS</Text>
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {NOTIFICATION_TYPES.map((item, index) => (
-            <View key={item.key}>
-              <View style={styles.row}>
-                <MaterialCommunityIcons
-                  name={item.icon as any}
-                  size={22}
-                  color={colors.primary}
-                  style={styles.icon}
-                />
-                <View style={styles.rowText}>
-                  <Text style={[styles.rowTitle, { color: colors.text }]}>{item.title}</Text>
-                  <Text style={[styles.rowBody, { color: colors.muted }]}>{item.body}</Text>
-                </View>
-                {renderSwitch(prefs[item.key], () => togglePref(item.key))}
+      {activeTab === 'feed' ? (
+        <FlatList
+          data={feedItems}
+          keyExtractor={(item) => item._id}
+          refreshControl={<RefreshControl refreshing={feedLoading} onRefresh={loadFeed} tintColor={colors.primary} />}
+          contentContainerStyle={[styles.content, feedItems.length === 0 && styles.emptyContainer]}
+          ListHeaderComponent={
+            feedItems.length > 0 && unreadCount > 0 ? (
+              <TouchableOpacity onPress={handleMarkAllRead} style={styles.markAllBtn}>
+                <Text style={[styles.markAllText, { color: colors.primary }]}>Mark all as read</Text>
+              </TouchableOpacity>
+            ) : null
+          }
+          ListEmptyComponent={
+            !feedLoading ? (
+              <View style={styles.emptyState}>
+                <MaterialCommunityIcons name="bell-off-outline" size={48} color={colors.muted} />
+                <Text style={[styles.emptyText, { color: colors.muted }]}>No notifications yet</Text>
               </View>
-              {index < NOTIFICATION_TYPES.length - 1 && (
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-              )}
-            </View>
-          ))}
-        </View>
-
-        <Button
-          title={isSaving ? 'Saving...' : 'Save preferences'}
-          onPress={handleSave}
-          variant="primary"
-          fullWidth
-          isLoading={isSaving}
+            ) : <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
+          }
+          renderItem={({ item }) => {
+            const icon = NOTIF_ICONS[item.notifType] || 'bell';
+            const isUnread = !item.isRead;
+            return (
+              <TouchableOpacity
+                style={[styles.feedItem, { backgroundColor: isUnread ? (isDark ? '#1a2744' : '#f0fdf4') : colors.surface, borderColor: colors.border }]}
+                onPress={() => {
+                  if (isUnread) handleMarkRead(item._id);
+                  if (item.relatedId && ['booking_accepted','booking_rejected','booking_update','cancellation_alert','payment_confirmation','deposit_paid','booking_reminder'].includes(item.notifType)) {
+                    if (navigationRef.isReady()) {
+                      navigationRef.navigate('Bookings' as never, { screen: 'BookingDetail', params: { bookingId: item.relatedId } } as never);
+                    }
+                  }
+                }}
+              >
+                <View style={[styles.feedIconWrap, { backgroundColor: isUnread ? colors.primary : colors.section }]}>
+                  <MaterialCommunityIcons name={icon as any} size={20} color={isUnread ? '#fff' : colors.muted} />
+                </View>
+                <View style={styles.feedText}>
+                  <Text style={[styles.feedTitle, { color: colors.text, fontWeight: isUnread ? '700' : '500' }]}>{item.title}</Text>
+                  <Text style={[styles.feedBody, { color: colors.muted }]}>{item.message}</Text>
+                  <Text style={[styles.feedTime, { color: colors.muted }]}>{new Date(item.createdAt).toLocaleString()}</Text>
+                </View>
+                {isUnread && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
+              </TouchableOpacity>
+            );
+          }}
         />
-      </ScrollView>
+      ) : (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+          {/* Email & Newsletter */}
+          <Text style={[styles.sectionLabel, { color: colors.muted }]}>EMAIL</Text>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.row}>
+              <View style={styles.rowText}>
+                <Text style={[styles.rowTitle, { color: colors.text }]}>Email notifications</Text>
+                <Text style={[styles.rowBody, { color: colors.muted }]}>Booking updates and service reminders.</Text>
+              </View>
+              {renderSwitch(emailEnabled, setEmailEnabled)}
+            </View>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={styles.row}>
+              <View style={styles.rowText}>
+                <Text style={[styles.rowTitle, { color: colors.text }]}>Newsletter emails</Text>
+                <Text style={[styles.rowBody, { color: colors.muted }]}>Tips, updates, and new service alerts.</Text>
+              </View>
+              {renderSwitch(newslettersEnabled, setNewslettersEnabled)}
+            </View>
+          </View>
+
+          {/* Push Notifications */}
+          <Text style={[styles.sectionLabel, { color: colors.muted }]}>PUSH NOTIFICATIONS</Text>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            {NOTIFICATION_TYPES.map((item, index) => (
+              <View key={item.key}>
+                <View style={styles.row}>
+                  <MaterialCommunityIcons
+                    name={item.icon as any}
+                    size={22}
+                    color={colors.primary}
+                    style={styles.icon}
+                  />
+                  <View style={styles.rowText}>
+                    <Text style={[styles.rowTitle, { color: colors.text }]}>{item.title}</Text>
+                    <Text style={[styles.rowBody, { color: colors.muted }]}>{item.body}</Text>
+                  </View>
+                  {renderSwitch(prefs[item.key], () => togglePref(item.key))}
+                </View>
+                {index < NOTIFICATION_TYPES.length - 1 && (
+                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                )}
+              </View>
+            ))}
+          </View>
+
+          <Button
+            title={isSaving ? 'Saving...' : 'Save preferences'}
+            onPress={handleSave}
+            variant="primary"
+            fullWidth
+            isLoading={isSaving}
+          />
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { padding: 16, paddingBottom: 96 },
-  header: { borderRadius: 28, padding: 22, marginBottom: 20 },
+  content: { padding: 16, paddingBottom: 40 },
+  emptyContainer: { flexGrow: 1 },
+  header: { borderRadius: 28, padding: 22, marginBottom: 4, margin: 16 },
   backButton: {
     width: 44, height: 44, borderRadius: 999,
     backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center', justifyContent: 'center', marginBottom: 14,
   },
   title: { color: '#fff', fontSize: 24, fontWeight: '800', marginBottom: 6 },
-  subtitle: { color: 'rgba(255,255,255,0.9)', fontSize: 13, lineHeight: 20 },
+  subtitle: { color: 'rgba(255,255,255,0.9)', fontSize: 13, lineHeight: 20, marginBottom: 14 },
+  tabs: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 12, padding: 3 },
+  tab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 10 },
+  tabActive: { backgroundColor: '#fff' },
+  tabText: { color: 'rgba(255,255,255,0.8)', fontWeight: '600', fontSize: 13 },
+  tabTextActive: { color: '#1f7a4d', fontWeight: '800' },
   sectionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 8, marginLeft: 4 },
   card: { borderRadius: 20, borderWidth: 1, paddingHorizontal: 16, marginBottom: 20 },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
@@ -265,4 +393,15 @@ const styles = StyleSheet.create({
   rowBody: { fontSize: 13, lineHeight: 18 },
   icon: { marginRight: 12 },
   divider: { height: 1, marginHorizontal: -16 },
+  markAllBtn: { alignSelf: 'flex-end', marginBottom: 8, paddingHorizontal: 4 },
+  markAllText: { fontSize: 13, fontWeight: '700' },
+  feedItem: { flexDirection: 'row', alignItems: 'flex-start', borderRadius: 16, borderWidth: 1, padding: 14, marginBottom: 10 },
+  feedIconWrap: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  feedText: { flex: 1 },
+  feedTitle: { fontSize: 14, marginBottom: 2 },
+  feedBody: { fontSize: 13, lineHeight: 18, marginBottom: 4 },
+  feedTime: { fontSize: 11 },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, marginTop: 4 },
+  emptyState: { alignItems: 'center', justifyContent: 'center', flex: 1, paddingTop: 60 },
+  emptyText: { marginTop: 12, fontSize: 15 },
 });

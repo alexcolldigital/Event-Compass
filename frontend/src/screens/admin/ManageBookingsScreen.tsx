@@ -26,6 +26,12 @@ const ManageBookingsScreen = () => {
   const [actionModal, setActionModal] = useState<{ booking: any; type: 'accept' | 'reject' } | null>(null);
   const [actionNote, setActionNote] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   useEffect(() => { loadBookings(); }, []);
   useEffect(() => { filterBookings(); }, [searchText, filterStatus, bookings]);
@@ -78,8 +84,9 @@ const ManageBookingsScreen = () => {
               const response = await adminAPI.completeBooking(booking._id);
               setBookings((prev) => prev.map((b) => b._id === booking._id ? response.booking : b));
               setSelectedBooking(null);
+              showToast('Booking completed successfully');
             } catch (err) {
-              Alert.alert('Error', err.message || 'Failed to complete booking');
+              showToast(err.message || 'Failed to complete booking', 'error');
             }
           },
         },
@@ -104,9 +111,9 @@ const ManageBookingsScreen = () => {
       setBookings((prev) => prev.map((b) => b._id === actionModal.booking._id ? response.booking : b));
       setSelectedBooking(null);
       setActionModal(null);
-      Alert.alert('Done', actionModal.type === 'accept' ? 'Booking accepted.' : 'Booking rejected.');
+      showToast(actionModal.type === 'accept' ? 'Booking accepted successfully' : 'Booking rejected successfully');
     } catch (err) {
-      Alert.alert('Error', err.message || 'Action failed');
+      showToast(err.message || 'Action failed', 'error');
     } finally {
       setActionLoading(false);
     }
@@ -346,6 +353,14 @@ const ManageBookingsScreen = () => {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Toast */}
+      {toast && (
+        <View style={[ms.toast, { backgroundColor: toast.type === 'success' ? '#15803d' : '#dc2626' }]}>
+          <MaterialCommunityIcons name={toast.type === 'success' ? 'check-circle' : 'alert-circle'} size={16} color="#fff" />
+          <Text style={[ms.toastText, { fontFamily: appFont }]}>{toast.msg}</Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -362,4 +377,6 @@ const ms = StyleSheet.create({
   noteInput: { borderWidth: 1, borderRadius: 12, padding: 12, fontSize: 14, minHeight: 80, textAlignVertical: 'top', marginBottom: 14 },
   btn: { borderRadius: 14, paddingVertical: 13, alignItems: 'center' },
   btnText: { fontSize: 15, fontWeight: '800' },
+  toast: { position: 'absolute', bottom: 24, left: 16, right: 16, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12 },
+  toastText: { color: '#fff', fontSize: 13, fontWeight: '700', flex: 1 },
 });

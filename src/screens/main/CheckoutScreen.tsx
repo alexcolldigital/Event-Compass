@@ -8,6 +8,12 @@ import Button from '../../components/Button.jsx';
 import { bookingAPI, adminAPI } from '../../services/api.js';
 import { buildCheckoutBookingDetails } from '../../utils/cartUtils';
 
+const PAYMENT_PLANS = [
+  { value: 'full', label: 'Full Payment', description: 'Pay 100% now' },
+  { value: 'split_50_50', label: '50/50 Split', description: 'Pay 50% now, 50% before event' },
+  { value: 'deposit_20', label: '20% Deposit', description: 'Pay 20% now, 80% before event' },
+];
+
 const CheckoutScreen = ({ navigation }: { navigation: any }) => {
   const { items, removeItem, updateItemQuantity, clearCart, getTotalAmount } = useCartStore();
   const { theme } = useTheme();
@@ -33,6 +39,8 @@ const CheckoutScreen = ({ navigation }: { navigation: any }) => {
   };
 
   const totalAmount = useMemo(() => getTotalAmount(), [items, getTotalAmount]);
+  const porItems = items.filter((i) => i.priceOnRequest);
+  const hasPorItems = porItems.length > 0;
 
   const [eventDate, setEventDate] = useState(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
   const [eventTime, setEventTime] = useState('12:00');
@@ -40,6 +48,15 @@ const CheckoutScreen = ({ navigation }: { navigation: any }) => {
   const [locationCity, setLocationCity] = useState('');
   const [locationAddress, setLocationAddress] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [paymentPlan, setPaymentPlan] = useState<'full' | 'split_50_50' | 'deposit_20'>('full');
+
+  const grandTotal = useMemo(() => Math.round(totalAmount * (1 + serviceFeeRate / 100)), [totalAmount, serviceFeeRate]);
+  const amountDueNow = useMemo(() => {
+    if (paymentPlan === 'split_50_50') return Math.round(grandTotal * 0.5);
+    if (paymentPlan === 'deposit_20') return Math.round(grandTotal * 0.2);
+    return grandTotal;
+  }, [paymentPlan, grandTotal]);
+  const balanceDue = grandTotal - amountDueNow;
 
   const handlePlaceOrder = async () => {
     if (items.length === 0) {
@@ -73,7 +90,7 @@ const CheckoutScreen = ({ navigation }: { navigation: any }) => {
           price: item.price || 0,
           name: item.name,
         })),
-        bookingDetails,
+        bookingDetails: { ...bookingDetails, paymentPlan },
       });
 
       clearCart();
@@ -188,7 +205,11 @@ const CheckoutScreen = ({ navigation }: { navigation: any }) => {
               <View style={styles.itemRow}>
                 <View style={styles.itemInfo}>
                   <Text style={[styles.itemTitle, { color: colors.text }]}>{item.name}</Text>
-                  <Text style={[styles.itemMeta, { color: colors.muted }]}>₦{(item.price || 0).toLocaleString()} × {item.quantity}</Text>
+                  {item.priceOnRequest ? (
+                    <Text style={[styles.itemMeta, { color: '#c2410c' }]}>Price not static — set on confirmation</Text>
+                  ) : (
+                    <Text style={[styles.itemMeta, { color: colors.muted }]}>₦{(item.price || 0).toLocaleString()} × {item.quantity}</Text>
+                  )}
                 </View>
                 <TouchableOpacity onPress={() => removeItem(item.serviceId)} style={styles.removeButton}>
                   <MaterialCommunityIcons name="trash-can-outline" size={20} color="#dc2626" />
@@ -205,22 +226,59 @@ const CheckoutScreen = ({ navigation }: { navigation: any }) => {
               </View>
             </View>
           ))}
-          <View style={[styles.orderSummary, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
-            <Text style={[styles.summaryTitle, { color: colors.text }]}>Order Summary</Text>
+          <View style={[styles.orderSummary, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.summaryTitle, { color: colors.text }]}>Payment Plan</Text>
+            {PAYMENT_PLANS.map((plan) => (
+              <TouchableOpacity
+                key={plan.value}
+                onPress={() => setPaymentPlan(plan.value as any)}
+                style={[styles.planOption, { borderColor: paymentPlan === plan.value ? colors.primary : colors.border, backgroundColor: paymentPlan === plan.value ? (theme === 'dark' ? 'rgba(52,211,153,0.1)' : '#f0fdf4') : colors.surface }]}
+              >
+                <View style={[styles.planRadio, { borderColor: paymentPlan === plan.value ? colors.primary : colors.border }]}>
+                  {paymentPlan === plan.value && <View style={[styles.planRadioInner, { backgroundColor: colors.primary }]} />}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.planLabel, { color: colors.text }]}>{plan.label}</Text>
+                  <Text style={[styles.planDesc, { color: colors.muted }]}>{plan.description}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+
+            <Text style={[styles.summaryTitle, { color: colors.text, marginTop: 12 }]}>Order Summary</Text>
+            {hasPorItems && (
+              <View style={[styles.porWarning, { backgroundColor: '#fff7ed', borderColor: '#fed7aa' }]}>
+                <MaterialCommunityIcons name="information-outline" size={16} color="#c2410c" />
+                <Text style={[styles.porWarningText, { color: '#c2410c' }]}>
+                  {porItems.map((i) => i.name).join(', ')} {porItems.length === 1 ? 'has' : 'have'} no fixed price. The cost will be set by the admin when confirming your booking and added to your total.
+                </Text>
+              </View>
+            )}
             <View style={styles.summaryRow}>
               <Text style={[styles.summaryText, { color: colors.muted }]}>Subtotal</Text>
-              <Text style={[styles.summaryText, { color: colors.text }]}>₦{totalAmount.toLocaleString()}</Text>
+              <Text style={[styles.summaryText, { color: colors.text }]}>₦{totalAmount.toLocaleString()}{hasPorItems ? ' + TBD' : ''}</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={[styles.summaryText, { color: colors.muted }]}>Service & Delivery Fee ({serviceFeeRate}%)</Text>
               <Text style={[styles.summaryText, { color: colors.text }]}>₦{Math.round(totalAmount * serviceFeeRate / 100).toLocaleString()}</Text>
             </View>
-            <View style={styles.summaryRow}> 
-              <Text style={[styles.totalText, { color: colors.primary }]}>Total</Text>
-              <Text style={[styles.totalText, { color: colors.primary }]}>₦{Math.round(totalAmount * (1 + serviceFeeRate / 100)).toLocaleString()}</Text>
+            <View style={styles.summaryRow}>
+              <Text style={[styles.totalText, { color: colors.primary }]}>Grand Total</Text>
+              <Text style={[styles.totalText, { color: colors.primary }]}>₦{grandTotal.toLocaleString()}{hasPorItems ? ' + TBD' : ''}</Text>
             </View>
+            {paymentPlan !== 'full' && (
+              <>
+                <View style={[styles.summaryRow, { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border }]}>
+                  <Text style={[styles.summaryText, { color: colors.muted }]}>Due now ({paymentPlan === 'deposit_20' ? '20%' : '50%'})</Text>
+                  <Text style={[styles.summaryText, { color: '#15803d', fontWeight: '800' }]}>₦{amountDueNow.toLocaleString()}</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={[styles.summaryText, { color: colors.muted }]}>Balance ({paymentPlan === 'deposit_20' ? '80%' : '50%'}) — due 2 days before event</Text>
+                  <Text style={[styles.summaryText, { color: '#c2410c', fontWeight: '800' }]}>₦{balanceDue.toLocaleString()}</Text>
+                </View>
+              </>
+            )}
           </View>
-          <Button title="Place booking order" onPress={handlePlaceOrder} isLoading={isLoading} fullWidth variant="primary" />
+          <Button title={paymentPlan === 'full' ? 'Place booking order' : `Place order — Pay ₦${amountDueNow.toLocaleString()} now`} onPress={handlePlaceOrder} isLoading={isLoading} fullWidth variant="primary" />
         </ScrollView>
       )}
     </SafeAreaView>
@@ -250,11 +308,18 @@ const styles = StyleSheet.create({
   emptyState: { flex: 1, margin: 24, borderWidth: 1, borderRadius: 20, padding: 24, alignItems: 'center', justifyContent: 'center' },
   emptyText: { fontSize: 18, fontWeight: '800', marginTop: 16 },
   emptySubtext: { marginTop: 8, fontSize: 14, textAlign: 'center', maxWidth: 260 },
+  porWarning: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderWidth: 1, borderRadius: 12, padding: 10, marginBottom: 10 },
+  porWarningText: { flex: 1, fontSize: 13, fontWeight: '600', lineHeight: 18 },
   eventForm: { margin: 16, marginBottom: 0, borderWidth: 1, borderRadius: 20, padding: 16, gap: 10 },
   formTitle: { fontSize: 15, fontWeight: '800', marginBottom: 4 },
   formRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 },
   formInput: { flex: 1, fontSize: 14 },
   formValue: { flex: 1, fontSize: 14 },
+  planOption: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1.5, borderRadius: 14, padding: 12, marginBottom: 8 },
+  planRadio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  planRadioInner: { width: 10, height: 10, borderRadius: 5 },
+  planLabel: { fontSize: 14, fontWeight: '800' },
+  planDesc: { fontSize: 12, marginTop: 2 },
 });
 
 export default CheckoutScreen;

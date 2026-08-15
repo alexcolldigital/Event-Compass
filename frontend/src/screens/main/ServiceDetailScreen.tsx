@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, Text, Image, TouchableOpacity, Alert, StyleSheet, Platform, Animated } from 'react-native';
+import { View, ScrollView, Text, Image, TouchableOpacity, Alert, StyleSheet, Platform, Animated, TextInput } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useServiceStore } from '../../context/serviceStore.js';
@@ -42,6 +42,22 @@ const ServiceDetailScreen = () => {
   };
 
   const [quantity, setQuantity] = useState(1);
+  const [quantityInput, setQuantityInput] = useState('1');
+  const [editingQty, setEditingQty] = useState(false);
+
+  const applyQuantity = (raw: string) => {
+    const n = parseInt(raw, 10);
+    const safe = isNaN(n) || n < 1 ? 1 : n;
+    setQuantity(safe);
+    setQuantityInput(String(safe));
+    setEditingQty(false);
+  };
+
+  const stepQuantity = (delta: number) => {
+    const next = Math.max(1, quantity + delta);
+    setQuantity(next);
+    setQuantityInput(String(next));
+  };
   const [bookingLocation] = useState({
     country: 'Nigeria',
     state: '',
@@ -256,10 +272,32 @@ const ServiceDetailScreen = () => {
 
         <Card variant="outlined" style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Complete your booking</Text>
-          <View style={styles.selectorRow}> 
-            <TouchableOpacity onPress={() => setQuantity(Math.max(1, quantity - 1))} style={styles.stepButton}><MaterialCommunityIcons name="minus" size={18} color={colors.primary} /></TouchableOpacity>
-            <Text style={[styles.quantity, { color: colors.text }]}>{quantity}</Text>
-            <TouchableOpacity onPress={() => setQuantity(quantity + 1)} style={styles.stepButton}><MaterialCommunityIcons name="plus" size={18} color={colors.primary} /></TouchableOpacity>
+          <View style={styles.selectorRow}>
+            <Text style={[styles.selectorLabel, { color: colors.muted }]}>Quantity</Text>
+            <View style={styles.qtyControl}>
+              <TouchableOpacity onPress={() => stepQuantity(-1)} style={[styles.stepButton, { borderColor: colors.border }]}>
+                <MaterialCommunityIcons name="minus" size={18} color={colors.primary} />
+              </TouchableOpacity>
+              {editingQty ? (
+                <TextInput
+                  style={[styles.qtyInput, { color: colors.text, borderColor: colors.primary }]}
+                  value={quantityInput}
+                  onChangeText={setQuantityInput}
+                  keyboardType="number-pad"
+                  autoFocus
+                  selectTextOnFocus
+                  onBlur={() => applyQuantity(quantityInput)}
+                  onSubmitEditing={() => applyQuantity(quantityInput)}
+                />
+              ) : (
+                <TouchableOpacity onPress={() => { setQuantityInput(String(quantity)); setEditingQty(true); }}>
+                  <Text style={[styles.quantity, { color: colors.text }]}>{quantity}</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity onPress={() => stepQuantity(1)} style={[styles.stepButton, { borderColor: colors.border }]}>
+                <MaterialCommunityIcons name="plus" size={18} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
           </View>
           <View style={[styles.dateBox, { backgroundColor: colors.surfaceAlt }]}> 
             <Text style={[styles.dateTitle, { color: colors.text }]}>Event date</Text>
@@ -369,8 +407,11 @@ const styles = StyleSheet.create({
   packageTitle: { fontSize: 14, fontWeight: '700', fontFamily: appFont },
   packagePrice: { fontSize: 14, fontWeight: '800', marginTop: 4 },
   selectorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  stepButton: { width: 42, height: 42, borderRadius: 999, backgroundColor: '#ecfdf3', alignItems: 'center', justifyContent: 'center' },
-  quantity: { fontSize: 20, fontWeight: '800', fontFamily: appFont },
+  selectorLabel: { fontSize: 13, fontWeight: '700', fontFamily: appFont },
+  qtyControl: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  stepButton: { width: 42, height: 42, borderRadius: 999, backgroundColor: '#ecfdf3', borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  quantity: { fontSize: 20, fontWeight: '800', fontFamily: appFont, minWidth: 36, textAlign: 'center' },
+  qtyInput: { fontSize: 20, fontWeight: '800', fontFamily: appFont, minWidth: 56, textAlign: 'center', borderWidth: 1.5, borderRadius: 10, paddingVertical: 4, paddingHorizontal: 8 },
   dateBox: { borderRadius: 16, padding: 12, marginBottom: 10 },
   dateTitle: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', fontFamily: appFont },
   dateValue: { fontSize: 15, fontWeight: '800', marginTop: 4 },

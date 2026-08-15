@@ -90,7 +90,13 @@ export const authAPI = {
   getDevices: () => apiClient.get('/auth/devices'),
   addDevice: (deviceId, deviceName) => apiClient.post('/auth/devices', { deviceId, deviceName }),
   removeDevice: (deviceId) => apiClient.delete(`/auth/devices/${deviceId}`),
+  // Phone verification
+  sendPhoneOtp: (phoneNumber) => apiClient.post('/auth/send-phone-otp', phoneNumber ? { phoneNumber } : {}),
+  verifyPhone: (otp) => apiClient.post('/auth/verify-phone', { otp }),
   saveFcmToken: (fcmToken) => apiClient.post('/auth/fcm-token', { fcmToken }),
+  getMyNotifications: (params) => apiClient.get('/auth/notifications', { params }),
+  markNotificationRead: (id) => apiClient.patch(`/auth/notifications/${id}/read`),
+  markAllNotificationsRead: () => apiClient.patch('/auth/notifications/read-all'),
 };
 
 // Service API calls
@@ -104,7 +110,6 @@ export const serviceAPI = {
     apiClient.post(`/services/${id}/upload-media`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
-  deleteServiceImage: (id, publicId) => apiClient.delete(`/services/${id}/images/${publicId}`),
   updateService: (id, data) => apiClient.put(`/services/${id}`, data),
   deleteService: (id) => apiClient.delete(`/services/${id}`),
   searchServices: (query) => apiClient.get('/services/search', { params: query }),
@@ -117,8 +122,8 @@ export const bookingAPI = {
   checkoutCart: (data) => apiClient.post('/bookings/checkout', data),
   createBookingPaymentSession: (bookingId, origin, gateway) =>
     apiClient.post(`/bookings/${bookingId}/payment-session`, { origin, gateway }),
-  markBookingPaymentSuccess: (bookingId, paymentType = 'full') =>
-    apiClient.post(`/bookings/${bookingId}/payment-success`, { paymentType }),
+  markBookingPaymentSuccess: (bookingId) =>
+    apiClient.post(`/bookings/${bookingId}/payment-success`),
   getBookingById: (id) => apiClient.get(`/bookings/${id}`),
   getMyClientBookings: (query) =>
     apiClient.get('/bookings/client/my-bookings', { params: query }),
@@ -130,11 +135,6 @@ export const bookingAPI = {
   completeBooking: (id) => apiClient.patch(`/bookings/${id}/complete`),
   releaseEscrow: (id) => apiClient.patch(`/bookings/${id}/release-escrow`),
   disputeEscrow: (id, data) => apiClient.patch(`/bookings/${id}/dispute-escrow`, data),
-  payBalance: (id, data) => apiClient.patch(`/bookings/${id}/pay-balance`, data),
-  requestReschedule: (id, data) => apiClient.patch(`/bookings/${id}/reschedule`, data),
-  respondReschedule: (id, data) => apiClient.patch(`/bookings/${id}/reschedule/respond`, data),
-  requestRefund: (id, data) => apiClient.patch(`/bookings/${id}/refund`, data),
-  respondRefund: (id, data) => apiClient.patch(`/bookings/${id}/refund/respond`, data),
 };
 
 // Admin API calls
@@ -159,16 +159,11 @@ export const adminAPI = {
   deleteService: (id) => apiClient.delete(`/admin/services/${id}`),
   toggleFeatured: (id) => apiClient.patch(`/admin/services/${id}/toggle-featured`),
   toggleActive: (id) => apiClient.patch(`/admin/services/${id}/toggle-active`),
-  uploadServiceMedia: (id, formData) =>
-    apiClient.post(`/admin/services/${id}/upload-media`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
-  deleteServiceImage: (id, publicId) => apiClient.delete(`/admin/services/${id}/images/${publicId}`),
 
   // Bookings
   getAllBookings: (query) => apiClient.get('/admin/bookings', { params: query }),
   getBookingById: (id) => apiClient.get(`/admin/bookings/${id}`),
-  confirmBooking: (id, data) => apiClient.patch(`/admin/bookings/${id}/confirm`, data),
+  confirmBooking: (id, data?) => apiClient.patch(`/admin/bookings/${id}/confirm`, data || {}),
   rejectBooking: (id, data) => apiClient.patch(`/admin/bookings/${id}/reject`, data),
   cancelBooking: (id, data) => apiClient.patch(`/admin/bookings/${id}/cancel`, data),
   completeBooking: (id) => apiClient.patch(`/admin/bookings/${id}/complete`),

@@ -11,6 +11,7 @@ export type AuthStackParamList = {
   Register: undefined;
   RegisterProvider: undefined;
   ForgotPassword: undefined;
+  Verify: { mode: 'email' | 'phone'; token?: string; phoneNumber?: string };
 };
 
 // Main Stack (Bottom Tabs)

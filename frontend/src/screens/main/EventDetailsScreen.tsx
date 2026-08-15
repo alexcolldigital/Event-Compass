@@ -36,6 +36,20 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
   const isDark = theme === 'dark';
   const { items, removeItem, updateItemQuantity, getTotalAmount, eventDraft, setEventDraft } = useCartStore();
 
+  // Per-item editing state: serviceId -> raw string being typed
+  const [editingQty, setEditingQty] = useState<Record<string, string>>({});
+
+  const startEditQty = (serviceId: string, current: number) =>
+    setEditingQty((p) => ({ ...p, [serviceId]: String(current) }));
+
+  const applyQty = (serviceId: string) => {
+    const raw = editingQty[serviceId] ?? '';
+    const n = parseInt(raw, 10);
+    if (!isNaN(n) && n >= 1) updateItemQuantity(serviceId, n);
+    else if (!isNaN(n) && n < 1) removeItem(serviceId);
+    setEditingQty((p) => { const next = { ...p }; delete next[serviceId]; return next; });
+  };
+
   const colors = {
     bg: isDark ? '#050816' : '#f8fafc',
     surface: isDark ? '#111827' : '#ffffff',
@@ -169,7 +183,22 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
                   >
                     <MaterialCommunityIcons name={item.quantity <= 1 ? 'trash-can-outline' : 'minus'} size={14} color={item.quantity <= 1 ? '#ef4444' : colors.primary} />
                   </TouchableOpacity>
-                  <Text style={[styles.qtyText, { color: colors.text, fontFamily: appFont }]}>{item.quantity}</Text>
+                  {editingQty[item.serviceId] !== undefined ? (
+                    <TextInput
+                      style={[styles.qtyInput, { color: colors.text, borderColor: colors.primary }]}
+                      value={editingQty[item.serviceId]}
+                      onChangeText={(v) => setEditingQty((p) => ({ ...p, [item.serviceId]: v }))}
+                      keyboardType="number-pad"
+                      autoFocus
+                      selectTextOnFocus
+                      onBlur={() => applyQty(item.serviceId)}
+                      onSubmitEditing={() => applyQty(item.serviceId)}
+                    />
+                  ) : (
+                    <TouchableOpacity onPress={() => startEditQty(item.serviceId, item.quantity)}>
+                      <Text style={[styles.qtyText, { color: colors.text, fontFamily: appFont }]}>{item.quantity}</Text>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
                     onPress={() => updateItemQuantity(item.serviceId, item.quantity + 1)}
                     style={[styles.qtyBtn, { borderColor: colors.border }]}
@@ -372,6 +401,7 @@ const styles = StyleSheet.create({
   cartQtyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   qtyBtn: { width: 28, height: 28, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   qtyText: { fontSize: 13, fontWeight: '700', minWidth: 18, textAlign: 'center' },
+  qtyInput: { fontSize: 13, fontWeight: '700', minWidth: 36, textAlign: 'center', borderWidth: 1.5, borderRadius: 8, paddingVertical: 2, paddingHorizontal: 6 },
   cartItemSubtotal: { fontSize: 13, fontWeight: '800', minWidth: 70, textAlign: 'right' },
   cartTotal: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, paddingTop: 10, marginTop: 4 },
   cartTotalLabel: { fontSize: 13, fontWeight: '700' },

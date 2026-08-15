@@ -58,6 +58,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
     if (!validateForm()) return;
     try {
       await register(formData);
+      navigation.navigate('Verify', { mode: 'email' });
     } catch (err) {
       console.error('Register error:', err);
     }

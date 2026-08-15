@@ -24,7 +24,7 @@ import Loading from '../../components/Loading.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { Card } from '../../components/Card.jsx';
 import { useTheme } from '../../context/ThemeContext';
-import { BOOKING_STATUS, USER_ROLES } from '../../utils/constants.js';
+import { BOOKING_STATUS, USER_ROLES, PAYMENT_PLAN } from '../../utils/constants.js';
 import { formatCurrency, formatDate, formatDateTime, getStatusColor } from '../../utils/helpers.js';
 
 const BookingDetailScreen = () => {
@@ -217,6 +217,17 @@ const BookingDetailScreen = () => {
   const isProvider = user?.role === USER_ROLES.SERVICE_PROVIDER;
   const isClient = user?.role === USER_ROLES.CLIENT;
 
+  // Payment plan helpers
+  const paymentPlan = currentBooking?.paymentPlan;
+  const isSplitPlan = paymentPlan === PAYMENT_PLAN.SPLIT_50_50 || paymentPlan === PAYMENT_PLAN.DEPOSIT_20;
+  const depositAmount = currentBooking?.depositAmount || 0;
+  const balanceDue = currentBooking?.balanceDue || 0;
+  const depositPaid = currentBooking?.depositPaid || false;
+  const balancePaid = currentBooking?.balancePaid || false;
+  const balanceDeadline = currentBooking?.balanceDeadline;
+  const isBalanceOverdue = balanceDeadline && !balancePaid && new Date() > new Date(balanceDeadline);
+  const planLabel = paymentPlan === PAYMENT_PLAN.SPLIT_50_50 ? '50/50 Split' : paymentPlan === PAYMENT_PLAN.DEPOSIT_20 ? '20% Deposit' : 'Full Payment';
+
   if (isLoading) {
     return <Loading fullScreen message="Loading booking details..." />;
   }
@@ -345,6 +356,18 @@ const BookingDetailScreen = () => {
         <Card variant="filled" style={[styles.sectionCard, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}> 
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Pricing summary</Text>
 
+          {currentBooking.adminSetPrices && currentBooking.adminSetPrices.length > 0 && (
+            <View style={[styles.adminPriceBox, { backgroundColor: '#fff7ed', borderColor: '#fed7aa' }]}>
+              <Text style={[styles.adminPriceTitle, { color: '#c2410c' }]}>Admin-set prices (added to total)</Text>
+              {currentBooking.adminSetPrices.map((sp: any, i: number) => (
+                <View key={i} style={styles.priceRow}>
+                  <Text style={[styles.priceLabel, { color: '#92400e' }]}>{sp.serviceName || 'Service'}</Text>
+                  <Text style={[styles.priceValue, { color: '#c2410c', fontWeight: '800' }]}>{formatCurrency(sp.price)}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
           <View style={styles.priceRow}> 
             <Text style={[styles.priceLabel, { color: colors.muted }]}>Base price</Text>
             <Text style={[styles.priceValue, { color: colors.text }]}>{formatCurrency(basePrice)}</Text>
@@ -380,6 +403,44 @@ const BookingDetailScreen = () => {
             </View>
           </View>
         </Card>
+
+        {/* Payment Plan Breakdown */}
+        {isSplitPlan && (
+          <Card variant="outlined" style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Payment plan — {planLabel}</Text>
+
+            <View style={styles.priceRow}>
+              <Text style={[styles.priceLabel, { color: colors.muted }]}>Total amount</Text>
+              <Text style={[styles.priceValue, { color: colors.text }]}>{formatCurrency(totalAmount)}</Text>
+            </View>
+
+            <View style={styles.priceRow}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[styles.priceLabel, { color: colors.muted }]}>Deposit ({paymentPlan === PAYMENT_PLAN.DEPOSIT_20 ? '20%' : '50%'})</Text>
+                {depositPaid && <View style={{ backgroundColor: '#dcfce7', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 2 }}><Text style={{ fontSize: 10, fontWeight: '800', color: '#15803d' }}>PAID</Text></View>}
+              </View>
+              <Text style={[styles.priceValue, { color: depositPaid ? '#15803d' : colors.text }]}>{formatCurrency(depositAmount)}</Text>
+            </View>
+
+            <View style={[styles.priceRow, styles.totalRow]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[styles.totalLabel, { color: colors.text }]}>Balance due ({paymentPlan === PAYMENT_PLAN.DEPOSIT_20 ? '80%' : '50%'})</Text>
+                {balancePaid && <View style={{ backgroundColor: '#dcfce7', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 2 }}><Text style={{ fontSize: 10, fontWeight: '800', color: '#15803d' }}>PAID</Text></View>}
+                {isBalanceOverdue && <View style={{ backgroundColor: '#fee2e2', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 2 }}><Text style={{ fontSize: 10, fontWeight: '800', color: '#dc2626' }}>OVERDUE</Text></View>}
+              </View>
+              <Text style={[styles.totalValue, { color: balancePaid ? '#15803d' : isBalanceOverdue ? '#dc2626' : colors.primary }]}>{formatCurrency(balanceDue)}</Text>
+            </View>
+
+            {balanceDeadline && !balancePaid && (
+              <View style={[styles.helperBox, { backgroundColor: isBalanceOverdue ? '#fef2f2' : '#fff7ed', borderColor: isBalanceOverdue ? '#fecaca' : '#fed7aa', marginTop: 8 }]}>
+                <MaterialCommunityIcons name="clock-alert-outline" size={16} color={isBalanceOverdue ? '#dc2626' : '#c2410c'} />
+                <Text style={{ fontSize: 13, color: isBalanceOverdue ? '#dc2626' : '#9a2c00', marginLeft: 6, flex: 1, lineHeight: 18 }}>
+                  Balance must be paid by {formatDate(balanceDeadline)} (2 days before your event)
+                </Text>
+              </View>
+            )}
+          </Card>
+        )}
 
         <Card variant="outlined" style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Party details</Text>
@@ -450,7 +511,18 @@ const BookingDetailScreen = () => {
 
           {isClient && !isPending && !isCancelled && currentBooking.payment?.status !== 'completed' ? (
             <View style={styles.buttonStack}>
-              <Button title="Pay now" onPress={handleSelectGatewayAndPay} variant="primary" fullWidth isLoading={isPaymentLoading} />
+              {isSplitPlan && depositPaid && !balancePaid ? (
+                <>
+                  <View style={[styles.helperBox, { backgroundColor: '#eff6ff', borderColor: '#bfdbfe', marginBottom: 8 }]}>
+                    <Text style={{ fontSize: 13, color: '#1d4ed8', lineHeight: 18 }}>
+                      Deposit paid ✔️  Balance of {formatCurrency(balanceDue)} is due by {balanceDeadline ? formatDate(balanceDeadline) : '2 days before event'}.
+                    </Text>
+                  </View>
+                  <Button title={`Pay balance — ${formatCurrency(balanceDue)}`} onPress={handleSelectGatewayAndPay} variant="primary" fullWidth isLoading={isPaymentLoading} />
+                </>
+              ) : (
+                <Button title={isSplitPlan ? `Pay deposit — ${formatCurrency(depositAmount)}` : 'Pay now'} onPress={handleSelectGatewayAndPay} variant="primary" fullWidth isLoading={isPaymentLoading} />
+              )}
               <Button title="Cancel booking" onPress={() => setShowCancelForm(true)} variant="danger" fullWidth />
             </View>
           ) : null}
@@ -538,8 +610,8 @@ const styles = StyleSheet.create({
   contactButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: 16, paddingVertical: 12, marginRight: 8 },
   contactButtonText: { fontSize: 14, fontWeight: '700', marginLeft: 6 },
   buttonStack: { marginTop: 4 },
-  helperBox: { borderRadius: 16, borderWidth: 1, padding: 12, marginBottom: 10 },
-  helperText: { fontSize: 13, color: '#9a2c00', lineHeight: 18 },
+  helperBox: { borderRadius: 16, borderWidth: 1, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'flex-start' },
+  helperText: { fontSize: 13, color: '#9a2c00', lineHeight: 18, flex: 1 },
   cancelBox: { borderWidth: 1, borderRadius: 18, padding: 12, marginTop: 12 },
   textInputWrap: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 10 },
   textInput: { minHeight: 84, fontSize: 14 },
@@ -548,6 +620,8 @@ const styles = StyleSheet.create({
   secondaryActionText: { fontSize: 14, fontWeight: '700' },
   primaryAction: { flex: 1, backgroundColor: '#dc2626', borderRadius: 14, paddingVertical: 12, alignItems: 'center' },
   primaryActionText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  adminPriceBox: { borderWidth: 1, borderRadius: 14, padding: 12, marginBottom: 12 },
+  adminPriceTitle: { fontSize: 13, fontWeight: '800', marginBottom: 8 },
 });
 
 export default BookingDetailScreen;

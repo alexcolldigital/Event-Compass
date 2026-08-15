@@ -4,7 +4,12 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, TextInput, StyleSheet, Platform, Animated } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, TextInput, StyleSheet, Platform, Animated, Dimensions } from 'react-native';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const H_PADDING = 32; // 16 * 2
+const GRID_GAP = 10;
+const COL2_WIDTH = (SCREEN_WIDTH - H_PADDING - GRID_GAP) / 2;
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../context/authStore.js';
 import { useServiceStore } from '../../context/serviceStore.js';
@@ -244,9 +249,9 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Highlights</Text>
           <View style={styles.statsGrid}>
-            <StatCard value={platformStats ? (platformStats.completedBookings >= 1000 ? `${(platformStats.completedBookings / 1000).toFixed(1)}K+` : `${platformStats.completedBookings}+`) : '—'} label="Events Completed" icon={<MaterialCommunityIcons name="calendar-check" size={22} color="#1f7a4d" />} />
-            <StatCard value={platformStats ? (platformStats.totalClients >= 1000 ? `${(platformStats.totalClients / 1000).toFixed(1)}K+` : `${platformStats.totalClients}+`) : '—'} label="Happy Customers" icon={<MaterialCommunityIcons name="account-group" size={22} color="#d97706" />} />
-            <StatCard value={platformStats ? `${platformStats.averageRating}/5` : '—'} label="Average Rating" icon={<MaterialCommunityIcons name="star-circle" size={22} color="#db2777" />} />
+            <StatCard value={platformStats ? (platformStats.completedBookings >= 1000 ? `${(platformStats.completedBookings / 1000).toFixed(1)}K+` : `${platformStats.completedBookings}+`) : '—'} label="Events Completed" icon={<MaterialCommunityIcons name="calendar-check" size={22} color="#1f7a4d" />} style={styles.statCardItem} />
+            <StatCard value={platformStats ? (platformStats.totalClients >= 1000 ? `${(platformStats.totalClients / 1000).toFixed(1)}K+` : `${platformStats.totalClients}+`) : '—'} label="Happy Customers" icon={<MaterialCommunityIcons name="account-group" size={22} color="#d97706" />} style={styles.statCardItem} />
+            <StatCard value={platformStats ? `${platformStats.averageRating}/5` : '—'} label="Average Rating" icon={<MaterialCommunityIcons name="star-circle" size={22} color="#db2777" />} style={styles.statCardItem} />
           </View>
         </View>
 
@@ -259,7 +264,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
           </View>
           <View style={styles.categoryGrid}>
             {featureCategories.slice(0, 5).map((category, index) => (
-              <FeatureCard key={index} icon={category.icon} title={category.title} description={category.description} count={categoryCountMap[category.title] ?? category.count} variant={category.variant} onPress={() => handleCategoryPress(category.title)} style={{ backgroundColor: colors.surface, borderColor: colors.border }} />
+              <FeatureCard key={index} icon={category.icon} title={category.title} description={category.description} count={categoryCountMap[category.title] ?? category.count} variant={category.variant} onPress={() => handleCategoryPress(category.title)} style={[{ backgroundColor: colors.surface, borderColor: colors.border }, styles.categoryCardItem, index === 4 && styles.categoryCardFull]} />
             ))}
           </View>
         </View>
@@ -341,8 +346,11 @@ const styles = StyleSheet.create({
   quickGrid: { flexDirection: 'row', gap: 10 },
   quickCard: { flex: 1, borderRadius: 20, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', minHeight: 104 },
   quickLabel: { color: '#fff', fontSize: 14, fontWeight: '700', marginTop: 8, fontFamily: appFont },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  statsGrid: { flexDirection: 'row', gap: 10 },
+  statCardItem: { flex: 1 },
+  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP },
+  categoryCardItem: { width: COL2_WIDTH },
+  categoryCardFull: { width: '100%' },
   marketplaceGrid: { gap: 12 },
   emptyCard: { borderRadius: 22, borderWidth: 1, paddingVertical: 24, alignItems: 'center', justifyContent: 'center' },
   emptyText: { fontSize: 14, fontWeight: '700', marginTop: 10, fontFamily: appFont },

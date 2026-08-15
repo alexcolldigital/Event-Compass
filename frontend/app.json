@@ -18,7 +18,8 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "bundleUrl": null,
-      "port": 3000
+      "port": 3000,
+      "bundler": "metro"
     },
     "splash": {
       "image": "./assets/splash.png",
@@ -28,6 +29,14 @@
     "scheme": "eventcompass",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light"
+    "userInterfaceStyle": "light",
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Event Compass needs access to your photos to upload service images."
+        }
+      ]
+    ]
   }
 }

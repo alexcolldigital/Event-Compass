@@ -70,6 +70,7 @@ export default function RegisterProviderScreen({ navigation }: RegisterProviderS
     if (!validateForm()) return;
     try {
       await registerProvider(formData);
+      navigation.navigate('Verify', { mode: 'email' });
     } catch (err) {
       console.error('Provider registration error:', err);
     }

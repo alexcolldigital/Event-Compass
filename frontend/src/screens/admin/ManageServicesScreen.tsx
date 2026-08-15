@@ -20,6 +20,7 @@ import {
   StyleSheet,
   Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import Button from '../../components/Button.jsx';
@@ -268,6 +269,7 @@ const ManageServicesScreen = () => {
   });
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingImages, setPendingImages] = useState<{ uri: string; name: string; type: string }[]>([]);
 
   useEffect(() => {
     loadServices();
@@ -380,14 +382,51 @@ const ManageServicesScreen = () => {
     );
   };
 
+  const pickImages = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Please allow access to your photo library.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 0.8,
+      selectionLimit: 10,
+    });
+    if (!result.canceled) {
+      const picked = result.assets.map((a) => ({
+        uri: a.uri,
+        name: a.fileName || `image_${Date.now()}.jpg`,
+        type: (a.mimeType as string) || 'image/jpeg',
+      }));
+      setPendingImages((prev) => [...prev, ...picked].slice(0, 10));
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setPendingImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadImages = async (serviceId: string) => {
+    if (pendingImages.length === 0) return;
+    const fd = new FormData();
+    pendingImages.forEach((img) => {
+      fd.append('images', { uri: img.uri, name: img.name, type: img.type } as any);
+    });
+    await adminAPI.uploadServiceMedia(serviceId, fd);
+  };
+
   const handleOpenAddModal = () => {
     resetForm();
+    setPendingImages([]);
     setShowAddModal(true);
   };
 
   const handleOpenEditModal = (service: Service) => {
     setSelectedService(service);
     setExpandedServiceId(null);
+    setPendingImages([]);
     setFormData({
       name: service.name || '',
       description: service.description || '',
@@ -495,15 +534,20 @@ const ManageServicesScreen = () => {
 
       if (showEditModal && selectedService) {
         await adminAPI.updateService(selectedService._id, submitData);
+        await uploadImages(selectedService._id);
         setShowEditModal(false);
         resetForm();
+        setPendingImages([]);
         await loadServices();
         Alert.alert('Success', 'Service updated successfully');
         setExpandedServiceId(null);
       } else {
-        await adminAPI.createService(submitData);
+        const res = (await adminAPI.createService(submitData)) as any;
+        const newId = res?.service?._id;
+        if (newId) await uploadImages(newId);
         setShowAddModal(false);
         resetForm();
+        setPendingImages([]);
         await loadServices();
         Alert.alert('Success', 'Service created successfully');
       }
@@ -716,6 +760,28 @@ const ManageServicesScreen = () => {
       </View>
     );
   };
+
+  const renderImagePicker = () => (
+    <View style={styles.modalSection}>
+      <Text style={styles.sectionTitle}>Images</Text>
+      <TouchableOpacity style={styles.imagePickerBtn} onPress={pickImages}>
+        <MaterialCommunityIcons name="image-plus" size={22} color="#16a34a" />
+        <Text style={styles.imagePickerBtnText}>Add Images (images only)</Text>
+      </TouchableOpacity>
+      {pendingImages.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }}>
+          {pendingImages.map((img, i) => (
+            <View key={i} style={styles.imageThumbWrap}>
+              <Image source={{ uri: img.uri }} style={styles.imageThumb} />
+              <TouchableOpacity style={styles.imageRemoveBtn} onPress={() => removeImage(i)}>
+                <MaterialCommunityIcons name="close-circle" size={18} color="#ef4444" />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
+      )}
+    </View>
+  );
 
   if (isLoading) {
     return <Loading fullScreen message="Loading services..." />;
@@ -1040,6 +1106,8 @@ const ManageServicesScreen = () => {
                 {renderFormField({ label: 'Cancellation Details', name: 'cancellationDetails', type: 'text', placeholder: 'Additional cancellation terms', multiline: true })}
               </View>
 
+              {renderImagePicker()}
+
               <View style={styles.modalActions}>
                 <Button
                   title="Cancel"
@@ -1192,6 +1260,8 @@ const ManageServicesScreen = () => {
                 </View>
                 {renderFormField({ label: 'Cancellation Details', name: 'cancellationDetails', type: 'text', placeholder: 'Additional cancellation terms', multiline: true })}
               </View>
+
+              {renderImagePicker()}
 
               <View style={styles.modalActions}>
                 <Button
@@ -1803,6 +1873,40 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     flex: 1,
+  },
+  imagePickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: '#16a34a',
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#f0fdf4',
+  },
+  imagePickerBtnText: {
+    color: '#16a34a',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  imageThumbWrap: {
+    marginRight: 10,
+    position: 'relative',
+  },
+  imageThumb: {
+    width: 80,
+    height: 80,
+    borderRadius: 10,
+    backgroundColor: '#e5e7eb',
+  },
+  imageRemoveBtn: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: 'white',
+    borderRadius: 999,
   },
 });
 

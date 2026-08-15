@@ -77,6 +77,13 @@ export const USER_ROLES = {
   VENDOR: 'vendor',
 };
 
+// Payment Plan
+export const PAYMENT_PLAN = {
+  FULL: 'full',
+  SPLIT_50_50: 'split_50_50',
+  DEPOSIT_20: 'deposit_20',
+};
+
 // Booking Status
 export const BOOKING_STATUS = {
   PENDING: 'pending',

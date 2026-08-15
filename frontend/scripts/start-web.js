@@ -1,15 +1,15 @@
 const path = require('path');
 
-const { DevServerManager } = require('@expo/cli/build/src/start/server/DevServerManager');
-const { WebSupportProjectPrerequisite } = require('@expo/cli/build/src/start/doctor/web/WebSupportProjectPrerequisite');
-const { setNodeEnv } = require('@expo/cli/build/src/utils/nodeEnv');
-
 const projectRoot = path.resolve(__dirname, '..');
 const port = Number(process.env.PORT || process.env.WEB_PORT || 3000);
 
 async function main() {
+  const { setNodeEnv } = require('@expo/cli/build/src/utils/nodeEnv');
   setNodeEnv('development');
   require('@expo/env').load(projectRoot);
+
+  const { DevServerManager } = require('@expo/cli/build/src/start/server/DevServerManager');
+  const { WebSupportProjectPrerequisite } = require('@expo/cli/build/src/start/doctor/web/WebSupportProjectPrerequisite');
 
   const options = {
     mode: 'development',
@@ -29,7 +29,7 @@ async function main() {
 
   const devServerManager = new DevServerManager(projectRoot, options);
   await devServerManager.ensureProjectPrerequisiteAsync(WebSupportProjectPrerequisite);
-  await devServerManager.startAsync([{ type: 'webpack', options }]);
+  await devServerManager.startAsync([{ type: 'metro', options }]);
 
   console.log(`Web frontend running at http://localhost:${port}`);
   await new Promise(() => {});

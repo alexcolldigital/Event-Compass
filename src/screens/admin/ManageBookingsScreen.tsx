@@ -28,6 +28,10 @@ export default function ManageBookingsScreen() {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [porPrices, setPorPrices] = useState({});
+  const [rejectModalVisible, setRejectModalVisible] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => { load(); }, []);
   useEffect(() => { filter(); }, [search, status, bookings]);
@@ -74,11 +78,87 @@ export default function ManageBookingsScreen() {
   const closeModal = () => {
     setModalVisible(false);
     setSelectedBooking(null);
+    setPorPrices({});
+  };
+
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleReject = async () => {
+    if (!rejectReason.trim()) {
+      showToast('Please enter a rejection reason', 'error');
+      return;
+    }
+    try {
+      const r = await adminAPI.rejectBooking(selectedBooking._id, { reason: rejectReason.trim() });
+      setBookings(prev => prev.map(b => b._id === selectedBooking._id ? r.booking : b));
+      setSelectedBooking(r.booking);
+      setRejectModalVisible(false);
+      setRejectReason('');
+      showToast('Booking rejected successfully');
+    } catch (e: any) {
+      showToast(e.message || 'Failed to reject booking', 'error');
+    }
   };
 
   const handleAction = (action) => {
     if (!selectedBooking) return;
-    const labels = { confirm: 'Confirm', complete: 'Complete', cancel: 'Cancel' };
+    const labels = { confirm: 'Confirm', complete: 'Complete', cancel: 'Cancel', reject: 'Reject' };
+
+    if (action === 'confirm') {
+      // Check for POR services in this booking
+      const svc = selectedBooking.service || {};
+      const isPor = svc._id && (!svc.pricing?.basePrice || svc.priceOnRequest);
+      const porServiceList = isPor ? [{ serviceId: svc._id, serviceName: svc.name, price: '' }] : [];
+
+      if (porServiceList.length > 0) {
+        // Show price input alert for each POR service
+        const missingPrices = porServiceList.filter((s) => !porPrices[s.serviceId]);
+        if (missingPrices.length > 0) {
+          Alert.alert(
+            'Set Prices',
+            `Please enter prices for the following services before confirming:\n${missingPrices.map((s) => s.serviceName).join(', ')}`,
+          );
+          return;
+        }
+      }
+
+      const adminSetPrices = Object.entries(porPrices)
+        .filter(([, price]) => price)
+        .map(([serviceId, price]) => ({
+          serviceId,
+          serviceName: (selectedBooking.service?._id === serviceId ? selectedBooking.service?.name : '') || '',
+          price: Number(price),
+        }));
+
+      Alert.alert('Confirm Booking', `Confirm booking ${selectedBooking.bookingNumber}?`, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm',
+          onPress: async () => {
+            try {
+              const r = await adminAPI.confirmBooking(selectedBooking._id, { adminSetPrices });
+              setBookings((prev) => prev.map((b) => (b._id === selectedBooking._id ? r.booking : b)));
+              setSelectedBooking(r.booking);
+              setPorPrices({});
+              showToast('Booking confirmed successfully');
+            } catch (e: any) {
+              showToast(e.message || 'Action failed', 'error');
+            }
+          },
+        },
+      ]);
+      return;
+    }
+
+    if (action === 'reject') {
+      setRejectReason('');
+      setRejectModalVisible(true);
+      return;
+    }
+
     Alert.alert(
       `${labels[action]} Booking`,
       `${labels[action]} booking ${selectedBooking.bookingNumber}?`,
@@ -88,13 +168,12 @@ export default function ManageBookingsScreen() {
           text: 'Confirm', onPress: async () => {
             try {
               let r;
-              if (action === 'confirm') r = await adminAPI.confirmBooking(selectedBooking._id);
-              else if (action === 'complete') r = await adminAPI.completeBooking(selectedBooking._id);
+              if (action === 'complete') r = await adminAPI.completeBooking(selectedBooking._id);
               else r = await adminAPI.cancelBooking(selectedBooking._id, { reason: 'Cancelled by admin' });
               setBookings(prev => prev.map(b => b._id === selectedBooking._id ? r.booking : b));
               setSelectedBooking(r.booking);
-              Alert.alert('Success', `Booking ${action}ed successfully`);
-            } catch (e) { Alert.alert('Error', e.message || 'Action failed'); }
+              showToast(`Booking ${action}ed successfully`);
+            } catch (e: any) { showToast(e.message || 'Action failed', 'error'); }
           },
         },
       ]
@@ -155,7 +234,7 @@ export default function ManageBookingsScreen() {
 
     return (
       <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={closeModal}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: c.bg, position: 'relative' }}>
           {/* Modal Header */}
           <View style={[s.modalHeader, { backgroundColor: c.surface, borderBottomColor: c.border }]}>
             <TouchableOpacity onPress={closeModal} style={s.modalClose}>
@@ -286,14 +365,39 @@ export default function ManageBookingsScreen() {
               </View>
 
               {/* Action Buttons */}
-              {b.status !== 'cancelled' && b.status !== 'completed' && (
+              {b.status !== 'cancelled' && b.status !== 'completed' && b.status !== 'rejected' && (
                 <View style={[adminStyles.actionRow, { marginTop: 8 }]}>
-                  {b.status === 'pending' && (
-                    <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: '#eff6ff' }]} onPress={() => handleAction('confirm')}>
-                      <MaterialCommunityIcons name="check-circle" size={16} color="#2563eb" />
-                      <Text style={[adminStyles.actionBtnText, { color: '#2563eb', fontFamily: font, marginTop: 2 }]}>Confirm</Text>
-                    </TouchableOpacity>
-                  )}
+                  {b.status === 'pending' && (() => {
+                    const svc = b.service || {};
+                    const isPor = svc._id && (!svc.pricing?.basePrice || svc.priceOnRequest);
+                    return (
+                      <>
+                        {isPor && (
+                          <View style={[s.porInputBox, { backgroundColor: '#fff7ed', borderColor: '#fed7aa' }]}>
+                            <Text style={[s.porInputLabel, { color: '#c2410c' }]}>
+                              Set price for "{svc.name}" (price not static)
+                            </Text>
+                            <TextInput
+                              style={[s.porInput, { color: c.text, borderColor: c.border, backgroundColor: c.surface }]}
+                              placeholder="Enter price (₦)"
+                              placeholderTextColor={c.muted}
+                              keyboardType="numeric"
+                              value={porPrices[svc._id] || ''}
+                              onChangeText={(val) => setPorPrices((prev) => ({ ...prev, [svc._id]: val }))}
+                            />
+                          </View>
+                        )}
+                        <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: '#eff6ff' }]} onPress={() => handleAction('confirm')}>
+                          <MaterialCommunityIcons name="check-circle" size={16} color="#2563eb" />
+                          <Text style={[adminStyles.actionBtnText, { color: '#2563eb', fontFamily: font, marginTop: 2 }]}>Confirm</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: '#fef3c7' }]} onPress={() => handleAction('reject')}>
+                          <MaterialCommunityIcons name="close-circle-outline" size={16} color="#b45309" />
+                          <Text style={[adminStyles.actionBtnText, { color: '#b45309', fontFamily: font, marginTop: 2 }]}>Reject</Text>
+                        </TouchableOpacity>
+                      </>
+                    );
+                  })()}
                   {b.status === 'confirmed' && (
                     <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: '#f0fdf4' }]} onPress={() => handleAction('complete')}>
                       <MaterialCommunityIcons name="check-all" size={16} color="#15803d" />
@@ -307,6 +411,13 @@ export default function ManageBookingsScreen() {
                 </View>
               )}
             </ScrollView>
+          )}
+          {/* Toast inside modal */}
+          {toast && (
+            <View style={[s.toast, { backgroundColor: toast.type === 'success' ? '#15803d' : '#dc2626' }]}>
+              <MaterialCommunityIcons name={toast.type === 'success' ? 'check-circle' : 'alert-circle'} size={16} color="#fff" />
+              <Text style={[s.toastText, { fontFamily: font }]}>{toast.msg}</Text>
+            </View>
           )}
         </SafeAreaView>
       </Modal>
@@ -369,6 +480,41 @@ export default function ManageBookingsScreen() {
       />
 
       {renderModal()}
+
+      {/* Reject Reason Modal */}
+      <Modal visible={rejectModalVisible} transparent animationType="fade" onRequestClose={() => setRejectModalVisible(false)}>
+        <View style={s.rejectOverlay}>
+          <View style={[s.rejectBox, { backgroundColor: c.surface }]}>
+            <Text style={[s.rejectTitle, { color: c.text, fontFamily: font }]}>Reject Booking</Text>
+            <Text style={[s.rejectSub, { color: c.muted, fontFamily: font }]}>Please provide a reason for rejection</Text>
+            <TextInput
+              style={[s.rejectInput, { color: c.text, borderColor: c.inputBorder, backgroundColor: c.bg, fontFamily: font }]}
+              placeholder="Enter rejection reason..."
+              placeholderTextColor={c.muted}
+              value={rejectReason}
+              onChangeText={setRejectReason}
+              multiline
+              numberOfLines={3}
+            />
+            <View style={s.rejectActions}>
+              <TouchableOpacity style={[s.rejectBtn, { backgroundColor: c.bg, borderColor: c.inputBorder, borderWidth: 1 }]} onPress={() => setRejectModalVisible(false)}>
+                <Text style={[s.rejectBtnText, { color: c.muted, fontFamily: font }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.rejectBtn, { backgroundColor: '#dc2626' }]} onPress={handleReject}>
+                <Text style={[s.rejectBtnText, { color: '#fff', fontFamily: font }]}>Reject</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Toast */}
+      {toast && (
+        <View style={[s.toast, { backgroundColor: toast.type === 'success' ? '#15803d' : '#dc2626' }]}>
+          <MaterialCommunityIcons name={toast.type === 'success' ? 'check-circle' : 'alert-circle'} size={16} color="#fff" />
+          <Text style={[s.toastText, { fontFamily: font }]}>{toast.msg}</Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -395,4 +541,18 @@ const s = StyleSheet.create({
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 10, marginTop: 6, borderTopWidth: 1 },
   totalLabel: { fontSize: 13, fontWeight: '800' },
   totalValue: { fontSize: 15, fontWeight: '800' },
+  porInputBox: { borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 10, width: '100%' },
+  porInputLabel: { fontSize: 13, fontWeight: '700', marginBottom: 8 },
+  porInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, fontWeight: '600' },
+  rejectOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  rejectBox: { width: '100%', borderRadius: 16, padding: 20 },
+  rejectTitle: { fontSize: 16, fontWeight: '800', marginBottom: 4 },
+  rejectSub: { fontSize: 13, marginBottom: 12 },
+  rejectInput: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 14, minHeight: 80, textAlignVertical: 'top', marginBottom: 16 },
+  rejectActions: { flexDirection: 'row', gap: 10 },
+  rejectBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
+  rejectBtnText: { fontSize: 14, fontWeight: '700' },
+  toast: { position: 'absolute', bottom: 24, left: 16, right: 16, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12 },
+  toastText: { color: '#fff', fontSize: 13, fontWeight: '700', flex: 1 },
 });
+
