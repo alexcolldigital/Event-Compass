@@ -9,7 +9,7 @@
     "android": "expo start --android --port 3000",
     "ios": "expo start --ios --port 3000",
     "web": "node scripts/start-web.js",
-    "build:web": "expo export:web",
+    "build:web": "expo export -p web",
     "eject": "expo eject",
     "test": "jest",
     "lint": "eslint ."
