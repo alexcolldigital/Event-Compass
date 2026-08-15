@@ -58,17 +58,21 @@ export const useAuthStore = create((set, get) => ({
       set({ isLoading: true, error: null });
       const response = await authAPI.register(userData);
 
-      await AsyncStorage.setItem('authToken', response.token);
+      if (response.token) {
+        await AsyncStorage.setItem('authToken', response.token);
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem('authToken', response.token);
+        }
+      }
       await AsyncStorage.setItem('user', JSON.stringify(response.user));
       if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem('authToken', response.token);
         window.localStorage.setItem('user', JSON.stringify(response.user));
       }
 
       set({
         user: response.user,
-        token: response.token,
-        isAuthenticated: true,
+        token: response.token || null,
+        isAuthenticated: false,
         isLoading: false,
       });
 
@@ -86,13 +90,21 @@ export const useAuthStore = create((set, get) => ({
       set({ isLoading: true, error: null });
       const response = await authAPI.registerProvider(userData);
 
-      await AsyncStorage.setItem('authToken', response.token);
+      if (response.token) {
+        await AsyncStorage.setItem('authToken', response.token);
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem('authToken', response.token);
+        }
+      }
       await AsyncStorage.setItem('user', JSON.stringify(response.user));
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('user', JSON.stringify(response.user));
+      }
 
       set({
         user: response.user,
-        token: response.token,
-        isAuthenticated: true,
+        token: response.token || null,
+        isAuthenticated: false,
         isLoading: false,
       });
 
@@ -113,6 +125,11 @@ export const useAuthStore = create((set, get) => ({
         set({ requiresTwoFactor: true, pendingUserId: response.userId, isLoading: false });
         return response;
       }
+      if (response.requiresEmailVerification) {
+        await AsyncStorage.setItem('user', JSON.stringify(response.user || null));
+        set({ user: response.user || null, token: null, isAuthenticated: false, isLoading: false, requiresTwoFactor: false, pendingUserId: null });
+        return response;
+      }
       await AsyncStorage.setItem('authToken', response.token);
       await AsyncStorage.setItem('user', JSON.stringify(response.user));
       if (typeof window !== 'undefined' && window.localStorage) {
@@ -122,6 +139,10 @@ export const useAuthStore = create((set, get) => ({
       set({ user: response.user, token: response.token, isAuthenticated: true, isLoading: false, requiresTwoFactor: false, pendingUserId: null });
       return response;
     } catch (error) {
+      if (error?.requiresEmailVerification) {
+        set({ error: error.message || 'Email verification required', isLoading: false, isAuthenticated: false, token: null, user: error.user || null });
+        return error;
+      }
       set({ error: error.message || 'Login failed', isLoading: false });
       throw error;
     }

@@ -80,13 +80,16 @@ export default function RegisterProviderScreen({ navigation }: RegisterProviderS
   const handleRegister = async () => {
     if (!validateForm()) return;
     try {
-      await registerProvider({
+      const response = await registerProvider({
         ...formData,
         phoneNumber: `${selectedCountry.dialCode} ${formData.phoneNumber.trim()}`.trim(),
         country: selectedCountry.name,
         countryCode: selectedCountry.code,
         dialCode: selectedCountry.dialCode,
       });
+      if (response?.requiresEmailVerification) {
+        navigation.navigate('Verify', { mode: 'email' });
+      }
     } catch (err) {
       console.error('Provider registration error:', err);
     }

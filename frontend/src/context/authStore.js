@@ -60,15 +60,17 @@ export const useAuthStore = create((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       const response = await authAPI.register(userData);
-      // Persist token so authenticated API calls (resend-verification, send-phone-otp) work
-      await AsyncStorage.setItem('authToken', response.token);
+      if (response.token) {
+        await AsyncStorage.setItem('authToken', response.token);
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem('authToken', response.token);
+        }
+      }
       await AsyncStorage.setItem('user', JSON.stringify(response.user));
       if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem('authToken', response.token);
         window.localStorage.setItem('user', JSON.stringify(response.user));
       }
-      // Keep isAuthenticated false — user must verify email first
-      set({ user: response.user, token: response.token, isAuthenticated: false, isLoading: false });
+      set({ user: response.user, token: response.token || null, isAuthenticated: false, isLoading: false });
       return response;
     } catch (error) {
       set({ error: error.message || 'Registration failed', isLoading: false });
@@ -81,13 +83,17 @@ export const useAuthStore = create((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       const response = await authAPI.registerProvider(userData);
-      await AsyncStorage.setItem('authToken', response.token);
+      if (response.token) {
+        await AsyncStorage.setItem('authToken', response.token);
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem('authToken', response.token);
+        }
+      }
       await AsyncStorage.setItem('user', JSON.stringify(response.user));
       if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem('authToken', response.token);
         window.localStorage.setItem('user', JSON.stringify(response.user));
       }
-      set({ user: response.user, token: response.token, isAuthenticated: false, isLoading: false });
+      set({ user: response.user, token: response.token || null, isAuthenticated: false, isLoading: false });
       return response;
     } catch (error) {
       set({ error: error.message || 'Provider registration failed', isLoading: false });
@@ -102,6 +108,10 @@ export const useAuthStore = create((set, get) => ({
       const response = await authAPI.loginUnified(identifier, password);
       if (response.requiresTwoFactor) {
         set({ requiresTwoFactor: true, pendingUserId: response.userId, isLoading: false });
+        return response;
+      }
+      if (response.requiresEmailVerification) {
+        set({ user: response.user || null, token: null, isAuthenticated: false, isLoading: false, requiresPhoneVerification: false, pendingPhoneNumber: null });
         return response;
       }
       await AsyncStorage.setItem('authToken', response.token);
@@ -122,6 +132,16 @@ export const useAuthStore = create((set, get) => ({
       });
       return response;
     } catch (error) {
+      if (error?.requiresEmailVerification || error?.requiresDeviceVerification) {
+        set({
+          user: error.user || null,
+          token: null,
+          isAuthenticated: false,
+          isLoading: false,
+          error: error.message || 'Email verification required',
+        });
+        return error;
+      }
       // HTTP 403 with requiresPhoneVerification comes through as a thrown error
       if (error?.requiresPhoneVerification) {
         set({

@@ -68,13 +68,16 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const handleRegister = async () => {
     if (!validateForm()) return;
     try {
-      await register({
+      const response = await register({
         ...formData,
         phoneNumber: `${selectedCountry.dialCode} ${formData.phoneNumber.trim()}`.trim(),
         country: selectedCountry.name,
         countryCode: selectedCountry.code,
         dialCode: selectedCountry.dialCode,
       });
+      if (response?.requiresEmailVerification) {
+        navigation.navigate('Verify', { mode: 'email' });
+      }
     } catch (err) {
       console.error('Register error:', err);
     }

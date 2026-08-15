@@ -34,9 +34,15 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
   const handleLogin = async () => {
     if (!validateForm()) return;
     try {
-      await login(email, password);
+      const response = await login(email, password);
+      if (response?.requiresEmailVerification) {
+        navigation.navigate('Verify', { mode: 'email' });
+      }
     } catch (err) {
       console.error('Login error:', err);
+      if (err && typeof err === 'object' && 'requiresEmailVerification' in err) {
+        navigation.navigate('Verify', { mode: 'email' });
+      }
     }
   };
 
