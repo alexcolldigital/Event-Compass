@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "cd frontend && npm install && npx expo export:web",
+  "buildCommand": "cd frontend && npm install --legacy-peer-deps && npx expo export:web",
   "outputDirectory": "frontend/web-build",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
