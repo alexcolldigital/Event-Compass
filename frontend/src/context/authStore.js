@@ -225,7 +225,11 @@ export const useAuthStore = create((set, get) => ({
   logout: async () => {
     try {
       set({ user: null, token: null, isAuthenticated: false, error: null, isLoading: false, requiresTwoFactor: false, pendingUserId: null, requiresPhoneVerification: false, pendingPhoneNumber: null });
-      await AsyncStorage.multiRemove(['authToken', 'user']);
+      await Promise.all([AsyncStorage.removeItem('authToken'), AsyncStorage.removeItem('user')]);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem('authToken');
+        window.localStorage.removeItem('user');
+      }
       return true;
     } catch (error) {
       set({ error: error.message || 'Logout failed', isLoading: false });
