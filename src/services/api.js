@@ -5,10 +5,26 @@
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'https://event-backend-kb9s.onrender.com').replace(/\/$/, '');
 const API_BASE_URL = API_URL.includes('/api') ? API_URL : `${API_URL}/api`;
 const API_TIMEOUT = Number(process.env.EXPO_PUBLIC_API_TIMEOUT || 30000);
+
+const getOrCreateDeviceId = async () => {
+  try {
+    let deviceId = await AsyncStorage.getItem('deviceId');
+    if (!deviceId) {
+      deviceId = `${Platform.OS}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      await AsyncStorage.setItem('deviceId', deviceId);
+    }
+    return deviceId;
+  } catch (error) {
+    return `${Platform.OS}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+};
+
+const getDeviceName = () => `${Platform.OS === 'ios' ? 'iPhone' : Platform.OS === 'android' ? 'Android' : 'Web'} Device`;
 
 // Create axios instance
 const apiClient = axios.create({
@@ -42,8 +58,12 @@ apiClient.interceptors.request.use(
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
+
+      const deviceId = await getOrCreateDeviceId();
+      config.headers['x-device-id'] = deviceId;
+      config.headers['x-device-name'] = getDeviceName();
     } catch (error) {
-      console.error('Error getting token:', error);
+      console.error('Error getting device metadata:', error);
     }
     return config;
   },
@@ -80,7 +100,14 @@ export const authAPI = {
   forgotPassword: (identifier) => apiClient.post('/auth/forgot-password', { identifier }),
   resetPassword: (data) => apiClient.post('/auth/reset-password', data),
   // Email verification
-  verifyEmail: (token) => apiClient.post('/auth/verify-email', { token }),
+  verifyEmail: async (token) => {
+    const deviceId = await getOrCreateDeviceId();
+    return apiClient.post('/auth/verify-email', {
+      token,
+      deviceId,
+      deviceName: getDeviceName(),
+    });
+  },
   resendVerification: () => apiClient.post('/auth/resend-verification'),
   // 2FA
   verifyTwoFactor: (userId, code) => apiClient.post('/auth/verify-2fa', { userId, code }),

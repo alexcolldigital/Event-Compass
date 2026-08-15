@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, SafeAreaView, StyleSheet, Modal } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Input from '../../components/Input.jsx';
+import PhoneCountryInput from '../../components/PhoneCountryInput.jsx';
 import Button from '../../components/Button.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { useAuthStore } from '../../context/authStore.js';
 import authStyles from '../../styles/authStyles.js';
 import { SERVICE_PROVIDER_TYPE_OPTIONS } from '../../utils/constants.js';
+import { DEFAULT_COUNTRY } from '../../utils/countryPhoneOptions.js';
 
 type FormData = {
   firstName: string;
@@ -40,16 +42,23 @@ export default function RegisterProviderScreen({ navigation }: RegisterProviderS
     businessDescription: '',
   });
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string | null>>>({});
+  const [selectedCountry, setSelectedCountry] = useState(DEFAULT_COUNTRY);
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const { registerProvider, isLoading, error } = useAuthStore();
-
-  const onlyPhoneChars = (text: string) => text.replace(/[^0-9+\-() ]/g, '');
 
   const updateField = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors({ ...errors, [field]: null });
     }
+  };
+
+  const handlePhoneChange = (text: string) => {
+    updateField('phoneNumber', text.replace(/\D/g, ''));
+  };
+
+  const handleCountryChange = (country: typeof DEFAULT_COUNTRY) => {
+    setSelectedCountry(country);
   };
 
   const validateForm = () => {
@@ -71,7 +80,13 @@ export default function RegisterProviderScreen({ navigation }: RegisterProviderS
   const handleRegister = async () => {
     if (!validateForm()) return;
     try {
-      await registerProvider(formData);
+      await registerProvider({
+        ...formData,
+        phoneNumber: `${selectedCountry.dialCode} ${formData.phoneNumber.trim()}`.trim(),
+        country: selectedCountry.name,
+        countryCode: selectedCountry.code,
+        dialCode: selectedCountry.dialCode,
+      });
     } catch (err) {
       console.error('Provider registration error:', err);
     }
@@ -133,13 +148,13 @@ export default function RegisterProviderScreen({ navigation }: RegisterProviderS
               icon="email"
               error={errors.email}
             />
-            <Input
+            <PhoneCountryInput
               label="Phone Number"
-              placeholder="+234 (0) 123 4567"
+              placeholder="8012345678"
               value={formData.phoneNumber}
-              onChangeText={(text: string) => updateField('phoneNumber', onlyPhoneChars(text))}
-              keyboardType="phone-pad"
-              icon="phone"
+              onChangeText={handlePhoneChange}
+              selectedCountry={selectedCountry}
+              onCountryChange={handleCountryChange}
               error={errors.phoneNumber}
             />
           </View>

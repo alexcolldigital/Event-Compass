@@ -21,7 +21,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../context/authStore.js';
 import Input from '../../components/Input.jsx';
+import PhoneCountryInput from '../../components/PhoneCountryInput.jsx';
 import Button from '../../components/Button.jsx';
+import { DEFAULT_COUNTRY } from '../../utils/countryPhoneOptions.js';
 
 const isValidEmail = (email: string) => /\S+@\S+\.\S+/.test(email);
 const isValidPhoneNumber = (phone: string) =>
@@ -40,23 +42,38 @@ export default function EditProfileScreen() {
     businessDescription: '',
   });
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState(DEFAULT_COUNTRY);
   const [formErrors, setFormErrors] = useState<Record<string, string | null>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   useEffect(() => {
     if (user) {
+      const userCountry = user.countryCode ?
+        require('../../utils/countryPhoneOptions.js').COUNTRY_PHONE_OPTIONS.find((country) => country.code === user.countryCode) :
+        DEFAULT_COUNTRY;
+
       setFormData({
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         email: user.email || '',
-        phoneNumber: user.phoneNumber || '',
+        phoneNumber: user.phoneNumber ? user.phoneNumber.replace(new RegExp(`^${user.dialCode || ''}`), '').trim() : '',
         businessName: user.businessName || '',
         businessDescription: user.businessDescription || '',
       });
+      setSelectedCountry(userCountry || DEFAULT_COUNTRY);
       setSelectedImage(user.profileImage?.url || null);
     }
   }, [user]);
+
+  const handlePhoneChange = (text: string) => {
+    setFormData((prev) => ({ ...prev, phoneNumber: text.replace(/\D/g, '') }));
+    if (formErrors.phoneNumber) setFormErrors((e) => ({ ...e, phoneNumber: null }));
+  };
+
+  const handleCountryChange = (country: typeof DEFAULT_COUNTRY) => {
+    setSelectedCountry(country);
+  };
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
@@ -65,7 +82,7 @@ export default function EditProfileScreen() {
     if (!formData.email.trim()) errors.email = 'Email is required';
     else if (!isValidEmail(formData.email)) errors.email = 'Invalid email format';
     if (!formData.phoneNumber.trim()) errors.phoneNumber = 'Phone number is required';
-    else if (!isValidPhoneNumber(formData.phoneNumber)) errors.phoneNumber = 'Invalid Nigerian phone number';
+    else if (!isValidPhoneNumber(`${selectedCountry.dialCode}${formData.phoneNumber}`)) errors.phoneNumber = 'Invalid phone number for the selected country';
     if (user?.role === 'service_provider') {
       if (!formData.businessName.trim()) errors.businessName = 'Business name is required';
       if (!formData.businessDescription.trim()) errors.businessDescription = 'Business description is required';
@@ -86,7 +103,10 @@ export default function EditProfileScreen() {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         email: formData.email.trim(),
-        phoneNumber: formData.phoneNumber.trim(),
+        phoneNumber: `${selectedCountry.dialCode} ${formData.phoneNumber.trim()}`.trim(),
+        country: selectedCountry.name,
+        countryCode: selectedCountry.code,
+        dialCode: selectedCountry.dialCode,
       };
       if (user?.role === 'service_provider') {
         updateData.businessName = formData.businessName.trim();
@@ -239,16 +259,13 @@ export default function EditProfileScreen() {
               icon="email"
               error={formErrors.email}
             />
-            <Input
+            <PhoneCountryInput
               label="Phone Number"
-              placeholder="+234 801 234 5678"
+              placeholder="8012345678"
               value={formData.phoneNumber}
-              onChangeText={(text: string) => {
-                setFormData((prev) => ({ ...prev, phoneNumber: text }));
-                if (formErrors.phoneNumber) setFormErrors((e) => ({ ...e, phoneNumber: null }));
-              }}
-              keyboardType="phone-pad"
-              icon="phone"
+              onChangeText={handlePhoneChange}
+              selectedCountry={selectedCountry}
+              onCountryChange={handleCountryChange}
               error={formErrors.phoneNumber}
             />
           </View>

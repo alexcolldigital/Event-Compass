@@ -24,6 +24,8 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../context/authStore.js';
 import { authAPI } from '../../services/api.js';
+import PhoneCountryInput from '../../components/PhoneCountryInput.jsx';
+import { DEFAULT_COUNTRY } from '../../utils/countryPhoneOptions.js';
 import authStyles from '../../styles/authStyles.js';
 
 type VerifyScreenProps = {
@@ -44,6 +46,7 @@ export default function VerifyScreen({ navigation, route }: VerifyScreenProps) {
 
   const { verifyEmail, verifyPhone, sendPhoneOtp, isLoading, clearError } = useAuthStore();
 
+  const [selectedCountry, setSelectedCountry] = useState(DEFAULT_COUNTRY);
   const [otp, setOtp] = useState('');
   const [otpError, setOtpError] = useState('');
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -96,11 +99,22 @@ export default function VerifyScreen({ navigation, route }: VerifyScreenProps) {
     }
   };
 
+  const handlePhoneChange = (text: string) => {
+    const nextPhone = text.replace(/\D/g, '');
+    const displayPhone = `${selectedCountry.dialCode} ${nextPhone}`.trim();
+    if (route.params) route.params.phoneNumber = displayPhone;
+  };
+
+  const handleCountryChange = (country: typeof DEFAULT_COUNTRY) => {
+    setSelectedCountry(country);
+  };
+
   const handleResendPhoneOtp = async () => {
     if (resendCooldown > 0) return;
     try {
       clearError();
-      await sendPhoneOtp(phoneNumber || undefined);
+      const contactPhone = `${selectedCountry.dialCode} ${phoneNumber.replace(new RegExp(`^${selectedCountry.dialCode}`), '').trim()}`.trim();
+      await sendPhoneOtp(contactPhone || undefined);
       startCooldown();
       Alert.alert('Sent', 'A new OTP has been sent to your phone number.');
     } catch (err: any) {
@@ -213,6 +227,19 @@ export default function VerifyScreen({ navigation, route }: VerifyScreenProps) {
           Enter the 6-digit code sent to{' '}
           <Text style={{ fontWeight: '800', color: '#172017' }}>{phoneNumber || 'your phone'}</Text>
         </Text>
+
+        <PhoneCountryInput
+          label="Phone Number"
+          placeholder="8012345678"
+          value={phoneNumber ? phoneNumber.replace(new RegExp(`^${selectedCountry.dialCode}`), '').trim() : ''}
+          onChangeText={(text) => {
+            const nextPhone = text.replace(/\D/g, '');
+            const displayPhone = `${selectedCountry.dialCode} ${nextPhone}`.trim();
+            navigation.setParams?.({ phoneNumber: displayPhone });
+          }}
+          selectedCountry={selectedCountry}
+          onCountryChange={handleCountryChange}
+        />
 
         <TextInput
           style={[styles.otpInput, otpError ? styles.otpInputError : null]}
