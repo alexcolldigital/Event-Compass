@@ -17,7 +17,7 @@ const Stack = createNativeStackNavigator();
 export default function RootNavigator() {
   const { isAuthenticated, isLoading, isInitialized } = useAuthStore();
 
-  if (isLoading || !isInitialized) {
+  if (!isInitialized) {
     return <Loading fullScreen />;
   }
 

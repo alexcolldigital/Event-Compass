@@ -43,7 +43,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       if (response?.requiresEmailVerification || response?.requiresDeviceVerification) {
         navigation.navigate('Verify', {
           mode: 'email',
-          email: identifier.includes('@') ? identifier.trim() : undefined,
+          email: response.email || (identifier.includes('@') ? identifier.trim() : undefined),
           userId: response.userId,
         });
       } else if (response?.requiresPhoneVerification) {

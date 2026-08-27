@@ -19,7 +19,7 @@ const MODE_CONFIG: Record<Mode, { icon: string; title: string; subtitle: (target
   email: {
     icon: 'email-check-outline',
     title: 'Verify Your Email',
-    subtitle: (email) => `Enter the 6-digit code sent to\n${email}`,
+    subtitle: (email) => `Your email must be verified before you can log in.\nWe sent a 6-digit code to ${email}`,
   },
   'forgot-password': {
     icon: 'lock-reset',

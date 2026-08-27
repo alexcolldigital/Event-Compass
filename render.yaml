@@ -1,0 +1,50 @@
+services:
+  - type: web
+    name: event-compass-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "1"
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRE
+        value: 7d
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: FROM_EMAIL
+        sync: false
+      - key: PAYSTACK_SECRET
+        sync: false
+      - key: PAYSTACK_PUBLIC_KEY
+        sync: false
+      - key: FLUTTERWAVE_SECRET
+        sync: false
+      - key: FLUTTERWAVE_PUBLIC_KEY
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
