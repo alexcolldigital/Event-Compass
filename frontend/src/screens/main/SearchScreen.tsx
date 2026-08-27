@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, View, Text, SafeAreaView, ScrollView, TouchableOpacity, TextInput, StyleSheet, Platform, Alert } from 'react-native';
+import { ActivityIndicator, View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Platform, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRoute } from '@react-navigation/native';
 import { useServiceStore } from '../../context/serviceStore.js';

@@ -4,7 +4,8 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, FlatList, StyleSheet, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useBookingStore } from '../../context/bookingStore.js';
 import { useAuthStore } from '../../context/authStore.js';

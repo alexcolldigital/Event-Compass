@@ -105,7 +105,7 @@ function SearchStack() {
 function BookingsStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="BookingsScreen">{() => <LazyScreen><BookingsScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="BookingsScreen">{({ navigation, route }) => <LazyScreen><BookingsScreen navigation={navigation} route={route} /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="BookingDetail" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><BookingDetailScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="WebCheckout" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><WebCheckoutScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="PaymentResult" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><PaymentResultScreen /></LazyScreen>}</Stack.Screen>

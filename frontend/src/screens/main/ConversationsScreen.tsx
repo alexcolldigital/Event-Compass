@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '../../context/authStore.js';
@@ -48,6 +49,7 @@ const ConversationsScreen = () => {
     primary: isDark ? '#34d399' : '#1f7a4d',
   };
 
+  const insets = useSafeAreaInsets();
   const [conversations, setConversations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -96,7 +98,7 @@ const ConversationsScreen = () => {
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + 12 }]}>
         <TouchableOpacity onPress={() => (navigation as any).goBack()} style={{ padding: 4 }}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
         </TouchableOpacity>
@@ -181,7 +183,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 52 : 16,
     paddingBottom: 14,
     borderBottomWidth: 1,
   },
