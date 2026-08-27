@@ -11,7 +11,13 @@ export type AuthStackParamList = {
   Register: undefined;
   RegisterProvider: undefined;
   ForgotPassword: undefined;
-  Verify: { mode: 'email' | 'phone'; token?: string; phoneNumber?: string };
+  Verify: {
+    mode: 'email' | 'phone' | 'forgot-password' | 'change-password';
+    token?: string;
+    phoneNumber?: string;
+    email?: string;
+  };
+  ResetPassword: { resetToken: string };
 };
 
 // Main Stack (Bottom Tabs)
@@ -62,7 +68,8 @@ export type ProviderServicesStackParamList = {
 export type ProfileStackParamList = {
   ProfileScreen: undefined;
   EditProfile: undefined;
-  ChangePassword: undefined;
+  ChangePassword: { otpVerified?: boolean };
+  Verify: { mode: 'email' | 'phone' | 'forgot-password' | 'change-password'; email?: string; phoneNumber?: string };
   Notifications: undefined;
   HelpSupport: undefined;
   About: undefined;

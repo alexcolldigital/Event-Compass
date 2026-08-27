@@ -28,13 +28,9 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const { user, logout, sendPhoneOtp, verifyPhone, isLoading } = useAuthStore();
+  const { user, logout, isLoading } = useAuthStore();
   const [contactingSupport, setContactingSupport] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [showPhoneModal, setShowPhoneModal] = useState(false);
-  const [phoneStep, setPhoneStep] = useState<'send' | 'verify'>('send');
-  const [otp, setOtp] = useState('');
-  const [otpError, setOtpError] = useState('');
 
   const handleContactSupport = async () => {
     setContactingSupport(true);
@@ -68,33 +64,9 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     try { await logout(); } catch (error) { console.error('Logout failed', error); }
   };
 
-  const handleSendPhoneOtp = async () => {
-    try {
-      await sendPhoneOtp();
-      setPhoneStep('verify');
-      setOtpError('');
-    } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to send OTP');
-    }
-  };
-
-  const handleVerifyPhone = async () => {
-    if (otp.length !== 6) { setOtpError('Enter the 6-digit OTP'); return; }
-    try {
-      await verifyPhone(otp);
-      setShowPhoneModal(false);
-      setOtp('');
-      setPhoneStep('send');
-      Alert.alert('Success', 'Phone number verified! You can now log in with your phone number.');
-    } catch (err: any) {
-      setOtpError(err?.message || 'Invalid or expired OTP');
-    }
-  };
-
   const menuItems: MenuItem[] = [
     ...(user?.role === 'admin' ? [{ icon: 'view-dashboard', label: 'Admin Dashboard', onPress: () => navigation.navigate('Admin' as never), color: '#1f7a4d' }] : []),
     { icon: 'account-edit', label: 'Edit Profile', onPress: () => navigation.navigate('EditProfile'), color: '#2563eb' },
-    ...(!user?.isPhoneVerified ? [{ icon: 'phone-check', label: 'Verify Phone Number', onPress: () => { setPhoneStep('send'); setOtp(''); setOtpError(''); setShowPhoneModal(true); }, color: '#16a34a' }] : []),
     { icon: 'lock', label: 'Change Password', onPress: () => navigation.navigate('ChangePassword'), color: '#8b5cf6' },
     { icon: 'message-text', label: 'Messages', onPress: () => navigation.navigate('Conversations'), color: '#0ea5e9' },
     { icon: 'headset', label: 'Contact Support', onPress: handleContactSupport, color: '#f59e0b' },
@@ -155,55 +127,6 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
       </ScrollView>
-
-      <Modal visible={showPhoneModal} transparent animationType="fade" onRequestClose={() => setShowPhoneModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalBox, { backgroundColor: colors.surface }]}>
-            <View style={[styles.modalIconWrap, { backgroundColor: '#dcfce7' }]}>
-              <MaterialCommunityIcons name="phone-check" size={32} color="#16a34a" />
-            </View>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Verify Phone Number</Text>
-            {phoneStep === 'send' ? (
-              <>
-                <Text style={[styles.modalMessage, { color: colors.muted }]}>
-                  We'll send a 6-digit OTP to{' '}
-                  <Text style={{ fontWeight: '700', color: colors.text }}>{user?.phoneNumber}</Text>
-                </Text>
-                <View style={styles.modalActions}>
-                  <TouchableOpacity style={[styles.modalBtn, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]} onPress={() => setShowPhoneModal(false)}>
-                    <Text style={[styles.modalBtnText, { color: colors.text }]}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#16a34a', borderColor: '#16a34a' }]} onPress={handleSendPhoneOtp} disabled={isLoading}>
-                    {isLoading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.modalBtnText, { color: '#fff' }]}>Send OTP</Text>}
-                  </TouchableOpacity>
-                </View>
-              </>
-            ) : (
-              <>
-                <Text style={[styles.modalMessage, { color: colors.muted }]}>Enter the 6-digit code sent to your phone</Text>
-                <TextInput
-                  style={[styles.otpInput, { borderColor: otpError ? '#dc2626' : colors.border, color: colors.text, backgroundColor: colors.surfaceAlt }]}
-                  value={otp}
-                  onChangeText={(t) => { setOtp(t.replace(/\D/g, '').slice(0, 6)); setOtpError(''); }}
-                  keyboardType="number-pad"
-                  maxLength={6}
-                  placeholder="000000"
-                  placeholderTextColor={colors.muted}
-                />
-                {otpError ? <Text style={styles.otpError}>{otpError}</Text> : null}
-                <View style={styles.modalActions}>
-                  <TouchableOpacity style={[styles.modalBtn, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]} onPress={() => setPhoneStep('send')}>
-                    <Text style={[styles.modalBtnText, { color: colors.text }]}>Resend</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#16a34a', borderColor: '#16a34a' }]} onPress={handleVerifyPhone} disabled={isLoading}>
-                    {isLoading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.modalBtnText, { color: '#fff' }]}>Verify</Text>}
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
-          </View>
-        </View>
-      </Modal>
 
       <Modal visible={showLogoutModal} transparent animationType="fade" onRequestClose={() => setShowLogoutModal(false)}>
         <View style={styles.modalOverlay}>

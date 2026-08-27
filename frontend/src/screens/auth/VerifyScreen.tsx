@@ -1,59 +1,59 @@
-/**
- * VerifyScreen
- * Handles both email verification (token from params/deep-link)
- * and phone OTP verification (6-digit code entry).
- *
- * Params:
- *   mode: 'email' | 'phone'
- *   token?: string        — email verification token (from deep-link URL)
- *   phoneNumber?: string  — display only
- */
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  View,
-  Text,
-  SafeAreaView,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  ActivityIndicator,
-  StyleSheet,
-  Alert,
+  View, Text, SafeAreaView, ScrollView, TouchableOpacity,
+  TextInput, ActivityIndicator, StyleSheet, Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../context/authStore.js';
 import { authAPI } from '../../services/api.js';
-import PhoneCountryInput from '../../components/PhoneCountryInput.jsx';
-import { DEFAULT_COUNTRY } from '../../utils/countryPhoneOptions.js';
 import authStyles from '../../styles/authStyles.js';
 
-type VerifyScreenProps = {
+type Mode = 'email' | 'phone' | 'forgot-password' | 'change-password';
+
+type Props = {
   navigation: any;
-  route: {
-    params?: {
-      mode?: 'email' | 'phone';
-      token?: string;
-      phoneNumber?: string;
-    };
-  };
+  route: { params?: { mode?: Mode; email?: string; phoneNumber?: string; userId?: string } };
 };
 
-export default function VerifyScreen({ navigation, route }: VerifyScreenProps) {
-  const mode = route.params?.mode ?? 'email';
-  const emailToken = route.params?.token ?? '';
-  const phoneNumber = route.params?.phoneNumber ?? '';
+const MODE_CONFIG: Record<Mode, { icon: string; title: string; subtitle: (target: string) => string }> = {
+  email: {
+    icon: 'email-check-outline',
+    title: 'Verify Your Email',
+    subtitle: (email) => `Enter the 6-digit code sent to\n${email}`,
+  },
+  phone: {
+    icon: 'phone-check',
+    title: 'Verify Your Phone',
+    subtitle: (phone) => `Enter the 6-digit code sent to\n${phone}`,
+  },
+  'forgot-password': {
+    icon: 'lock-reset',
+    title: 'Reset Password',
+    subtitle: (email) => `Enter the 6-digit code sent to\n${email}`,
+  },
+  'change-password': {
+    icon: 'shield-lock',
+    title: 'Confirm It\'s You',
+    subtitle: (email) => `Enter the 6-digit code sent to\n${email}`,
+  },
+};
 
-  const { verifyEmail, verifyPhone, sendPhoneOtp, isLoading, clearError } = useAuthStore();
+export default function VerifyScreen({ navigation, route }: Props) {
+  const mode: Mode = (route.params?.mode ?? 'email') as Mode;
+  const paramEmail = route.params?.email ?? '';
+  const paramPhone = route.params?.phoneNumber ?? '';
+  const paramUserId = route.params?.userId ?? '';
 
-  const [selectedCountry, setSelectedCountry] = useState(DEFAULT_COUNTRY);
+  const { verifyEmail, verifyPhone, verifyOtp, sendPhoneOtp, user, isLoading, clearError } = useAuthStore() as any;
+
+  const target = mode === 'phone' ? (paramPhone || user?.phoneNumber || '') : (paramEmail || user?.email || '');
+  const resendTarget = target || paramUserId;
+  const config = MODE_CONFIG[mode];
+
   const [otp, setOtp] = useState('');
   const [otpError, setOtpError] = useState('');
-  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [statusMsg, setStatusMsg] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const didAutoVerify = useRef(false);
 
   const startCooldown = useCallback(() => {
     setResendCooldown(60);
@@ -65,211 +65,119 @@ export default function VerifyScreen({ navigation, route }: VerifyScreenProps) {
     }, 1000);
   }, []);
 
-  const handleEmailVerify = useCallback(async (token: string) => {
-    try {
-      clearError();
-      await verifyEmail(token);
-      setStatus('success');
-      setStatusMsg('Your email has been verified successfully! You can now log in.');
-    } catch (err: any) {
-      setStatus('error');
-      setStatusMsg(err?.message || 'Invalid or expired verification link. Please request a new one.');
-    }
-  }, [clearError, verifyEmail]);
+  useEffect(() => () => { if (cooldownRef.current) clearInterval(cooldownRef.current); }, []);
 
-  // Auto-verify email if token already in params (deep-link)
-  useEffect(() => {
-    if (mode === 'email' && emailToken && !didAutoVerify.current) {
-      didAutoVerify.current = true;
-      handleEmailVerify(emailToken);
-    }
-    return () => { if (cooldownRef.current) clearInterval(cooldownRef.current); };
-  }, [mode, emailToken, handleEmailVerify]);
-
-  const handlePhoneVerify = async () => {
+  const handleVerify = async () => {
     if (otp.length !== 6) { setOtpError('Enter the 6-digit code'); return; }
+    setOtpError('');
+    clearError();
     try {
-      clearError();
-      setOtpError('');
-      await verifyPhone(otp);
-      setStatus('success');
-      setStatusMsg('Phone number verified! You can now log in with your phone number.');
+      if (mode === 'phone') {
+        await verifyPhone(otp);
+        // verifyPhone sets isAuthenticated → navigator auto-redirects
+      } else if (mode === 'email' || mode === 'change-password') {
+        await verifyEmail(otp);
+        if (mode === 'change-password') {
+          navigation.navigate('ChangePassword', { otpVerified: true });
+        } else {
+          Alert.alert('Verified!', 'Your email has been verified.', [
+            { text: 'Login', onPress: () => navigation.navigate('Login') },
+          ]);
+        }
+      } else if (mode === 'forgot-password') {
+        const res = await verifyOtp(target, otp) as { resetToken?: string };
+        if (!res.resetToken) {
+          setOtpError('Could not verify code. Please request a new one.');
+          return;
+        }
+        navigation.navigate('ResetPassword', { resetToken: res.resetToken });
+      }
     } catch (err: any) {
-      setOtpError(err?.message || 'Invalid or expired OTP. Please try again.');
+      setOtpError(err?.message || 'Invalid or expired code. Please try again.');
     }
   };
 
-  const handlePhoneChange = (text: string) => {
-    const nextPhone = text.replace(/\D/g, '');
-    const displayPhone = `${selectedCountry.dialCode} ${nextPhone}`.trim();
-    if (route.params) route.params.phoneNumber = displayPhone;
-  };
-
-  const handleCountryChange = (country: typeof DEFAULT_COUNTRY) => {
-    setSelectedCountry(country);
-  };
-
-  const handleResendPhoneOtp = async () => {
+  const handleResend = async () => {
     if (resendCooldown > 0) return;
     try {
       clearError();
-      const contactPhone = `${selectedCountry.dialCode} ${phoneNumber.replace(new RegExp(`^${selectedCountry.dialCode}`), '').trim()}`.trim();
-      await sendPhoneOtp(contactPhone || undefined);
+      if (mode === 'phone') {
+        await sendPhoneOtp();
+      } else if (mode === 'forgot-password') {
+        await authAPI.forgotPassword(target);
+      } else if (mode === 'change-password') {
+        await authAPI.sendChangePasswordOtp();
+      } else {
+        await authAPI.resendVerification(resendTarget);
+      }
       startCooldown();
-      Alert.alert('Sent', 'A new OTP has been sent to your phone number.');
+      Alert.alert('Sent', `A new code has been sent to ${target || 'your email'}.`);
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to resend OTP. Please try again.');
+      Alert.alert('Error', err?.message || 'Failed to resend. Please try again.');
     }
   };
 
-  const handleResendEmail = async () => {
-    if (resendCooldown > 0) return;
-    try {
-      clearError();
-      await authAPI.resendVerification();
-      startCooldown();
-      Alert.alert('Sent', 'A new verification email has been sent. Check your inbox.');
-    } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to resend email. Please try again.');
-    }
-  };
-
-  // ── Success ────────────────────────────────────────────────────────────────
-  if (status === 'success') {
-    return (
-      <SafeAreaView style={authStyles.screen}>
-        <ScrollView contentContainerStyle={styles.center}>
-          <View style={styles.iconCircle}>
-            <MaterialCommunityIcons name="check-circle" size={64} color="#16a34a" />
-          </View>
-          <Text style={styles.heading}>Verified!</Text>
-          <Text style={styles.subText}>{statusMsg}</Text>
-          <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.navigate('Login')}>
-            <Text style={styles.primaryBtnText}>Go to Login</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
-  // ── Email token invalid ────────────────────────────────────────────────────
-  if (status === 'error' && mode === 'email') {
-    return (
-      <SafeAreaView style={authStyles.screen}>
-        <ScrollView contentContainerStyle={styles.center}>
-          <View style={[styles.iconCircle, { backgroundColor: '#fee2e2' }]}>
-            <MaterialCommunityIcons name="close-circle" size={64} color="#dc2626" />
-          </View>
-          <Text style={styles.heading}>Verification Failed</Text>
-          <Text style={styles.subText}>{statusMsg}</Text>
-          <TouchableOpacity
-            style={[styles.primaryBtn, resendCooldown > 0 && styles.btnDisabled]}
-            onPress={handleResendEmail}
-            disabled={resendCooldown > 0 || isLoading}
-          >
-            {isLoading
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.primaryBtnText}>
-                  {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Verification Email'}
-                </Text>}
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.ghostBtn} onPress={() => navigation.navigate('Login')}>
-            <Text style={styles.ghostBtnText}>Back to Login</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
-  // ── Email: waiting for user to click link ──────────────────────────────────
-  if (mode === 'email') {
-    return (
-      <SafeAreaView style={authStyles.screen}>
-        <ScrollView contentContainerStyle={styles.center}>
-          <View style={styles.iconCircle}>
-            <MaterialCommunityIcons name="email-check-outline" size={64} color="#16a34a" />
-          </View>
-          <Text style={styles.heading}>Check Your Email</Text>
-          <Text style={styles.subText}>
-            We sent a verification link to your email address. Open it to activate your account.
-          </Text>
-          {isLoading && <ActivityIndicator color="#16a34a" style={{ marginVertical: 16 }} />}
-          <TouchableOpacity
-            style={[styles.primaryBtn, (resendCooldown > 0 || isLoading) && styles.btnDisabled]}
-            onPress={handleResendEmail}
-            disabled={resendCooldown > 0 || isLoading}
-          >
-            <Text style={styles.primaryBtnText}>
-              {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Email'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.ghostBtn} onPress={() => navigation.navigate('Login')}>
-            <Text style={styles.ghostBtnText}>Back to Login</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
-  // ── Phone OTP entry ────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={authStyles.screen}>
-      <ScrollView contentContainerStyle={styles.center}>
+      <ScrollView contentContainerStyle={styles.center} keyboardShouldPersistTaps="handled">
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <MaterialCommunityIcons name="arrow-left" size={24} color="#16a34a" />
         </TouchableOpacity>
 
         <View style={styles.iconCircle}>
-          <MaterialCommunityIcons name="phone-check" size={64} color="#16a34a" />
+          <MaterialCommunityIcons name={config.icon as any} size={64} color="#16a34a" />
         </View>
-        <Text style={styles.heading}>Verify Phone Number</Text>
-        <Text style={styles.subText}>
-          Enter the 6-digit code sent to{' '}
-          <Text style={{ fontWeight: '800', color: '#172017' }}>{phoneNumber || 'your phone'}</Text>
-        </Text>
 
-        <PhoneCountryInput
-          label="Phone Number"
-          placeholder="8012345678"
-          value={phoneNumber ? phoneNumber.replace(new RegExp(`^${selectedCountry.dialCode}`), '').trim() : ''}
-          onChangeText={(text) => {
-            const nextPhone = text.replace(/\D/g, '');
-            const displayPhone = `${selectedCountry.dialCode} ${nextPhone}`.trim();
-            navigation.setParams?.({ phoneNumber: displayPhone });
-          }}
-          selectedCountry={selectedCountry}
-          onCountryChange={handleCountryChange}
-        />
+        <Text style={styles.heading}>{config.title}</Text>
+        <Text style={styles.subText}>{config.subtitle(target)}</Text>
 
+        {/* OTP boxes */}
+        <View style={styles.otpRow}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <View
+              key={i}
+              style={[
+                styles.otpBox,
+                otp.length === i && styles.otpBoxActive,
+                otpError && styles.otpBoxError,
+                otp[i] && styles.otpBoxFilled,
+              ]}
+            >
+              <Text style={styles.otpChar}>{otp[i] || ''}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Hidden input that captures all digits */}
         <TextInput
-          style={[styles.otpInput, otpError ? styles.otpInputError : null]}
+          style={styles.hiddenInput}
           value={otp}
           onChangeText={(t) => { setOtp(t.replace(/\D/g, '').slice(0, 6)); setOtpError(''); }}
           keyboardType="number-pad"
           maxLength={6}
-          placeholder="000000"
-          placeholderTextColor="#9ca3af"
           autoFocus
+          caretHidden
         />
+
         {otpError ? <Text style={styles.errorText}>{otpError}</Text> : null}
 
         <TouchableOpacity
           style={[styles.primaryBtn, (isLoading || otp.length !== 6) && styles.btnDisabled]}
-          onPress={handlePhoneVerify}
+          onPress={handleVerify}
           disabled={isLoading || otp.length !== 6}
         >
           {isLoading
             ? <ActivityIndicator color="#fff" />
-            : <Text style={styles.primaryBtnText}>Verify</Text>}
+            : <Text style={styles.primaryBtnText}>Verify Code</Text>}
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.ghostBtn, (resendCooldown > 0 || isLoading) && styles.btnDisabled]}
-          onPress={handleResendPhoneOtp}
+          onPress={handleResend}
           disabled={resendCooldown > 0 || isLoading}
         >
           <Text style={styles.ghostBtnText}>
-            {resendCooldown > 0 ? `Resend OTP in ${resendCooldown}s` : "Didn't receive it? Resend"}
+            {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Didn't receive it? Resend"}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -292,16 +200,23 @@ const styles = StyleSheet.create({
     fontSize: 15, color: '#667064', textAlign: 'center',
     lineHeight: 22, marginBottom: 28, fontWeight: '600',
   },
-  otpInput: {
-    width: '100%', borderWidth: 2, borderColor: '#d1fae5', borderRadius: 16,
-    fontSize: 32, fontWeight: '900', letterSpacing: 14, textAlign: 'center',
-    paddingVertical: 16, backgroundColor: '#fff', marginBottom: 8, color: '#172017',
+  otpRow: { flexDirection: 'row', gap: 10, marginBottom: 4 },
+  otpBox: {
+    width: 46, height: 56, borderRadius: 12, borderWidth: 2,
+    borderColor: '#d1fae5', backgroundColor: '#fff',
+    alignItems: 'center', justifyContent: 'center',
   },
-  otpInputError: { borderColor: '#dc2626' },
-  errorText: { color: '#dc2626', fontSize: 13, fontWeight: '700', marginBottom: 12 },
+  otpBoxActive: { borderColor: '#16a34a', backgroundColor: '#f0fdf4' },
+  otpBoxFilled: { borderColor: '#16a34a' },
+  otpBoxError: { borderColor: '#dc2626' },
+  otpChar: { fontSize: 24, fontWeight: '900', color: '#172017' },
+  hiddenInput: {
+    position: 'absolute', opacity: 0, width: 1, height: 1,
+  },
+  errorText: { color: '#dc2626', fontSize: 13, fontWeight: '700', marginBottom: 12, marginTop: 8 },
   primaryBtn: {
     width: '100%', backgroundColor: '#16a34a', borderRadius: 16,
-    paddingVertical: 16, alignItems: 'center', marginTop: 16,
+    paddingVertical: 16, alignItems: 'center', marginTop: 20,
   },
   primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
   ghostBtn: { width: '100%', paddingVertical: 14, alignItems: 'center', marginTop: 10 },

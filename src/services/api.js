@@ -103,12 +103,13 @@ export const authAPI = {
   verifyEmail: async (token) => {
     const deviceId = await getOrCreateDeviceId();
     return apiClient.post('/auth/verify-email', {
-      token,
+      otp: token,
       deviceId,
       deviceName: getDeviceName(),
     });
   },
-  resendVerification: () => apiClient.post('/auth/resend-verification'),
+  resendVerification: (email) => apiClient.post('/auth/resend-verification', email ? { email } : {}),
+  verifyOtp: (email, otp) => apiClient.post('/auth/verify-otp', { email, otp }),
   // 2FA
   verifyTwoFactor: (userId, code) => apiClient.post('/auth/verify-2fa', { userId, code }),
   toggleTwoFactor: () => apiClient.post('/auth/2fa/toggle'),
@@ -118,6 +119,8 @@ export const authAPI = {
   addDevice: (deviceId, deviceName) => apiClient.post('/auth/devices', { deviceId, deviceName }),
   removeDevice: (deviceId) => apiClient.delete(`/auth/devices/${deviceId}`),
   saveFcmToken: (fcmToken) => apiClient.post('/auth/fcm-token', { fcmToken }),
+  sendPhoneOtp: () => apiClient.post('/auth/send-phone-otp'),
+  verifyPhone: (otp) => apiClient.post('/auth/verify-phone', { otp }),
   getMyNotifications: (params) => apiClient.get('/auth/notifications', { params }),
   markNotificationRead: (id) => apiClient.patch(`/auth/notifications/${id}/read`),
   markAllNotificationsRead: () => apiClient.patch('/auth/notifications/read-all'),
@@ -187,7 +190,7 @@ export const adminAPI = {
   // Bookings
   getAllBookings: (query) => apiClient.get('/admin/bookings', { params: query }),
   getBookingById: (id) => apiClient.get(`/admin/bookings/${id}`),
-  confirmBooking: (id, data?) => apiClient.patch(`/admin/bookings/${id}/confirm`, data || {}),
+  confirmBooking: (id, data) => apiClient.patch(`/admin/bookings/${id}/confirm`, data || {}),
   rejectBooking: (id, data) => apiClient.patch(`/admin/bookings/${id}/reject`, data),
   cancelBooking: (id, data) => apiClient.patch(`/admin/bookings/${id}/cancel`, data),
   completeBooking: (id) => apiClient.patch(`/admin/bookings/${id}/complete`),

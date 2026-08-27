@@ -36,12 +36,12 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     try {
       const response = await login(email, password);
       if (response?.requiresEmailVerification) {
-        navigation.navigate('Verify', { mode: 'email' });
+        navigation.navigate('Verify', { mode: 'email', email: email.trim() });
       }
     } catch (err) {
       console.error('Login error:', err);
       if (err && typeof err === 'object' && 'requiresEmailVerification' in err) {
-        navigation.navigate('Verify', { mode: 'email' });
+        navigation.navigate('Verify', { mode: 'email', email: email.trim() });
       }
     }
   };

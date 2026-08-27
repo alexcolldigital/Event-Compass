@@ -9,8 +9,7 @@ import authStyles from '../../styles/authStyles.js';
 
 export default function ForgotPasswordScreen({ navigation }) {
   const [email, setEmail] = useState('');
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<{ email?: string }>({});
   const { forgotPassword, isLoading, error } = useAuthStore();
 
   const handleSubmit = async () => {
@@ -21,48 +20,12 @@ export default function ForgotPasswordScreen({ navigation }) {
     }
 
     try {
-      await forgotPassword(email);
-      setIsSubmitted(true);
+      const response = await forgotPassword(email.trim()) as { email?: string };
+      navigation.navigate('ResetPassword', { email: response?.email || email.trim() });
     } catch (err) {
       console.error('Forgot password error:', err);
     }
   };
-
-  if (isSubmitted) {
-    return (
-      <SafeAreaView style={authStyles.screen}>
-        <ScrollView style={authStyles.scroll} contentContainerStyle={authStyles.scrollContent}>
-          <View style={authStyles.shell}>
-            <View style={authStyles.header}>
-              <View style={authStyles.brandBadge}>
-                <MaterialCommunityIcons name="check-circle" size={58} color="white" />
-              </View>
-              <Text style={authStyles.title}>Reset Link Sent</Text>
-              <Text style={authStyles.subtitle}>
-                We sent a password reset link to your email address.
-              </Text>
-            </View>
-
-            <View style={authStyles.successBox}>
-              <Text style={authStyles.smallLabel}>Email Sent To</Text>
-              <Text style={authStyles.strongText}>{email}</Text>
-            </View>
-
-            <Button
-              title="Back to Login"
-              onPress={() => navigation.navigate('Login')}
-              variant="primary"
-              fullWidth
-              size="lg"
-            />
-            <Text style={authStyles.terms}>
-              Did not receive the email? Check your spam folder or contact support.
-            </Text>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={authStyles.screen}>
@@ -78,7 +41,7 @@ export default function ForgotPasswordScreen({ navigation }) {
             </View>
             <Text style={authStyles.title}>Reset Password</Text>
             <Text style={authStyles.subtitle}>
-              Enter your email and we will send you a link to reset your password.
+              Enter your email and we will send you a 6-digit code to reset your password.
             </Text>
           </View>
 
@@ -100,7 +63,7 @@ export default function ForgotPasswordScreen({ navigation }) {
           </View>
 
           <Button
-            title={isLoading ? 'Sending...' : 'Send Reset Link'}
+            title={isLoading ? 'Sending...' : 'Send Reset Code'}
             onPress={handleSubmit}
             isLoading={isLoading}
             fullWidth

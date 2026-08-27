@@ -26,6 +26,7 @@ import PaymentResultScreen from '../screens/main/PaymentResultScreen';
 import WebCheckoutScreen from '../screens/main/WebCheckoutScreen';
 import EditProfileScreen from '../screens/main/EditProfileScreen';
 import ChangePasswordScreen from '../screens/main/ChangePasswordScreen';
+import VerifyScreen from '../screens/auth/VerifyScreen';
 import NotificationsScreen from '../screens/main/NotificationsScreen';
 import HelpSupportScreen from '../screens/main/HelpSupportScreen';
 import AboutScreen from '../screens/main/AboutScreen';
@@ -223,6 +224,11 @@ function ProfileStack() {
       <Stack.Screen
         name="ChangePassword"
         component={ChangePasswordScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="Verify"
+        component={VerifyScreen}
         options={{ animation: 'slide_from_right' }}
       />
       <Stack.Screen

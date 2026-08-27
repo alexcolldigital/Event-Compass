@@ -96,19 +96,24 @@ export const authAPI = {
     apiClient.post('/auth/profile/image', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
+  sendChangePasswordOtp: () => apiClient.post('/auth/send-change-password-otp'),
   changePassword: (data) => apiClient.post('/auth/change-password', data),
   forgotPassword: (identifier) => apiClient.post('/auth/forgot-password', { identifier }),
   resetPassword: (data) => apiClient.post('/auth/reset-password', data),
   // Email verification
-  verifyEmail: async (token) => {
+  verifyEmail: async (otp) => {
     const deviceId = await getOrCreateDeviceId();
-    return apiClient.post('/auth/verify-email', {
-      token,
-      deviceId,
-      deviceName: getDeviceName(),
-    });
+    return apiClient.post('/auth/verify-email', { otp, deviceId, deviceName: getDeviceName() });
   },
-  resendVerification: () => apiClient.post('/auth/resend-verification'),
+  verifyOtp: (email, otp) => apiClient.post('/auth/verify-otp', { email, otp }),
+  resetPasswordWithToken: (data) => apiClient.post('/auth/reset-password', data),
+  resendVerification: (emailOrUserId) => {
+    // Works unauthenticated — pass email or userId so backend can find the user
+    const body = emailOrUserId
+      ? (emailOrUserId.includes('@') ? { email: emailOrUserId } : { userId: emailOrUserId })
+      : {};
+    return apiClient.post('/auth/resend-verification', body);
+  },
   // 2FA
   verifyTwoFactor: (userId, code) => apiClient.post('/auth/verify-2fa', { userId, code }),
   toggleTwoFactor: () => apiClient.post('/auth/2fa/toggle'),
@@ -190,7 +195,7 @@ export const adminAPI = {
   // Bookings
   getAllBookings: (query) => apiClient.get('/admin/bookings', { params: query }),
   getBookingById: (id) => apiClient.get(`/admin/bookings/${id}`),
-  confirmBooking: (id, data?) => apiClient.patch(`/admin/bookings/${id}/confirm`, data || {}),
+  confirmBooking: (id, data) => apiClient.patch(`/admin/bookings/${id}/confirm`, data || {}),
   rejectBooking: (id, data) => apiClient.patch(`/admin/bookings/${id}/reject`, data),
   cancelBooking: (id, data) => apiClient.patch(`/admin/bookings/${id}/cancel`, data),
   completeBooking: (id) => apiClient.patch(`/admin/bookings/${id}/complete`),

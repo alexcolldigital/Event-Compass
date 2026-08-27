@@ -21,7 +21,7 @@ type FormData = {
 type RegisterScreenProps = {
   navigation: {
     goBack: () => void;
-    navigate: (screen: string) => void;
+    navigate: (screen: string, params?: Record<string, unknown>) => void;
   };
 };
 
@@ -68,14 +68,19 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const handleRegister = async () => {
     if (!validateForm()) return;
     try {
-      await register({
+      const response = await register({
         ...formData,
         phoneNumber: `${selectedCountry.dialCode} ${formData.phoneNumber.trim()}`.trim(),
         country: selectedCountry.name,
         countryCode: selectedCountry.code,
         dialCode: selectedCountry.dialCode,
+        verificationMethod: 'email',
       });
-      navigation.navigate('Verify', { mode: 'email' });
+      if (response?.requiresEmailVerification) {
+        navigation.navigate('Verify', { mode: 'email', email: formData.email.trim() });
+      } else if (response?.requiresPhoneVerification) {
+        navigation.navigate('Verify', { mode: 'phone' });
+      }
     } catch (err) {
       console.error('Register error:', err);
     }

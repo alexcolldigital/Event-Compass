@@ -20,6 +20,8 @@ const linking = {
           Login: 'login',
           Register: 'register',
           ForgotPassword: 'forgot-password',
+          Verify: 'verify',
+          PhoneVerify: 'verify-phone',
         },
       },
       Main: {

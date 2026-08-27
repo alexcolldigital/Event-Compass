@@ -293,20 +293,6 @@ const EditProfileScreen = () => {
                 </View>
               </View>
             </View>
-
-            <View style={[styles.statusCard, { backgroundColor: user?.isPhoneVerified ? '#ecfdf5' : '#fef3c7', borderColor: user?.isPhoneVerified ? '#bbf7d0' : '#fde68a' }]}> 
-              <View style={styles.statusLeft}> 
-                <View style={[styles.statusIcon, { backgroundColor: user?.isPhoneVerified ? '#16a34a' : '#d97706' }]}> 
-                  <MaterialCommunityIcons name={user?.isPhoneVerified ? 'check-circle' : 'phone-alert'} size={20} color="white" />
-                </View>
-                <View>
-                  <Text style={[styles.statusLabel, { color: colors.muted }]}>Phone Verification</Text>
-                  <Text style={[styles.statusValue, { color: user?.isPhoneVerified ? '#166534' : '#92400e' }]}> 
-                    {user?.isPhoneVerified ? 'Verified' : 'Not Verified'}
-                  </Text>
-                </View>
-              </View>
-            </View>
           </View>
         </View>
       </ScrollView>

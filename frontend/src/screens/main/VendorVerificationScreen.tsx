@@ -11,8 +11,7 @@ const VendorVerificationScreen = () => {
 
   const verificationOptions = [
     { key: 'Verified', value: provider.isVerified || provider.isBusinessVerified, icon: 'shield-check', desc: 'Business and account review complete' },
-    { key: 'Email verified', value: provider.isEmailVerified, icon: 'email-check', desc: 'Email ownership confirmed' },
-    { key: 'Phone verified', value: provider.isPhoneVerified, icon: 'phone-check', desc: 'Phone number confirmed' },
+    { key: 'Email verified', value: provider.isEmailVerified, icon: 'email-check', desc: 'Email ownership confirmed. Phone auto-verified.' },
     { key: 'Bank account verified', value: provider.bankVerified || provider.isBusinessVerified, icon: 'bank', desc: 'Payout account verified' },
     { key: 'Documents approved', value: provider.verificationDocuments?.length > 0, icon: 'file-check', desc: 'Government or business identification approved' },
   ];

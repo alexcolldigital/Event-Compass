@@ -21,7 +21,7 @@ type FormData = {
 type RegisterScreenProps = {
   navigation: {
     goBack: () => void;
-    navigate: (screen: string) => void;
+    navigate: (screen: string, params?: Record<string, unknown>) => void;
   };
 };
 
@@ -76,7 +76,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
         dialCode: selectedCountry.dialCode,
       });
       if (response?.requiresEmailVerification) {
-        navigation.navigate('Verify', { mode: 'email' });
+        navigation.navigate('Verify', { mode: 'email', email: formData.email.trim() });
       }
     } catch (err) {
       console.error('Register error:', err);

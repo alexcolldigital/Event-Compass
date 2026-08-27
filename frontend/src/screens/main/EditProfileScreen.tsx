@@ -343,21 +343,6 @@ export default function EditProfileScreen() {
               </Text>
             </View>
           </View>
-          <View style={styles.statusItem}>
-            <View style={[styles.statusIcon, { backgroundColor: user?.isPhoneVerified ? '#16a34a' : '#f59e0b' }]}>
-              <MaterialCommunityIcons
-                name={user?.isPhoneVerified ? 'check-circle' : 'phone-alert'}
-                size={20}
-                color="#fff"
-              />
-            </View>
-            <View>
-              <Text style={styles.statusLabel}>Phone Verification</Text>
-              <Text style={[styles.statusValue, { color: user?.isPhoneVerified ? '#16a34a' : '#d97706' }]}>
-                {user?.isPhoneVerified ? '✓ Verified' : '⚠ Not Verified'}
-              </Text>
-            </View>
-          </View>
         </View>
       </ScrollView>
 

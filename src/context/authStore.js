@@ -139,7 +139,7 @@ export const useAuthStore = create((set, get) => ({
       set({ user: response.user, token: response.token, isAuthenticated: true, isLoading: false, requiresTwoFactor: false, pendingUserId: null });
       return response;
     } catch (error) {
-      if (error?.requiresEmailVerification) {
+      if (error?.requiresEmailVerification || error?.requiresDeviceVerification) {
         set({ error: error.message || 'Email verification required', isLoading: false, isAuthenticated: false, token: null, user: error.user || null });
         return error;
       }
@@ -179,12 +179,12 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // Verify email
+  // Verify email (auto-verifies phone too)
   verifyEmail: async (token) => {
     try {
       set({ isLoading: true, error: null });
       const response = await authAPI.verifyEmail(token);
-      const user = { ...get().user, isEmailVerified: true };
+      const user = { ...get().user, isEmailVerified: true, isPhoneVerified: true };
       await AsyncStorage.setItem('user', JSON.stringify(user));
       set({ user, isLoading: false });
       return response;
@@ -300,6 +300,37 @@ export const useAuthStore = create((set, get) => ({
       return response;
     } catch (error) {
       set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  // Send phone OTP
+  sendPhoneOtp: async () => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authAPI.sendPhoneOtp();
+      set({ isLoading: false });
+      return response;
+    } catch (error) {
+      set({ error: error.message || 'Failed to send OTP', isLoading: false });
+      throw error;
+    }
+  },
+
+  // Verify phone OTP after login
+  verifyPhone: async (otp) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authAPI.verifyPhone(otp);
+      const updatedUser = response.user || { ...get().user, isPhoneVerified: true };
+      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+      set({ user: updatedUser, isAuthenticated: true, isLoading: false });
+      return response;
+    } catch (error) {
+      set({ error: error.message || 'OTP verification failed', isLoading: false });
       throw error;
     }
   },

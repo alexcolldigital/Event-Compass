@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../context/authStore.js';
@@ -6,10 +6,11 @@ import { useTheme } from '../../context/ThemeContext';
 import Input from '../../components/Input.jsx';
 import Button from '../../components/Button.jsx';
 
-export default function ChangePasswordScreen({ navigation }: { navigation: any }) {
-  const { changePassword } = useAuthStore();
+export default function ChangePasswordScreen({ navigation, route }: { navigation: any; route: any }) {
+  const { changePassword, sendChangePasswordOtp } = useAuthStore() as any;
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const otpVerified = route?.params?.otpVerified === true;
 
   const colors = {
     bg: isDark ? '#050816' : '#f5f7f2',
@@ -23,6 +24,27 @@ export default function ChangePasswordScreen({ navigation }: { navigation: any }
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [otpSent, setOtpSent] = useState(otpVerified);
+  const [sendingOtp, setSendingOtp] = useState(false);
+
+  // Auto-send OTP when screen mounts (if not already verified)
+  useEffect(() => {
+    if (!otpVerified) {
+      handleSendOtp();
+    }
+  }, []);
+
+  const handleSendOtp = async () => {
+    setSendingOtp(true);
+    try {
+      await sendChangePasswordOtp();
+      navigation.navigate('Verify', { mode: 'change-password' });
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to send verification code');
+    } finally {
+      setSendingOtp(false);
+    }
+  };
 
   const set = (key: string, val: string) => {
     setForm((f) => ({ ...f, [key]: val }));
@@ -66,6 +88,10 @@ export default function ChangePasswordScreen({ navigation }: { navigation: any }
 
   const strength = getStrength(form.newPassword);
   const matches = form.newPassword && form.confirmPassword && form.newPassword === form.confirmPassword;
+
+  if (!otpVerified) {
+    return null; // navigating to Verify screen
+  }
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>

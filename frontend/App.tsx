@@ -10,6 +10,7 @@ import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { useAuthStore } from './src/context/authStore';
 import RootNavigator from './src/navigation/RootNavigator';
 import { navigationRef } from './src/navigation/navigationRef';
+import { parseStoredNavigationState } from './src/utils/navigationState';
 
 const NAV_STATE_KEY = 'navigationState';
 
@@ -23,8 +24,10 @@ function AppShell() {
     initializeAuth();
     AsyncStorage.getItem(NAV_STATE_KEY)
       .then((saved) => {
-        if (saved) setInitialState(JSON.parse(saved));
+        const parsedState = parseStoredNavigationState(saved);
+        if (parsedState) setInitialState(parsedState);
       })
+      .catch(() => undefined)
       .finally(() => setIsReady(true));
   }, [initializeAuth]);
 

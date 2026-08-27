@@ -25,7 +25,7 @@ type FormData = {
 type RegisterProviderScreenProps = {
   navigation: {
     goBack: () => void;
-    navigate: (screen: string) => void;
+    navigate: (screen: string, params?: Record<string, unknown>) => void;
   };
 };
 
@@ -88,7 +88,7 @@ export default function RegisterProviderScreen({ navigation }: RegisterProviderS
         dialCode: selectedCountry.dialCode,
       });
       if (response?.requiresEmailVerification) {
-        navigation.navigate('Verify', { mode: 'email' });
+        navigation.navigate('Verify', { mode: 'email', email: formData.email.trim() });
       }
     } catch (err) {
       console.error('Provider registration error:', err);

@@ -15,9 +15,9 @@ import BottomTabNavigator from './BottomTabNavigator';
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigator() {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isAuthenticated, isLoading, isInitialized } = useAuthStore();
 
-  if (isLoading) {
+  if (isLoading || !isInitialized) {
     return <Loading fullScreen />;
   }
 
