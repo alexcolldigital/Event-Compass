@@ -1,4 +1,8 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const LOGO_WIDTH = Math.min(SCREEN_WIDTH - 48, 500);
+const LOGO_HEIGHT = Math.round(LOGO_WIDTH * (220 / 500));
 
 export const authStyles = StyleSheet.create({
   screen: {
@@ -33,8 +37,8 @@ export const authStyles = StyleSheet.create({
     marginBottom: 28,
   },
   brandLogo: {
-    width: 500,
-    height: 220,
+    width: LOGO_WIDTH,
+    height: LOGO_HEIGHT,
     marginBottom: 12,
   },
   brandBadge: {
