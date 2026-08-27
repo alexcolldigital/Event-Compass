@@ -176,6 +176,33 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  // Verify the account email with the 6-digit code
+  verifyEmail: async (otp) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authAPI.verifyEmail(otp);
+      const updatedUser = {
+        ...(response.user || get().user || {}),
+        isEmailVerified: true,
+      };
+      if (response.token) {
+        await AsyncStorage.setItem('authToken', response.token);
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem('authToken', response.token);
+        }
+      }
+      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+      set({ user: updatedUser, token: response.token || null, isAuthenticated: Boolean(response.token), isLoading: false });
+      return response;
+    } catch (error) {
+      set({ error: error.message || 'Email verification failed', isLoading: false });
+      throw error;
+    }
+  },
+
   // Verify 2FA code
   verifyTwoFactor: async (code) => {
     try {

@@ -184,9 +184,21 @@ export const useAuthStore = create((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       const response = await authAPI.verifyEmail(token);
-      const user = { ...get().user, isEmailVerified: true, isPhoneVerified: true };
+      const user = {
+        ...(response.user || get().user || {}),
+        isEmailVerified: true,
+      };
+      if (response.token) {
+        await AsyncStorage.setItem('authToken', response.token);
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem('authToken', response.token);
+        }
+      }
       await AsyncStorage.setItem('user', JSON.stringify(user));
-      set({ user, isLoading: false });
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('user', JSON.stringify(user));
+      }
+      set({ user, token: response.token || null, isAuthenticated: Boolean(response.token), isLoading: false });
       return response;
     } catch (error) {
       set({ error: error.message, isLoading: false });

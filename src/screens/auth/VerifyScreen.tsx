@@ -16,7 +16,9 @@ type Props = {
 
 export default function VerifyScreen({ navigation, route }: Props) {
   const [otp, setOtp] = useState('');
-  const [resendCooldown, setResendCooldown] = useState(60);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [actionError, setActionError] = useState('');
+  const [statusMessage, setStatusMessage] = useState('');
   const { verifyEmail, isLoading, error, user, clearError } = useAuthStore();
   const email = route.params?.email || user?.email || '';
 
@@ -27,20 +29,33 @@ export default function VerifyScreen({ navigation, route }: Props) {
   }, [resendCooldown]);
 
   const handleVerify = async () => {
-    if (!otp || otp.length !== 6) return;
+    if (!otp || otp.length !== 6) {
+      setActionError('Enter the 6-digit verification code');
+      return;
+    }
     try {
+      clearError();
+      setActionError('');
+      setStatusMessage('');
       await verifyEmail(otp);
-      navigation.navigate('Login');
-    } catch (_) {}
+      setStatusMessage('Email verified successfully. Opening your account...');
+    } catch (verificationError: any) {
+      setActionError(verificationError?.message || 'Invalid or expired code. Please try again.');
+    }
   };
 
   const handleResend = async () => {
     if (resendCooldown > 0) return;
     try {
       clearError();
+      setActionError('');
+      setStatusMessage('');
       await authAPI.resendVerification(email);
       setResendCooldown(60);
-    } catch (_) {}
+      setStatusMessage(`A new code has been sent to ${email || 'your email'}.`);
+    } catch (resendError: any) {
+      setActionError(resendError?.message || 'Failed to resend the verification code. Please try again.');
+    }
   };
 
   return (
@@ -68,7 +83,8 @@ export default function VerifyScreen({ navigation, route }: Props) {
             </Text>
           </View>
 
-          {error ? <ErrorMessage error={error} /> : null}
+          {error || actionError ? <ErrorMessage error={error || actionError} /> : null}
+          {statusMessage ? <Text style={{ color: '#15803d', textAlign: 'center', marginBottom: 12 }}>{statusMessage}</Text> : null}
 
           <View style={authStyles.card}>
             <Input
@@ -77,6 +93,7 @@ export default function VerifyScreen({ navigation, route }: Props) {
               value={otp}
               onChangeText={(text: string) => {
                 clearError();
+                setActionError('');
                 setOtp(text.replace(/\D/g, '').slice(0, 6));
               }}
               keyboardType="number-pad"

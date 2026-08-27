@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, SafeAreaView, ScrollView, TouchableOpacity,
-  TextInput, ActivityIndicator, StyleSheet, Alert,
+  TextInput, ActivityIndicator, StyleSheet,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../context/authStore.js';
@@ -46,7 +46,9 @@ export default function VerifyScreen({ navigation, route }: Props) {
 
   const [otp, setOtp] = useState('');
   const [otpError, setOtpError] = useState('');
+  const [statusMessage, setStatusMessage] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
+  const otpInputRef = useRef<TextInput>(null);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const startCooldown = useCallback(() => {
@@ -64,6 +66,7 @@ export default function VerifyScreen({ navigation, route }: Props) {
   const handleVerify = async () => {
     if (otp.length !== 6) { setOtpError('Enter the 6-digit code'); return; }
     setOtpError('');
+    setStatusMessage('');
     clearError();
     try {
       if (mode === 'email' || mode === 'change-password') {
@@ -71,9 +74,7 @@ export default function VerifyScreen({ navigation, route }: Props) {
         if (mode === 'change-password') {
           navigation.navigate('ChangePassword', { otpVerified: true });
         } else {
-          Alert.alert('Verified!', 'Your email has been verified.', [
-            { text: 'Login', onPress: () => navigation.navigate('Login') },
-          ]);
+          setStatusMessage('Email verified successfully. Opening your account...');
         }
       } else if (mode === 'forgot-password') {
         const res = await verifyOtp(target, otp) as { resetToken?: string };
@@ -92,6 +93,8 @@ export default function VerifyScreen({ navigation, route }: Props) {
     if (resendCooldown > 0) return;
     try {
       clearError();
+      setOtpError('');
+      setStatusMessage('');
       if (mode === 'forgot-password') {
         await authAPI.forgotPassword(target);
       } else if (mode === 'change-password') {
@@ -100,9 +103,13 @@ export default function VerifyScreen({ navigation, route }: Props) {
         await authAPI.resendVerification(resendTarget);
       }
       startCooldown();
-      Alert.alert('Sent', `A new code has been sent to ${target || 'your email'}.`);
+      setStatusMessage(`A new code has been sent to ${target || 'your email'}.`);
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to resend. Please try again.');
+      if (err?.message === 'Email already verified') {
+        navigation.navigate('Login');
+        return;
+      }
+      setOtpError(err?.message || 'Failed to resend. Please try again.');
     }
   };
 
@@ -119,9 +126,10 @@ export default function VerifyScreen({ navigation, route }: Props) {
 
         <Text style={styles.heading}>{config.title}</Text>
         <Text style={styles.subText}>{config.subtitle(target)}</Text>
+        {statusMessage ? <Text style={styles.statusText}>{statusMessage}</Text> : null}
 
         {/* OTP boxes */}
-        <View style={styles.otpRow}>
+        <TouchableOpacity style={styles.otpRow} onPress={() => otpInputRef.current?.focus()} activeOpacity={1}>
           {Array.from({ length: 6 }).map((_, i) => (
             <View
               key={i}
@@ -135,10 +143,11 @@ export default function VerifyScreen({ navigation, route }: Props) {
               <Text style={styles.otpChar}>{otp[i] || ''}</Text>
             </View>
           ))}
-        </View>
+        </TouchableOpacity>
 
         {/* Hidden input that captures all digits */}
         <TextInput
+          ref={otpInputRef}
           style={styles.hiddenInput}
           value={otp}
           onChangeText={(t) => { setOtp(t.replace(/\D/g, '').slice(0, 6)); setOtpError(''); }}
@@ -146,6 +155,7 @@ export default function VerifyScreen({ navigation, route }: Props) {
           maxLength={6}
           autoFocus
           caretHidden
+          accessibilityLabel="Email verification code"
         />
 
         {otpError ? <Text style={styles.errorText}>{otpError}</Text> : null}
@@ -203,6 +213,7 @@ const styles = StyleSheet.create({
     position: 'absolute', opacity: 0, width: 1, height: 1,
   },
   errorText: { color: '#dc2626', fontSize: 13, fontWeight: '700', marginBottom: 12, marginTop: 8 },
+  statusText: { color: '#15803d', fontSize: 13, fontWeight: '700', marginBottom: 12, marginTop: 8, textAlign: 'center' },
   primaryBtn: {
     width: '100%', backgroundColor: '#16a34a', borderRadius: 16,
     paddingVertical: 16, alignItems: 'center', marginTop: 20,
