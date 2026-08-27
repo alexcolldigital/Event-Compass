@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Linking, StyleSheet } from 'react-native';
+import { View, Text, Image, SafeAreaView, ScrollView, TouchableOpacity, Linking, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -46,7 +46,7 @@ export default function AboutScreen({ navigation }: { navigation: any }) {
         {/* Brand hero */}
         <View style={[styles.brandCard, { backgroundColor: colors.primary }]}>
           <View style={styles.logoWrap}>
-            <MaterialCommunityIcons name="compass" size={48} color="#1f7a4d" />
+            <Image source={require('../../../assets/icon.png')} style={styles.logo} resizeMode="contain" />
           </View>
           <Text style={styles.brandName}>Event Compass</Text>
           <Text style={styles.brandTagline}>Your all-in-one event marketplace</Text>
@@ -144,6 +144,7 @@ const styles = StyleSheet.create({
   content: { padding: 16, gap: 14, paddingBottom: 96 },
   brandCard: { borderRadius: 24, padding: 28, alignItems: 'center' },
   logoWrap: { width: 80, height: 80, borderRadius: 999, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
+  logo: { width: 72, height: 72, borderRadius: 16 },
   brandName: { color: '#fff', fontSize: 26, fontWeight: '900' },
   brandTagline: { color: 'rgba(255,255,255,0.85)', fontSize: 14, marginTop: 6, fontWeight: '600' },
   versionBadge: { marginTop: 12, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 5 },

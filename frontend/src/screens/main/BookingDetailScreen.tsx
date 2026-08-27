@@ -355,6 +355,19 @@ const BookingDetailScreen = () => {
             </View>
           ))}
 
+          {/* Admin-set prices breakdown */}
+          {currentBooking.adminSetPrices && currentBooking.adminSetPrices.length > 0 && (
+            <View style={{ backgroundColor: isDark ? '#1e3a5f' : '#eff6ff', borderRadius: 12, padding: 12, marginBottom: 10 }}>
+              <Text style={{ color: '#2563eb', fontSize: 12, fontWeight: '800', marginBottom: 6 }}>Admin Adjusted Pricing</Text>
+              {currentBooking.adminSetPrices.map((item: any, i: number) => (
+                <View key={i} style={styles.priceRow}>
+                  <Text style={[styles.label, { color: '#2563eb' }]}>{item.serviceName}</Text>
+                  <Text style={[styles.value, { color: '#2563eb' }]}>{formatCurrency(item.price)}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
           <View style={[styles.totalRow, { borderTopColor: colors.border }]}>
             <Text style={[styles.totalLabel, { color: colors.text }]}>Total Amount</Text>
             <Text style={[styles.totalValue, { color: colors.primary }]}>{formatCurrency(totalAmount)}</Text>

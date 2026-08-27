@@ -8,6 +8,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
+  SafeAreaView,
   FlatList,
   TextInput,
   TouchableOpacity,

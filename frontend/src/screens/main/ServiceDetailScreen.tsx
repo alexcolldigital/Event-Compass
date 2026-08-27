@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, Text, Image, TouchableOpacity, Alert, StyleSheet, Platform, Animated, TextInput } from 'react-native';
+import { View, ScrollView, Text, Image, TouchableOpacity, Alert, StyleSheet, Platform, Animated, TextInput, Linking } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useServiceStore } from '../../context/serviceStore.js';
@@ -142,6 +142,35 @@ const ServiceDetailScreen = () => {
     Alert.alert('Success', isFavorite ? 'Removed from favorites' : 'Added to favorites');
   };
 
+  const handleContactProvider = (type: 'call' | 'message') => {
+    const provider = currentService?.provider;
+    if (!provider?._id) {
+      Alert.alert('Unavailable', 'Contact details are not available for this service.');
+      return;
+    }
+
+    if (type === 'call') {
+      if (!provider.phoneNumber) {
+        Alert.alert('Unavailable', 'A phone number is not available for this service contact.');
+        return;
+      }
+      Linking.openURL(`tel:${provider.phoneNumber}`);
+      return;
+    }
+
+    const messageParams = {
+      receiver: {
+        _id: provider._id,
+        firstName: provider.firstName || 'Event',
+        lastName: provider.lastName || 'Compass',
+        businessName: provider.businessName || '',
+        role: provider.role || 'service_provider',
+      },
+      service: currentService,
+    };
+    navigation.navigate('Chat' as never, messageParams as never);
+  };
+
   const setDateOffset = (daysFromNow: number) => {
     const date = new Date();
     date.setDate(date.getDate() + daysFromNow);
@@ -207,7 +236,7 @@ const ServiceDetailScreen = () => {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.imageWrap}> 
           {currentService.images && currentService.images.length > 0 ? <Image source={{ uri: currentService.images[0].url }} style={styles.image} resizeMode="cover" /> : <MaterialCommunityIcons name="briefcase" size={78} color="rgba(255,255,255,0.6)" />}
-          <View style={styles.imageOverlay} />
+          <View pointerEvents="none" style={styles.imageOverlay} />
           <View style={styles.imageBadge}><Text style={styles.imageBadgeText}>{currentService.serviceType}</Text></View>
         </View>
 
@@ -245,10 +274,19 @@ const ServiceDetailScreen = () => {
           <View style={styles.providerRow}>
             <View style={styles.providerIcon}><MaterialCommunityIcons name="account" size={26} color="#fff" /></View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.providerName, { color: colors.text }]}>{currentService.provider?.businessName || 'Service Provider'}</Text>
+              <Text style={[styles.providerName, { color: colors.text }]}>{currentService.provider?.businessName || (currentService.provider?.role === 'admin' ? 'Event Compass Admin' : 'Service Provider')}</Text>
               <Text style={[styles.providerSubtitle, { color: colors.muted }]}>{currentService.serviceType}</Text>
             </View>
-            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.muted} />
+          </View>
+          <View style={styles.contactRow}>
+            <TouchableOpacity style={[styles.contactButton, { borderColor: colors.primary }]} onPress={() => handleContactProvider('call')}>
+              <MaterialCommunityIcons name="phone" size={18} color={colors.primary} />
+              <Text style={[styles.contactButtonText, { color: colors.primary }]}>Call</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.contactButton, { borderColor: colors.primary }]} onPress={() => handleContactProvider('message')}>
+              <MaterialCommunityIcons name="message-text" size={18} color={colors.primary} />
+              <Text style={[styles.contactButtonText, { color: colors.primary }]}>Message</Text>
+            </TouchableOpacity>
           </View>
         </Card>
 
@@ -400,6 +438,9 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 16, fontWeight: '800', marginBottom: 10, fontFamily: appFont },
   copy: { fontSize: 14, lineHeight: 21, fontFamily: appFont },
   providerRow: { flexDirection: 'row', alignItems: 'center' },
+  contactRow: { flexDirection: 'row', gap: 10, marginTop: 14 },
+  contactButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderRadius: 14, paddingVertical: 11 },
+  contactButtonText: { fontSize: 14, fontWeight: '800' },
   providerIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#1f7a4d', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   providerName: { fontSize: 15, fontWeight: '800', fontFamily: appFont },
   providerSubtitle: { fontSize: 12, marginTop: 2 },

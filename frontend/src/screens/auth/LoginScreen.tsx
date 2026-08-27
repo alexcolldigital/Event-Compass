@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, SafeAreaView, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Input from '../../components/Input.jsx';
 import Button from '../../components/Button.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { useAuthStore } from '../../context/authStore.js';
 import authStyles from '../../styles/authStyles.js';
+import logo from '../../assets/logo';
 
 interface LoginErrors {
   identifier?: string | null;
@@ -63,10 +64,7 @@ return (
       >
         <View style={authStyles.shell}>
           <View style={authStyles.header}>
-            <View style={authStyles.brandBadge}>
-              <MaterialCommunityIcons name="calendar-check" size={54} color="white" />
-            </View>
-            <Text style={authStyles.title}>Event Compass by Checcas</Text>
+            <Image source={logo} style={authStyles.brandLogo} resizeMode="contain" />
             <Text style={authStyles.subtitle}>Book premium event services instantly</Text>
           </View>
 

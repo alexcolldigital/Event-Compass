@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, StyleSheet, Platform, Alert, Modal } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, StyleSheet, Platform, Alert, Modal, TextInput } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useServiceStore } from '../../context/serviceStore.js';
@@ -79,7 +79,7 @@ const initialFormState = {
 };
 
 export default function ProviderServicesScreen({ navigation, route }: { navigation: any; route: any }) {
-  const { myServices, getMyServices, createService, uploadServiceMedia, isLoading, error } = useServiceStore();
+  const { myServices, getMyServices, createService, updateService, uploadServiceMedia, isLoading, error } = useServiceStore();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [formState, setFormState] = useState(initialFormState);
@@ -93,6 +93,9 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
   const [isUnitMenuOpen, setIsUnitMenuOpen] = useState(false);
   const [isDurationMenuOpen, setIsDurationMenuOpen] = useState(false);
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
+  const [editingService, setEditingService] = useState<any>(null);
+  const [priceDraft, setPriceDraft] = useState('');
+  const [isSavingPrice, setIsSavingPrice] = useState(false);
 
   const colors = {
     bg: isDark ? '#050816' : '#f5f7f2',
@@ -261,6 +264,30 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
         message: `Unable to create service: ${message}`,
       });
       Alert.alert('Unable to create service', message);
+    }
+  };
+
+  const handleSavePrice = async () => {
+    const price = Number(priceDraft);
+    if (!editingService || !Number.isFinite(price) || price <= 0) {
+      Alert.alert('Invalid price', 'Enter a price greater than zero.');
+      return;
+    }
+
+    try {
+      setIsSavingPrice(true);
+      await updateService(editingService._id, {
+        pricing: {
+          ...editingService.pricing,
+          basePrice: price,
+        },
+      });
+      setEditingService(null);
+      Alert.alert('Price updated', 'Your service price has been updated successfully.');
+    } catch (err) {
+      Alert.alert('Unable to update price', err instanceof Error ? err.message : 'Please try again.');
+    } finally {
+      setIsSavingPrice(false);
     }
   };
 
@@ -595,18 +622,26 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
           ) : myServices.length > 0 ? (
             <View style={styles.itemsGrid}>
               {myServices.map((service: any) => (
-                <MarketplaceCard
-                  key={service._id}
-                  image={service.images?.[0]?.url}
-                  title={service.name}
-                  subtitle={service.category}
-                  price={service.pricing?.basePrice || 0}
-                  unit={service.pricing?.unit || 'booking'}
-                  category={service.serviceType}
-                  badge={service.availability?.isAvailable === false ? 'Unavailable' : 'Available'}
-                  onPress={() => navigation.navigate('ServiceDetail', { serviceId: service._id })}
-                  style={{ backgroundColor: colors.surface, borderColor: colors.border }}
-                />
+                <View key={service._id}>
+                  <MarketplaceCard
+                    image={service.images?.[0]?.url}
+                    title={service.name}
+                    subtitle={service.category}
+                    price={service.pricing?.basePrice || 0}
+                    unit={service.pricing?.unit || 'booking'}
+                    category={service.serviceType}
+                    badge={service.availability?.isAvailable === false ? 'Unavailable' : 'Available'}
+                    onPress={() => navigation.navigate('ServiceDetail', { serviceId: service._id })}
+                    style={{ backgroundColor: colors.surface, borderColor: colors.border }}
+                  />
+                  <TouchableOpacity
+                    onPress={() => { setEditingService(service); setPriceDraft(String(service.pricing?.basePrice || '')); }}
+                    style={[styles.editPriceButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  >
+                    <MaterialCommunityIcons name="pencil-outline" size={16} color={colors.primary} />
+                    <Text style={[styles.editPriceText, { color: colors.primary }]}>Edit price</Text>
+                  </TouchableOpacity>
+                </View>
               ))}
             </View>
           ) : (
@@ -622,6 +657,29 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
           )}
         </View>
       </ScrollView>
+
+      <Modal visible={!!editingService} transparent animationType="fade" onRequestClose={() => !isSavingPrice && setEditingService(null)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => !isSavingPrice && setEditingService(null)}>
+          <View style={[styles.modalCard, { backgroundColor: colors.surface, borderColor: colors.border }]} onStartShouldSetResponder={() => true}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Edit service price</Text>
+              <TouchableOpacity onPress={() => !isSavingPrice && setEditingService(null)}>
+                <MaterialCommunityIcons name="close" size={20} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            <Text style={[styles.modalServiceName, { color: colors.muted }]}>{editingService?.name}</Text>
+            <TextInput
+              value={priceDraft}
+              onChangeText={setPriceDraft}
+              keyboardType="numeric"
+              placeholder="Enter base price"
+              placeholderTextColor={colors.muted}
+              style={[styles.priceInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
+            />
+            <Button title={isSavingPrice ? 'Saving...' : 'Save price'} onPress={handleSavePrice} disabled={isSavingPrice} fullWidth />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -720,6 +778,8 @@ const styles = StyleSheet.create({
   imagePreviewRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   imagePreviewChip: { backgroundColor: '#ecfdf3', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
   imagePreviewText: { color: '#166534', fontSize: 12, fontWeight: '700' },
+  editPriceButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderRadius: 14, paddingVertical: 10, marginTop: 8 },
+  editPriceText: { fontSize: 13, fontWeight: '800' },
   notificationBar: {
     borderWidth: 1,
     borderRadius: 18,
@@ -767,6 +827,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
   },
+  modalServiceName: { fontSize: 13, marginBottom: 12 },
+  priceInput: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, marginBottom: 14 },
   modalList: {
     marginBottom: 8,
   },

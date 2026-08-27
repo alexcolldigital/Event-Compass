@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, SafeAreaView, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Input from '../../components/Input.jsx';
 import PhoneCountryInput from '../../components/PhoneCountryInput.jsx';
@@ -7,6 +7,7 @@ import Button from '../../components/Button.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { useAuthStore } from '../../context/authStore.js';
 import authStyles from '../../styles/authStyles.js';
+import logo from '../../assets/logo';
 import { DEFAULT_COUNTRY } from '../../utils/countryPhoneOptions.js';
 
 type FormData = {
@@ -95,10 +96,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
           </TouchableOpacity>
 
           <View style={authStyles.header}>
-            <View style={authStyles.brandBadge}>
-              <MaterialCommunityIcons name="account-plus" size={54} color="white" />
-            </View>
-            <Text style={authStyles.title}>Join Event Compass by Checcas</Text>
+            <Image source={logo} style={authStyles.brandLogo} resizeMode="contain" />
             <Text style={authStyles.subtitle}>Discover premium event services in just a few steps</Text>
           </View>
 

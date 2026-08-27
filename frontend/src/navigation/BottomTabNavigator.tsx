@@ -3,7 +3,7 @@
  * Main navigation for authenticated users with bottom tabs
  */
 
-import React, { useRef } from 'react';
+import React, { lazy, Suspense, useRef } from 'react';
 import { Platform, BackHandler } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -11,51 +11,52 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../context/authStore';
 import { useTheme } from '../context/ThemeContext';
+import Loading from '../components/Loading';
 
-// Import main screens
-import HomeScreen from '../screens/main/HomeScreen';
-import SearchScreen from '../screens/main/SearchScreen';
-import BookingsScreen from '../screens/main/BookingsScreen';
-import ProfileScreen from '../screens/main/ProfileScreen';
+// Lazy-loaded main screens
+const HomeScreen = lazy(() => import('../screens/main/HomeScreen'));
+const SearchScreen = lazy(() => import('../screens/main/SearchScreen'));
+const BookingsScreen = lazy(() => import('../screens/main/BookingsScreen'));
+const ProfileScreen = lazy(() => import('../screens/main/ProfileScreen'));
 
-// Import detail screens
-import ServiceDetailScreen from '../screens/main/ServiceDetailScreen';
-import BookingDetailScreen from '../screens/main/BookingDetailScreen';
-import ProviderServicesScreen from '../screens/main/ProviderServicesScreen';
-import PaymentResultScreen from '../screens/main/PaymentResultScreen';
-import WebCheckoutScreen from '../screens/main/WebCheckoutScreen';
-import EditProfileScreen from '../screens/main/EditProfileScreen';
-import ChangePasswordScreen from '../screens/main/ChangePasswordScreen';
-import VerifyScreen from '../screens/auth/VerifyScreen';
-import NotificationsScreen from '../screens/main/NotificationsScreen';
-import HelpSupportScreen from '../screens/main/HelpSupportScreen';
-import AboutScreen from '../screens/main/AboutScreen';
-import CheckoutScreen from '../screens/main/CheckoutScreen';
-import EventDetailsScreen from '../screens/main/EventDetailsScreen';
-import EscrowStatusScreen from '../screens/main/EscrowStatusScreen';
-import ChatScreen from '../screens/main/ChatScreen';
-import DisputeEvidenceScreen from '../screens/main/DisputeEvidenceScreen';
-import VendorVerificationScreen from '../screens/main/VendorVerificationScreen';
-import ConversationsScreen from '../screens/main/ConversationsScreen';
+// Lazy-loaded detail screens
+const ServiceDetailScreen = lazy(() => import('../screens/main/ServiceDetailScreen'));
+const BookingDetailScreen = lazy(() => import('../screens/main/BookingDetailScreen'));
+const ProviderServicesScreen = lazy(() => import('../screens/main/ProviderServicesScreen'));
+const PaymentResultScreen = lazy(() => import('../screens/main/PaymentResultScreen'));
+const WebCheckoutScreen = lazy(() => import('../screens/main/WebCheckoutScreen'));
+const EditProfileScreen = lazy(() => import('../screens/main/EditProfileScreen'));
+const ChangePasswordScreen = lazy(() => import('../screens/main/ChangePasswordScreen'));
+const VerifyScreen = lazy(() => import('../screens/auth/VerifyScreen'));
+const NotificationsScreen = lazy(() => import('../screens/main/NotificationsScreen'));
+const HelpSupportScreen = lazy(() => import('../screens/main/HelpSupportScreen'));
+const AboutScreen = lazy(() => import('../screens/main/AboutScreen'));
+const CheckoutScreen = lazy(() => import('../screens/main/CheckoutScreen'));
+const EventDetailsScreen = lazy(() => import('../screens/main/EventDetailsScreen'));
+const EscrowStatusScreen = lazy(() => import('../screens/main/EscrowStatusScreen'));
+const ChatScreen = lazy(() => import('../screens/main/ChatScreen'));
+const DisputeEvidenceScreen = lazy(() => import('../screens/main/DisputeEvidenceScreen'));
+const VendorVerificationScreen = lazy(() => import('../screens/main/VendorVerificationScreen'));
+const ConversationsScreen = lazy(() => import('../screens/main/ConversationsScreen'));
 
-// Import admin screens
-import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
-import ManageUsersScreen from '../screens/admin/ManageUsersScreen';
-import ManageBookingsScreen from '../screens/admin/ManageBookingsScreen';
-import RevenueAnalyticsScreen from '../screens/admin/RevenueAnalyticsScreen';
-import ManageServicesScreen from '../screens/admin/ManageServicesScreen';
-import CommissionManagementScreen from '../screens/admin/CommissionManagementScreen';
-import PaymentMonitoringScreen from '../screens/admin/PaymentMonitoringScreen';
-import RefundApprovalScreen from '../screens/admin/RefundApprovalScreen';
-import ContentModerationScreen from '../screens/admin/ContentModerationScreen';
-import ReportsManagementScreen from '../screens/admin/ReportsManagementScreen';
-import CategoryManagementScreen from '../screens/admin/CategoryManagementScreen';
-import CouponManagementScreen from '../screens/admin/CouponManagementScreen';
-import PromotionsManagementScreen from '../screens/admin/PromotionsManagementScreen';
-import AnalyticsDashboardScreen from '../screens/admin/AnalyticsDashboardScreen';
-import NotificationManagementScreen from '../screens/admin/NotificationManagementScreen';
-import CMSManagementScreen from '../screens/admin/CMSManagementScreen';
-import AuditLogsScreen from '../screens/admin/AuditLogsScreen';
+// Lazy-loaded admin screens
+const AdminDashboardScreen = lazy(() => import('../screens/admin/AdminDashboardScreen'));
+const ManageUsersScreen = lazy(() => import('../screens/admin/ManageUsersScreen'));
+const ManageBookingsScreen = lazy(() => import('../screens/admin/ManageBookingsScreen'));
+const RevenueAnalyticsScreen = lazy(() => import('../screens/admin/RevenueAnalyticsScreen'));
+const ManageServicesScreen = lazy(() => import('../screens/admin/ManageServicesScreen'));
+const CommissionManagementScreen = lazy(() => import('../screens/admin/CommissionManagementScreen'));
+const PaymentMonitoringScreen = lazy(() => import('../screens/admin/PaymentMonitoringScreen'));
+const RefundApprovalScreen = lazy(() => import('../screens/admin/RefundApprovalScreen'));
+const ContentModerationScreen = lazy(() => import('../screens/admin/ContentModerationScreen'));
+const ReportsManagementScreen = lazy(() => import('../screens/admin/ReportsManagementScreen'));
+const CategoryManagementScreen = lazy(() => import('../screens/admin/CategoryManagementScreen'));
+const CouponManagementScreen = lazy(() => import('../screens/admin/CouponManagementScreen'));
+const PromotionsManagementScreen = lazy(() => import('../screens/admin/PromotionsManagementScreen'));
+const AnalyticsDashboardScreen = lazy(() => import('../screens/admin/AnalyticsDashboardScreen'));
+const NotificationManagementScreen = lazy(() => import('../screens/admin/NotificationManagementScreen'));
+const CMSManagementScreen = lazy(() => import('../screens/admin/CMSManagementScreen'));
+const AuditLogsScreen = lazy(() => import('../screens/admin/AuditLogsScreen'));
 
 // Import constants
 import { COLORS } from '../utils/constants';
@@ -64,17 +65,22 @@ import { showToast } from '../utils/toast';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
+const LazyScreen = ({ children }: { children: React.ReactNode }) => (
+  <Suspense fallback={<Loading fullScreen />}>{children}</Suspense>
+);
+
 // Home stack
 function HomeStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="HomeScreen" component={HomeScreen} />
-      <Stack.Screen name="ServiceDetail" component={ServiceDetailScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="EventDetails" component={EventDetailsScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="Checkout" component={CheckoutScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="WebCheckout" component={WebCheckoutScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="BookingDetail" component={BookingDetailScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="PaymentResult" component={PaymentResultScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="HomeScreen">{() => <LazyScreen><HomeScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="ServiceDetail" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ServiceDetailScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="EventDetails" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><EventDetailsScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="Checkout" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><CheckoutScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="WebCheckout" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><WebCheckoutScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="BookingDetail" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><BookingDetailScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="PaymentResult" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><PaymentResultScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="Chat" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ChatScreen /></LazyScreen>}</Stack.Screen>
     </Stack.Navigator>
   );
 }
@@ -83,13 +89,14 @@ function HomeStack() {
 function SearchStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="SearchScreen" component={SearchScreen} />
-      <Stack.Screen name="ServiceDetail" component={ServiceDetailScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="EventDetails" component={EventDetailsScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="Checkout" component={CheckoutScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="WebCheckout" component={WebCheckoutScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="BookingDetail" component={BookingDetailScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="PaymentResult" component={PaymentResultScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="SearchScreen">{() => <LazyScreen><SearchScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="ServiceDetail" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ServiceDetailScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="EventDetails" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><EventDetailsScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="Checkout" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><CheckoutScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="WebCheckout" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><WebCheckoutScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="BookingDetail" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><BookingDetailScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="PaymentResult" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><PaymentResultScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="Chat" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ChatScreen /></LazyScreen>}</Stack.Screen>
     </Stack.Navigator>
   );
 }
@@ -97,62 +104,18 @@ function SearchStack() {
 // Bookings stack
 function BookingsStack() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen name="BookingsScreen" component={BookingsScreen} />
-      <Stack.Screen
-        name="BookingDetail"
-        component={BookingDetailScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="WebCheckout"
-        component={WebCheckoutScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="PaymentResult"
-        component={PaymentResultScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="Checkout"
-        component={CheckoutScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="EventDetails"
-        component={EventDetailsScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="EscrowStatus"
-        component={EscrowStatusScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="Chat"
-        component={ChatScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="Conversations"
-        component={ConversationsScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="DisputeEvidence"
-        component={DisputeEvidenceScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="VendorVerification"
-        component={VendorVerificationScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="BookingsScreen">{() => <LazyScreen><BookingsScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="BookingDetail" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><BookingDetailScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="WebCheckout" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><WebCheckoutScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="PaymentResult" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><PaymentResultScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="Checkout" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><CheckoutScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="EventDetails" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><EventDetailsScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="EscrowStatus" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><EscrowStatusScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="Chat" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ChatScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="Conversations" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ConversationsScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="DisputeEvidence" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><DisputeEvidenceScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="VendorVerification" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><VendorVerificationScreen /></LazyScreen>}</Stack.Screen>
     </Stack.Navigator>
   );
 }
@@ -161,8 +124,8 @@ function BookingsStack() {
 function MessagesStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="ConversationsScreen" component={ConversationsScreen} />
-      <Stack.Screen name="Chat" component={ChatScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="ConversationsScreen">{() => <LazyScreen><ConversationsScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="Chat" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ChatScreen /></LazyScreen>}</Stack.Screen>
     </Stack.Navigator>
   );
 }
@@ -171,11 +134,7 @@ function MessagesStack() {
 function ProviderServicesStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen
-        name="ProviderServices"
-        component={ProviderServicesScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
+      <Stack.Screen name="ProviderServices" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ProviderServicesScreen /></LazyScreen>}</Stack.Screen>
     </Stack.Navigator>
   );
 }
@@ -184,25 +143,25 @@ function ProviderServicesStack() {
 function AdminStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="AdminDashboardScreen" component={AdminDashboardScreen} />
-      <Stack.Screen name="ManageUsers" component={ManageUsersScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="ManageBookings" component={ManageBookingsScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="ManageServices" component={ManageServicesScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="RevenueAnalytics" component={RevenueAnalyticsScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="CommissionManagement" component={CommissionManagementScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="PaymentMonitoring" component={PaymentMonitoringScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="RefundApproval" component={RefundApprovalScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="ContentModeration" component={ContentModerationScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="ReportsManagement" component={ReportsManagementScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="CategoryManagement" component={CategoryManagementScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="CouponManagement" component={CouponManagementScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="PromotionsManagement" component={PromotionsManagementScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="AnalyticsDashboard" component={AnalyticsDashboardScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="NotificationManagement" component={NotificationManagementScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="CMSManagement" component={CMSManagementScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="AuditLogs" component={AuditLogsScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="Conversations" component={ConversationsScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="Chat" component={ChatScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="AdminDashboardScreen">{() => <LazyScreen><AdminDashboardScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="ManageUsers" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ManageUsersScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="ManageBookings" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ManageBookingsScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="ManageServices" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ManageServicesScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="RevenueAnalytics" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><RevenueAnalyticsScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="CommissionManagement" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><CommissionManagementScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="PaymentMonitoring" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><PaymentMonitoringScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="RefundApproval" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><RefundApprovalScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="ContentModeration" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ContentModerationScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="ReportsManagement" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ReportsManagementScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="CategoryManagement" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><CategoryManagementScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="CouponManagement" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><CouponManagementScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="PromotionsManagement" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><PromotionsManagementScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="AnalyticsDashboard" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><AnalyticsDashboardScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="NotificationManagement" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><NotificationManagementScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="CMSManagement" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><CMSManagementScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="AuditLogs" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><AuditLogsScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="Conversations" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ConversationsScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="Chat" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ChatScreen /></LazyScreen>}</Stack.Screen>
     </Stack.Navigator>
   );
 }
@@ -210,62 +169,18 @@ function AdminStack() {
 // Profile stack
 function ProfileStack() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
-      <Stack.Screen
-        name="EditProfile"
-        component={EditProfileScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="ChangePassword"
-        component={ChangePasswordScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="Verify"
-        component={VerifyScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="Notifications"
-        component={NotificationsScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="HelpSupport"
-        component={HelpSupportScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="About"
-        component={AboutScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="ProviderServices"
-        component={ProviderServicesScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="AdminDashboard"
-        component={AdminDashboardScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="Conversations"
-        component={ConversationsScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="Chat"
-        component={ChatScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="ProfileScreen">{() => <LazyScreen><ProfileScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="EditProfile" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><EditProfileScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="ChangePassword" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ChangePasswordScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="Verify" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><VerifyScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="Notifications" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><NotificationsScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="HelpSupport" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><HelpSupportScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="About" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><AboutScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="ProviderServices" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ProviderServicesScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="AdminDashboard" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><AdminDashboardScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="Conversations" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ConversationsScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="Chat" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ChatScreen /></LazyScreen>}</Stack.Screen>
     </Stack.Navigator>
   );
 }

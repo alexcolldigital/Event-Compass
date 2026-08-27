@@ -411,9 +411,17 @@ const ManageServicesScreen = () => {
   const uploadImages = async (serviceId: string) => {
     if (pendingImages.length === 0) return;
     const fd = new FormData();
-    pendingImages.forEach((img) => {
-      fd.append('images', { uri: img.uri, name: img.name, type: img.type } as any);
-    });
+    if (Platform.OS === 'web') {
+      for (const img of pendingImages) {
+        const response = await fetch(img.uri);
+        const blob = await response.blob();
+        fd.append('images', blob, img.name);
+      }
+    } else {
+      pendingImages.forEach((img) => {
+        fd.append('images', { uri: img.uri, name: img.name, type: img.type } as any);
+      });
+    }
     await adminAPI.uploadServiceMedia(serviceId, fd);
   };
 

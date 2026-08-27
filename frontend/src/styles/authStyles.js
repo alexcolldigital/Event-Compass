@@ -32,6 +32,11 @@ export const authStyles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 28,
   },
+  brandLogo: {
+    width: 500,
+    height: 220,
+    marginBottom: 12,
+  },
   brandBadge: {
     width: 92,
     height: 92,

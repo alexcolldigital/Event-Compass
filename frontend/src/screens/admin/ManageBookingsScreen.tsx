@@ -25,6 +25,7 @@ const ManageBookingsScreen = () => {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [actionModal, setActionModal] = useState<{ booking: any; type: 'accept' | 'reject' } | null>(null);
   const [actionNote, setActionNote] = useState('');
+  const [adminPrice, setAdminPrice] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
@@ -70,9 +71,11 @@ const ManageBookingsScreen = () => {
   const handleBookingAction = async (booking, action) => {
     if (action === 'accept') {
       setActionNote('');
+      setAdminPrice('');
       setActionModal({ booking, type: 'accept' });
     } else if (action === 'reject') {
       setActionNote('');
+      setAdminPrice('');
       setActionModal({ booking, type: 'reject' });
     } else if (action === 'complete') {
       Alert.alert('Complete Booking', `Complete booking ${booking.bookingNumber}?`, [
@@ -104,13 +107,21 @@ const ManageBookingsScreen = () => {
     try {
       let response;
       if (actionModal.type === 'accept') {
-        response = await adminAPI.confirmBooking(actionModal.booking._id, { message: actionNote.trim() || undefined });
+        const bk = actionModal.booking;
+        const svc = bk.service || bk.serviceId || bk.venue || {};
+        const payload: any = { message: actionNote.trim() || undefined };
+        const parsedPrice = parseFloat(adminPrice.trim());
+        if (!isNaN(parsedPrice) && parsedPrice > 0) {
+          payload.adminSetPrices = [{ serviceId: svc._id || bk.service, serviceName: svc.name || 'Service', price: parsedPrice }];
+        }
+        response = await adminAPI.confirmBooking(bk._id, payload);
       } else {
         response = await adminAPI.rejectBooking(actionModal.booking._id, { reason: actionNote.trim() });
       }
       setBookings((prev) => prev.map((b) => b._id === actionModal.booking._id ? response.booking : b));
       setSelectedBooking(null);
       setActionModal(null);
+      setAdminPrice('');
       showToast(actionModal.type === 'accept' ? 'Booking accepted successfully' : 'Booking rejected successfully');
     } catch (err) {
       showToast(err.message || 'Action failed', 'error');
@@ -320,6 +331,35 @@ const ManageBookingsScreen = () => {
               {actionModal?.booking?.bookingNumber}
             </Text>
             <View style={[ms.divider, { backgroundColor: C.border }]} />
+            {actionModal?.type === 'accept' && (() => {
+              const bk = actionModal.booking;
+              const currentPrice = bk.pricing?.basePrice || 0;
+              const isPriceOnRequest = bk.service?.priceOnRequest || currentPrice === 0;
+              const parsedPrice = parseFloat(adminPrice.trim());
+              const previewTotal = !isNaN(parsedPrice) && parsedPrice > 0 ? parsedPrice * 1.10 : null;
+              return (
+                <>
+                  <Text style={[ms.noteLabel, { color: C.muted, fontFamily: appFont }]}>
+                    {isPriceOnRequest ? 'Set Service Price *' : `Override Price (current: ₦${Number(currentPrice).toLocaleString()})`}
+                  </Text>
+                  <TextInput
+                    style={[ms.noteInput, { color: C.text, borderColor: isPriceOnRequest && !adminPrice.trim() ? '#f87171' : C.border, backgroundColor: C.bg, fontFamily: appFont, minHeight: 48, textAlignVertical: 'center' }]}
+                    placeholder={isPriceOnRequest ? 'Enter price e.g. 50000' : `Leave blank to keep ₦${Number(currentPrice).toLocaleString()}`}
+                    placeholderTextColor={C.muted}
+                    value={adminPrice}
+                    onChangeText={setAdminPrice}
+                    keyboardType="numeric"
+                  />
+                  {previewTotal !== null && (
+                    <View style={{ backgroundColor: isDark ? '#1e3a5f' : '#eff6ff', borderRadius: 10, padding: 10, marginBottom: 12 }}>
+                      <Text style={{ color: '#2563eb', fontSize: 12, fontFamily: appFont }}>Service price: ₦{parsedPrice.toLocaleString()}</Text>
+                      <Text style={{ color: '#2563eb', fontSize: 12, fontFamily: appFont }}>Platform fee (10%): ₦{(parsedPrice * 0.10).toLocaleString()}</Text>
+                      <Text style={{ color: '#2563eb', fontSize: 13, fontWeight: '800', fontFamily: appFont }}>Client total: ₦{previewTotal.toLocaleString()}</Text>
+                    </View>
+                  )}
+                </>
+              );
+            })()}
             <Text style={[ms.noteLabel, { color: C.muted, fontFamily: appFont }]}>
               {actionModal?.type === 'accept' ? 'Acceptance message (optional)' : 'Reason for rejection *'}
             </Text>
