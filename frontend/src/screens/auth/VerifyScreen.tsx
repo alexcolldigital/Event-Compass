@@ -8,7 +8,7 @@ import { useAuthStore } from '../../context/authStore.js';
 import { authAPI } from '../../services/api.js';
 import authStyles from '../../styles/authStyles.js';
 
-type Mode = 'email' | 'phone' | 'forgot-password' | 'change-password';
+type Mode = 'email' | 'forgot-password' | 'change-password';
 
 type Props = {
   navigation: any;
@@ -20,11 +20,6 @@ const MODE_CONFIG: Record<Mode, { icon: string; title: string; subtitle: (target
     icon: 'email-check-outline',
     title: 'Verify Your Email',
     subtitle: (email) => `Enter the 6-digit code sent to\n${email}`,
-  },
-  phone: {
-    icon: 'phone-check',
-    title: 'Verify Your Phone',
-    subtitle: (phone) => `Enter the 6-digit code sent to\n${phone}`,
   },
   'forgot-password': {
     icon: 'lock-reset',
@@ -41,12 +36,11 @@ const MODE_CONFIG: Record<Mode, { icon: string; title: string; subtitle: (target
 export default function VerifyScreen({ navigation, route }: Props) {
   const mode: Mode = (route.params?.mode ?? 'email') as Mode;
   const paramEmail = route.params?.email ?? '';
-  const paramPhone = route.params?.phoneNumber ?? '';
   const paramUserId = route.params?.userId ?? '';
 
-  const { verifyEmail, verifyPhone, verifyOtp, sendPhoneOtp, user, isLoading, clearError } = useAuthStore() as any;
+  const { verifyEmail, verifyOtp, user, isLoading, clearError } = useAuthStore() as any;
 
-  const target = mode === 'phone' ? (paramPhone || user?.phoneNumber || '') : (paramEmail || user?.email || '');
+  const target = paramEmail || user?.email || '';
   const resendTarget = target || paramUserId;
   const config = MODE_CONFIG[mode];
 
@@ -72,10 +66,7 @@ export default function VerifyScreen({ navigation, route }: Props) {
     setOtpError('');
     clearError();
     try {
-      if (mode === 'phone') {
-        await verifyPhone(otp);
-        // verifyPhone sets isAuthenticated → navigator auto-redirects
-      } else if (mode === 'email' || mode === 'change-password') {
+      if (mode === 'email' || mode === 'change-password') {
         await verifyEmail(otp);
         if (mode === 'change-password') {
           navigation.navigate('ChangePassword', { otpVerified: true });
@@ -101,9 +92,7 @@ export default function VerifyScreen({ navigation, route }: Props) {
     if (resendCooldown > 0) return;
     try {
       clearError();
-      if (mode === 'phone') {
-        await sendPhoneOtp();
-      } else if (mode === 'forgot-password') {
+      if (mode === 'forgot-password') {
         await authAPI.forgotPassword(target);
       } else if (mode === 'change-password') {
         await authAPI.sendChangePasswordOtp();

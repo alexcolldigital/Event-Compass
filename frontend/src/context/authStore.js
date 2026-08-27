@@ -207,39 +207,6 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // Verify email OTP
-  verifyEmail: async (otp) => {
-    try {
-      set({ isLoading: true, error: null });
-      const response = await authAPI.verifyEmail(otp);
-      const currentUser = get().user;
-      if (currentUser) {
-        const user = { ...currentUser, isEmailVerified: true };
-        await AsyncStorage.setItem('user', JSON.stringify(user));
-        set({ user, isLoading: false });
-      } else {
-        set({ isLoading: false });
-      }
-      return response;
-    } catch (error) {
-      set({ error: error.message, isLoading: false });
-      throw error;
-    }
-  },
-
-  // Verify OTP for forgot password
-  verifyOtp: async (email, otp) => {
-    try {
-      set({ isLoading: true, error: null });
-      const response = await authAPI.verifyOtp(email, otp);
-      set({ isLoading: false });
-      return response;
-    } catch (error) {
-      set({ error: error.message, isLoading: false });
-      throw error;
-    }
-  },
-
   // Reset password with verified token
   resetPasswordWithToken: async (data) => {
     try {

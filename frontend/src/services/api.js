@@ -122,9 +122,6 @@ export const authAPI = {
   getDevices: () => apiClient.get('/auth/devices'),
   addDevice: (deviceId, deviceName) => apiClient.post('/auth/devices', { deviceId, deviceName }),
   removeDevice: (deviceId) => apiClient.delete(`/auth/devices/${deviceId}`),
-  // Phone verification
-  sendPhoneOtp: (phoneNumber) => apiClient.post('/auth/send-phone-otp', phoneNumber ? { phoneNumber } : {}),
-  verifyPhone: (otp) => apiClient.post('/auth/verify-phone', { otp }),
   saveFcmToken: (fcmToken) => apiClient.post('/auth/fcm-token', { fcmToken }),
   getMyNotifications: (params) => apiClient.get('/auth/notifications', { params }),
   markNotificationRead: (id) => apiClient.patch(`/auth/notifications/${id}/read`),
