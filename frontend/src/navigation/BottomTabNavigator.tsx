@@ -73,10 +73,10 @@ const LazyScreen = ({ children }: { children: React.ReactNode }) => (
 function HomeStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="HomeScreen">{() => <LazyScreen><HomeScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="HomeScreen">{({ navigation, route }) => <LazyScreen><HomeScreen navigation={navigation} route={route} /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="ServiceDetail" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ServiceDetailScreen /></LazyScreen>}</Stack.Screen>
-      <Stack.Screen name="EventDetails" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><EventDetailsScreen /></LazyScreen>}</Stack.Screen>
-      <Stack.Screen name="Checkout" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><CheckoutScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="EventDetails" options={{ animation: 'slide_from_right' }}>{({ navigation, route }) => <LazyScreen><EventDetailsScreen navigation={navigation} route={route} /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="Checkout" options={{ animation: 'slide_from_right' }}>{({ navigation, route }) => <LazyScreen><CheckoutScreen navigation={navigation} route={route} /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="WebCheckout" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><WebCheckoutScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="BookingDetail" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><BookingDetailScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="PaymentResult" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><PaymentResultScreen /></LazyScreen>}</Stack.Screen>
@@ -143,7 +143,7 @@ function ProviderServicesStack() {
 function AdminStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="AdminDashboardScreen">{() => <LazyScreen><AdminDashboardScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="AdminDashboardScreen">{({ navigation, route }) => <LazyScreen><AdminDashboardScreen navigation={navigation} route={route} /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="ManageUsers" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ManageUsersScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="ManageBookings" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ManageBookingsScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="ManageServices" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ManageServicesScreen /></LazyScreen>}</Stack.Screen>

@@ -44,6 +44,13 @@ if (!content.includes('const shimDir = _path.default.join(projectRoot, METRO_EXT
   );
 }
 
+if (content.includes('const shimDir = _path.default.join(projectRoot, METRO_EXTERNALS_FOLDER, moduleId);')) {
+  content = content.replace(
+    "        const shimDir = _path.default.join(projectRoot, METRO_EXTERNALS_FOLDER, moduleId);",
+    "        const safeModuleId = getSafeMetroModuleId(moduleId);\n        const shimDir = _path.default.join(projectRoot, METRO_EXTERNALS_FOLDER, safeModuleId);"
+  );
+}
+
 if (content !== original) {
   fs.writeFileSync(targetFile, content);
   console.log(`Patched Expo Metro externals for Windows compatibility: ${targetFile}`);
