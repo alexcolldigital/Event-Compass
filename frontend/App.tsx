@@ -31,6 +31,27 @@ function AppShell() {
       .finally(() => setIsReady(true));
   }, [initializeAuth]);
 
+  useEffect(() => {
+    if (!isReady || !navigationRef.isReady() || typeof window === 'undefined') return;
+    if (window.location.pathname !== '/payment-callback') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const bookingId = params.get('bookingId');
+    if (!bookingId) return;
+
+    (navigationRef as any).navigate('Main', {
+      screen: 'Bookings',
+      params: {
+        screen: 'PaymentResult',
+        params: {
+          bookingId,
+          status: 'success',
+          paymentType: params.get('paymentType') || 'full',
+        },
+      },
+    });
+  }, [isReady]);
+
   if (!isReady) return null;
 
   return (

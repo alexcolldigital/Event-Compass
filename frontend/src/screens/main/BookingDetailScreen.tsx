@@ -50,6 +50,8 @@ const BookingDetailScreen = () => {
   const [cancelReason, setCancelReason] = useState('');
   const [showCancelForm, setShowCancelForm] = useState(false);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
+  const [providerPrice, setProviderPrice] = useState('');
+  const [showPriceInput, setShowPriceInput] = useState(false);
 
   const colors = {
     bg: isDark ? '#0b120d' : '#f5f7f2',
@@ -68,15 +70,31 @@ const BookingDetailScreen = () => {
     getBookingById(bookingId);
   }, [bookingId, isAuthenticated]);
 
+  const isPriceOnRequest = !currentBooking?.pricing?.totalAmount || currentBooking?.pricing?.totalAmount === 0 || currentBooking?.service?.priceOnRequest;
+
   const handleConfirmBooking = () => {
+    if (isPriceOnRequest && !providerPrice.trim()) {
+      setShowPriceInput(true);
+      return;
+    }
+    const parsedPrice = parseFloat(providerPrice.trim());
+    if (isPriceOnRequest && (isNaN(parsedPrice) || parsedPrice <= 0)) {
+      Alert.alert('Price Required', 'Please enter a valid price for this service before confirming.');
+      return;
+    }
+    const payload: any = {};
+    if (providerPrice.trim() && !isNaN(parsedPrice) && parsedPrice > 0) {
+      payload.price = parsedPrice;
+    }
     Alert.alert('Confirm Booking', 'Are you sure you want to confirm this booking?', [
       { text: 'Cancel', onPress: () => {} },
       {
         text: 'Confirm',
         onPress: async () => {
           try {
-            const response = await confirmBooking(bookingId);
+            const response = await confirmBooking(bookingId, payload);
             Alert.alert('Booking Confirmed', 'The booking has been confirmed. The client will now be prompted to complete payment.');
+            setShowPriceInput(false);
             if (response?.checkoutUrl) {
               (navigation as any).navigate('WebCheckout', { url: response.checkoutUrl, bookingId });
             }
@@ -130,7 +148,8 @@ const BookingDetailScreen = () => {
   const handlePayNow = async (paymentType: 'deposit' | 'balance' | 'full' = 'full', gateway?: string) => {
     try {
       setIsPaymentLoading(true);
-      const origin = process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:19007';
+      const origin = process.env.EXPO_PUBLIC_APP_URL ||
+        (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:19007');
       const response = await createBookingPaymentSession(bookingId, origin, gateway);
       const sessionUrl = response?.checkoutUrl || response?.session?.url;
       if (!sessionUrl) throw new Error('No payment URL returned. Please try again.');
@@ -155,7 +174,8 @@ const BookingDetailScreen = () => {
   const handlePayBalance = async (gateway: string) => {
     try {
       setIsPaymentLoading(true);
-      const origin = process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:19007';
+      const origin = process.env.EXPO_PUBLIC_APP_URL ||
+        (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:19007');
       const response = await createBookingPaymentSession(bookingId, origin, gateway);
       const sessionUrl = response?.checkoutUrl || response?.session?.url;
       if (!sessionUrl) throw new Error('No payment URL returned. Please try again.');
@@ -490,6 +510,31 @@ const BookingDetailScreen = () => {
 
           {isProvider && isPending && (
             <View style={styles.actionGap}>
+              {/* Price input for priceOnRequest services */}
+              {(showPriceInput || isPriceOnRequest) && (
+                <View style={{ backgroundColor: isDark ? '#1e3a5f' : '#eff6ff', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: isDark ? '#1e40af' : '#bfdbfe' }}>
+                  <Text style={{ color: '#2563eb', fontSize: 12, fontWeight: '800', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    {isPriceOnRequest ? 'Set Service Price (Required)' : 'Override Price (Optional)'}
+                  </Text>
+                  <View style={[styles.textInputWrap, { backgroundColor: colors.surface, borderColor: !providerPrice.trim() && isPriceOnRequest ? colors.danger : colors.border, marginBottom: 6 }]}>
+                    <TextInput
+                      style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}
+                      placeholder="Enter price e.g. 50000"
+                      placeholderTextColor={colors.muted}
+                      value={providerPrice}
+                      onChangeText={setProviderPrice}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  {providerPrice.trim() && !isNaN(parseFloat(providerPrice)) && parseFloat(providerPrice) > 0 && (
+                    <View style={{ backgroundColor: isDark ? '#14532d' : '#dcfce7', borderRadius: 10, padding: 10 }}>
+                      <Text style={{ color: '#15803d', fontSize: 12 }}>Service: {formatCurrency(parseFloat(providerPrice))}</Text>
+                      <Text style={{ color: '#15803d', fontSize: 12 }}>Platform fee (10%): {formatCurrency(parseFloat(providerPrice) * 0.10)}</Text>
+                      <Text style={{ color: '#15803d', fontSize: 13, fontWeight: '800' }}>Client total: {formatCurrency(parseFloat(providerPrice) * 1.10)}</Text>
+                    </View>
+                  )}
+                </View>
+              )}
               <Button title="Confirm Booking" onPress={handleConfirmBooking} variant="primary" fullWidth />
               <Button title="Decline" onPress={() => setShowCancelForm(true)} variant="danger" fullWidth />
             </View>

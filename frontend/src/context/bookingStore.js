@@ -117,10 +117,10 @@ export const useBookingStore = create((set, get) => ({
   },
 
   // Confirm booking
-  confirmBooking: async (id) => {
+  confirmBooking: async (id, data) => {
     try {
       set({ isLoading: true, error: null });
-      const response = await bookingAPI.confirmBooking(id);
+      const response = await bookingAPI.confirmBooking(id, data);
 
       const state = get();
       const updatedBookings = state.bookings.map((b) =>

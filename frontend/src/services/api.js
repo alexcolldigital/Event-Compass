@@ -158,7 +158,7 @@ export const bookingAPI = {
     apiClient.get('/bookings/client/my-bookings', { params: query }),
   getMyProviderBookings: (query) =>
     apiClient.get('/bookings/provider/my-bookings', { params: query }),
-  confirmBooking: (id) => apiClient.patch(`/bookings/${id}/confirm`),
+  confirmBooking: (id, data) => apiClient.patch(`/bookings/${id}/confirm`, data || {}),
   rejectBooking: (id, data) => apiClient.patch(`/bookings/${id}/reject`, data),
   cancelBooking: (id, data) => apiClient.patch(`/bookings/${id}/cancel`, data),
   completeBooking: (id) => apiClient.patch(`/bookings/${id}/complete`),
