@@ -19,6 +19,7 @@ function AppShell() {
   const initializeAuth = useAuthStore((state) => state.initializeAuth);
   const [initialState, setInitialState] = useState<object | undefined>(undefined);
   const [isReady, setIsReady] = useState(false);
+  const [isNavigationReady, setIsNavigationReady] = useState(false);
 
   useEffect(() => {
     initializeAuth();
@@ -32,7 +33,7 @@ function AppShell() {
   }, [initializeAuth]);
 
   useEffect(() => {
-    if (!isReady || !navigationRef.isReady() || typeof window === 'undefined') return;
+    if (!isReady || !isNavigationReady || !navigationRef.isReady() || typeof window === 'undefined') return;
     if (window.location.pathname !== '/payment-callback') return;
 
     const params = new URLSearchParams(window.location.search);
@@ -50,7 +51,7 @@ function AppShell() {
         },
       },
     });
-  }, [isReady]);
+  }, [isReady, isNavigationReady]);
 
   if (!isReady) return null;
 
@@ -58,6 +59,7 @@ function AppShell() {
     <NavigationContainer
       ref={navigationRef}
       initialState={initialState}
+      onReady={() => setIsNavigationReady(true)}
       onStateChange={(state) =>
         AsyncStorage.setItem(NAV_STATE_KEY, JSON.stringify(state))
       }

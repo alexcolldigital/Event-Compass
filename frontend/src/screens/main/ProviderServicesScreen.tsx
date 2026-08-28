@@ -8,6 +8,7 @@ import Input from '../../components/Input.jsx';
 import { MarketplaceCard } from '../../components/Card.jsx';
 import Loading from '../../components/Loading.jsx';
 import { useTheme } from '../../context/ThemeContext';
+import { fetchLocations, getLgasForState, getTownsForLga } from '../../utils/nigeriaLocations.js';
 
 const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
@@ -96,6 +97,13 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
   const [editingService, setEditingService] = useState<any>(null);
   const [priceDraft, setPriceDraft] = useState('');
   const [isSavingPrice, setIsSavingPrice] = useState(false);
+  const [locations, setLocations] = useState<any[]>([]);
+  const [showStateMenu, setShowStateMenu] = useState(false);
+  const [showLgaMenu, setShowLgaMenu] = useState(false);
+  const [showTownMenu, setShowTownMenu] = useState(false);
+
+  const lgaOptions = getLgasForState(locations, formState.state);
+  const townOptions = getTownsForLga(locations, formState.state, formState.lga);
 
   const colors = {
     bg: isDark ? '#050816' : '#f5f7f2',
@@ -109,6 +117,7 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
 
   useEffect(() => {
     getMyServices().catch(() => {});
+    fetchLocations().then(setLocations).catch(() => {});
 
     if (route?.params?.showForm) {
       setShowForm(true);
@@ -589,9 +598,46 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
               </TouchableOpacity>
             </View>
             <Input label="Country" placeholder="Nigeria" value="Nigeria" editable={false} icon="earth" />
-            <Input label="State" placeholder="Lagos" value={formState.state} onChangeText={(text) => updateField('state', text)} icon="map-marker-radius" />
-            <Input label="City" placeholder="Ikeja" value={formState.city} onChangeText={(text) => updateField('city', text)} icon="city" />
-            <Input label="Local Government" placeholder="Ikeja LGA" value={formState.lga} onChangeText={(text) => updateField('lga', text)} icon="office-building" />
+
+            {/* State dropdown */}
+            <View style={styles.fieldBlock}>
+              <Text style={styles.label}>State</Text>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => setShowStateMenu(true)}
+                style={[styles.dropdownTrigger, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
+              >
+                <Text style={[styles.dropdownValue, { color: formState.state ? colors.text : colors.muted }]}>{formState.state || 'Select state'}</Text>
+                <MaterialCommunityIcons name="chevron-down" size={20} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            {/* LGA dropdown */}
+            <View style={styles.fieldBlock}>
+              <Text style={styles.label}>Local Government</Text>
+              <TouchableOpacity
+                activeOpacity={formState.state ? 0.85 : 1}
+                onPress={() => formState.state && setShowLgaMenu(true)}
+                style={[styles.dropdownTrigger, { borderColor: colors.border, backgroundColor: colors.surfaceAlt, opacity: formState.state ? 1 : 0.5 }]}
+              >
+                <Text style={[styles.dropdownValue, { color: formState.lga ? colors.text : colors.muted }]}>{formState.lga || (formState.state ? 'Select LGA' : 'Select state first')}</Text>
+                <MaterialCommunityIcons name="chevron-down" size={20} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Town/City dropdown */}
+            <View style={styles.fieldBlock}>
+              <Text style={styles.label}>Town / City</Text>
+              <TouchableOpacity
+                activeOpacity={formState.lga ? 0.85 : 1}
+                onPress={() => formState.lga && setShowTownMenu(true)}
+                style={[styles.dropdownTrigger, { borderColor: colors.border, backgroundColor: colors.surfaceAlt, opacity: formState.lga ? 1 : 0.5 }]}
+              >
+                <Text style={[styles.dropdownValue, { color: formState.city ? colors.text : colors.muted }]}>{formState.city || (formState.lga ? 'Select town' : 'Select LGA first')}</Text>
+                <MaterialCommunityIcons name="chevron-down" size={20} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
             <Input label="Address" placeholder="12, Adeola Odeku Street" value={formState.address} onChangeText={(text) => updateField('address', text)} icon="home-map-marker" />
             <Input label="Radius Covered" placeholder="Within 50 km" value={formState.radiusCovered} onChangeText={(text) => updateField('radiusCovered', text)} icon="radius" />
 
@@ -611,6 +657,9 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
           {renderDropdownModal(isUnitMenuOpen, () => setIsUnitMenuOpen(false), 'Select unit', unitOptions, formState.unit, (value) => updateField('unit', value), colors)}
           {renderDropdownModal(isDurationMenuOpen, () => setIsDurationMenuOpen(false), 'Select duration', durationOptions, formState.duration, (value) => updateField('duration', value), colors)}
           {renderDropdownModal(isStatusMenuOpen, () => setIsStatusMenuOpen(false), 'Select availability status', availabilityStatusOptions, formState.availabilityStatus, (value) => updateField('availabilityStatus', value), colors)}
+          {renderDropdownModal(showStateMenu, () => setShowStateMenu(false), 'Select state', locations.map((l: any) => l.state), formState.state, (v) => { updateField('state', v); updateField('lga', ''); updateField('city', ''); }, colors)}
+          {renderDropdownModal(showLgaMenu, () => setShowLgaMenu(false), 'Select LGA', lgaOptions.map((l: any) => l.lga), formState.lga, (v) => { updateField('lga', v); updateField('city', ''); }, colors)}
+          {renderDropdownModal(showTownMenu, () => setShowTownMenu(false), 'Select town', townOptions, formState.city, (v) => updateField('city', v), colors)}
 
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>My services</Text>

@@ -26,6 +26,7 @@ const MENU_ITEMS = [
   { icon: 'bell-outline', label: 'Notification Management', screen: 'NotificationManagement', accent: '#ec4899' },
   { icon: 'file-document-outline', label: 'CMS Pages', screen: 'CMSManagement', accent: '#64748b' },
   { icon: 'clipboard-list-outline', label: 'Audit Logs', screen: 'AuditLogs', accent: '#374151' },
+  { icon: 'map-marker-multiple', label: 'Location Management', screen: 'LocationManagement', accent: '#0f766e' },
 ];
 
 export default function AdminDashboardScreen({ navigation }) {

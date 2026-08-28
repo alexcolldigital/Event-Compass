@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, SafeAreaView, ScrollView, TouchableOpacity,
   StyleSheet, Alert, TextInput, Platform,
@@ -13,18 +13,11 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useCartStore } from '../../context/cartStore';
 import Button from '../../components/Button.jsx';
+import { fetchLocations, getLgasForState, getTownsForLga } from '../../utils/nigeriaLocations.js';
 
 const EVENT_TYPES = [
   'Wedding', 'Birthday', 'Corporate', 'Burial/Funeral', 'Graduation',
   'Naming Ceremony', 'Engagement', 'Conference', 'Concert', 'Other',
-];
-
-const NIGERIAN_STATES = [
-  'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue',
-  'Borno', 'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu',
-  'FCT - Abuja', 'Gombe', 'Imo', 'Jigawa', 'Kaduna', 'Kano', 'Katsina',
-  'Kebbi', 'Kogi', 'Kwara', 'Lagos', 'Nasarawa', 'Niger', 'Ogun', 'Ondo',
-  'Osun', 'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara',
 ];
 
 const VENUE_TYPES = ['Indoor', 'Outdoor', 'Hybrid', 'Virtual'];
@@ -74,7 +67,17 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
   const [town, setTown] = useState(eventDraft.town || '');
   const [state, setState] = useState(eventDraft.state || '');
   const [showStateList, setShowStateList] = useState(false);
+  const [showLgaList, setShowLgaList] = useState(false);
+  const [showTownList, setShowTownList] = useState(false);
+  const [locations, setLocations] = useState<any[]>([]);
   const [eventDate, setEventDate] = useState<Date | null>(eventDraft.eventDate ? new Date(eventDraft.eventDate) : null);
+
+  useEffect(() => {
+    fetchLocations().then(setLocations).catch(() => {});
+  }, []);
+
+  const lgaOptions = getLgasForState(locations, state);
+  const townOptions = getTownsForLga(locations, state, lga);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [additionalNotes, setAdditionalNotes] = useState(eventDraft.additionalNotes || '');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -281,40 +284,61 @@ const EventDetailsScreen = ({ navigation }: { navigation: any }) => {
         {/* Location */}
         <SectionLabel label="Event Location" color={colors.muted} />
         <Field icon="map-marker" placeholder="Full event address / venue name *" value={eventAddress} onChangeText={setEventAddress} fieldKey="eventAddress" colors={colors} errors={errors} setErrors={setErrors} />
-        <Field icon="city-variant-outline" placeholder="Local Government Area (LGA) *" value={lga} onChangeText={setLga} fieldKey="lga" colors={colors} errors={errors} setErrors={setErrors} />
-        <Field icon="home-city" placeholder="Town / City *" value={town} onChangeText={setTown} fieldKey="town" colors={colors} errors={errors} setErrors={setErrors} />
-
         {/* State picker */}
-        <View style={{ marginBottom: 2 }}>
-          <TouchableOpacity
-            style={[styles.field, { borderColor: errors.state ? colors.error : colors.border, backgroundColor: colors.surface }]}
-            onPress={() => setShowStateList((v) => !v)}
-            activeOpacity={0.8}
-          >
-            <MaterialCommunityIcons name="map" size={18} color={errors.state ? colors.error : colors.primary} />
-            <Text style={[styles.input, { color: state ? colors.text : colors.muted, fontFamily: appFont }]}>
-              {state || 'Select State *'}
-            </Text>
-            <MaterialCommunityIcons name={showStateList ? 'chevron-up' : 'chevron-down'} size={18} color={colors.muted} />
-          </TouchableOpacity>
-          {errors.state ? <Text style={[styles.errorText, { color: colors.error }]}>{errors.state}</Text> : null}
-          {showStateList && (
-            <View style={[styles.dropdown, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <ScrollView nestedScrollEnabled style={{ maxHeight: 200 }}>
-                {NIGERIAN_STATES.map((s) => (
-                  <TouchableOpacity
-                    key={s}
-                    style={[styles.dropdownItem, { borderBottomColor: colors.border }]}
-                    onPress={() => { setState(s); setShowStateList(false); if (errors.state) setErrors((p) => ({ ...p, state: '' })); }}
-                  >
-                    <Text style={[styles.dropdownText, { color: s === state ? colors.primary : colors.text, fontFamily: appFont }]}>{s}</Text>
-                    {s === state && <MaterialCommunityIcons name="check" size={16} color={colors.primary} />}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-        </View>
+        <LocationPicker
+          label="State *"
+          icon="map"
+          value={state}
+          options={locations.map((l: any) => l.state)}
+          show={showStateList}
+          onToggle={() => setShowStateList((v) => !v)}
+          onSelect={(s) => {
+            setState(s); setLga(''); setTown('');
+            setShowStateList(false);
+            if (errors.state) setErrors((p: any) => ({ ...p, state: '' }));
+          }}
+          placeholder="Select State *"
+          error={errors.state}
+          colors={colors}
+        />
+
+        {/* LGA picker */}
+        <LocationPicker
+          label="Local Government Area *"
+          icon="city-variant-outline"
+          value={lga}
+          options={lgaOptions.map((l: any) => l.lga)}
+          show={showLgaList}
+          onToggle={() => state && setShowLgaList((v) => !v)}
+          onSelect={(l) => {
+            setLga(l); setTown('');
+            setShowLgaList(false);
+            if (errors.lga) setErrors((p: any) => ({ ...p, lga: '' }));
+          }}
+          placeholder={state ? 'Select LGA *' : 'Select state first'}
+          error={errors.lga}
+          colors={colors}
+          disabled={!state}
+        />
+
+        {/* Town picker */}
+        <LocationPicker
+          label="Town / City *"
+          icon="home-city"
+          value={town}
+          options={townOptions}
+          show={showTownList}
+          onToggle={() => lga && setShowTownList((v) => !v)}
+          onSelect={(t) => {
+            setTown(t);
+            setShowTownList(false);
+            if (errors.town) setErrors((p: any) => ({ ...p, town: '' }));
+          }}
+          placeholder={lga ? 'Select Town *' : 'Select LGA first'}
+          error={errors.town}
+          colors={colors}
+          disabled={!lga}
+        />
 
         {/* Additional */}
         <SectionLabel label="Additional Information" color={colors.muted} />
@@ -367,6 +391,41 @@ function ChipGroup({ options, selected, onSelect, fieldKey, colors, errors, setE
         ))}
       </View>
       {errors[fieldKey] ? <Text style={[styles.errorText, { color: colors.error }]}>{errors[fieldKey]}</Text> : null}
+    </View>
+  );
+}
+
+function LocationPicker({ label, icon, value, options, show, onToggle, onSelect, placeholder, error, colors, disabled = false }: any) {
+  return (
+    <View style={{ marginBottom: 2 }}>
+      <TouchableOpacity
+        style={[styles.field, { borderColor: error ? colors.error : colors.border, backgroundColor: disabled ? colors.chip : colors.surface, opacity: disabled ? 0.6 : 1 }]}
+        onPress={onToggle}
+        activeOpacity={disabled ? 1 : 0.8}
+      >
+        <MaterialCommunityIcons name={icon} size={18} color={error ? colors.error : colors.primary} />
+        <Text style={[styles.input, { color: value ? colors.text : colors.muted, fontFamily: appFont }]}>
+          {value || placeholder}
+        </Text>
+        <MaterialCommunityIcons name={show ? 'chevron-up' : 'chevron-down'} size={18} color={colors.muted} />
+      </TouchableOpacity>
+      {error ? <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text> : null}
+      {show && options.length > 0 && (
+        <View style={[styles.dropdown, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <ScrollView nestedScrollEnabled style={{ maxHeight: 200 }}>
+            {options.map((opt: string) => (
+              <TouchableOpacity
+                key={opt}
+                style={[styles.dropdownItem, { borderBottomColor: colors.border }]}
+                onPress={() => onSelect(opt)}
+              >
+                <Text style={[styles.dropdownText, { color: opt === value ? colors.primary : colors.text, fontFamily: appFont }]}>{opt}</Text>
+                {opt === value && <MaterialCommunityIcons name="check" size={16} color={colors.primary} />}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
     </View>
   );
 }

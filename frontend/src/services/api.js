@@ -168,6 +168,12 @@ export const bookingAPI = {
 
 // Admin API calls
 export const adminAPI = {
+  // Locations (public + admin CRUD)
+  getLocations: () => apiClient.get('/locations'),
+  createLocation: (data) => apiClient.post('/admin/locations', data),
+  updateLocation: (id, data) => apiClient.put(`/admin/locations/${id}`, data),
+  deleteLocation: (id) => apiClient.delete(`/admin/locations/${id}`),
+
   // Dashboard & Stats
   getDashboardStats: () => apiClient.get('/admin/dashboard'),
   getAnalyticsDashboard: (query) => apiClient.get('/admin/analytics/dashboard', { params: query }),

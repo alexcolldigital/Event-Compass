@@ -58,6 +58,7 @@ const AnalyticsDashboardScreen = lazy(() => import('../screens/admin/AnalyticsDa
 const NotificationManagementScreen = lazy(() => import('../screens/admin/NotificationManagementScreen'));
 const CMSManagementScreen = lazy(() => import('../screens/admin/CMSManagementScreen'));
 const AuditLogsScreen = lazy(() => import('../screens/admin/AuditLogsScreen'));
+const LocationManagementScreen = lazy(() => import('../screens/admin/LocationManagementScreen'));
 
 // Import constants
 import { COLORS } from '../utils/constants';
@@ -161,6 +162,7 @@ function AdminStack() {
       <Stack.Screen name="NotificationManagement" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><NotificationManagementScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="CMSManagement" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><CMSManagementScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="AuditLogs" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><AuditLogsScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="LocationManagement" options={{ animation: 'slide_from_right' }}>{({ navigation }) => <LazyScreen><LocationManagementScreen navigation={navigation} /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="Conversations" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ConversationsScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="Chat" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ChatScreen /></LazyScreen>}</Stack.Screen>
     </Stack.Navigator>
