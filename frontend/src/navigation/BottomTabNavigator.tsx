@@ -73,9 +73,9 @@ const LazyScreen = ({ children }: { children: React.ReactNode }) => (
 function HomeStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="HomeScreen">{({ navigation, route }) => <LazyScreen><HomeScreen navigation={navigation} route={route} /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="HomeScreen">{({ navigation }) => <LazyScreen><HomeScreen navigation={navigation} /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="ServiceDetail" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ServiceDetailScreen /></LazyScreen>}</Stack.Screen>
-      <Stack.Screen name="EventDetails" options={{ animation: 'slide_from_right' }}>{({ navigation, route }) => <LazyScreen><EventDetailsScreen navigation={navigation} route={route} /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="EventDetails" options={{ animation: 'slide_from_right' }}>{({ navigation }) => <LazyScreen><EventDetailsScreen navigation={navigation} /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="Checkout" options={{ animation: 'slide_from_right' }}>{({ navigation, route }) => <LazyScreen><CheckoutScreen navigation={navigation} route={route} /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="WebCheckout" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><WebCheckoutScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="BookingDetail" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><BookingDetailScreen /></LazyScreen>}</Stack.Screen>
@@ -89,10 +89,10 @@ function HomeStack() {
 function SearchStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="SearchScreen">{() => <LazyScreen><SearchScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="SearchScreen">{({ navigation }) => <LazyScreen><SearchScreen navigation={navigation} /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="ServiceDetail" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ServiceDetailScreen /></LazyScreen>}</Stack.Screen>
-      <Stack.Screen name="EventDetails" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><EventDetailsScreen /></LazyScreen>}</Stack.Screen>
-      <Stack.Screen name="Checkout" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><CheckoutScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="EventDetails" options={{ animation: 'slide_from_right' }}>{({ navigation }) => <LazyScreen><EventDetailsScreen navigation={navigation} /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="Checkout" options={{ animation: 'slide_from_right' }}>{({ navigation, route }) => <LazyScreen><CheckoutScreen navigation={navigation} route={route} /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="WebCheckout" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><WebCheckoutScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="BookingDetail" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><BookingDetailScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="PaymentResult" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><PaymentResultScreen /></LazyScreen>}</Stack.Screen>
@@ -105,11 +105,11 @@ function SearchStack() {
 function BookingsStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="BookingsScreen">{({ navigation, route }) => <LazyScreen><BookingsScreen navigation={navigation} route={route} /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="BookingsScreen">{({ navigation }) => <LazyScreen><BookingsScreen navigation={navigation} /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="BookingDetail" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><BookingDetailScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="WebCheckout" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><WebCheckoutScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="PaymentResult" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><PaymentResultScreen /></LazyScreen>}</Stack.Screen>
-      <Stack.Screen name="Checkout" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><CheckoutScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="Checkout" options={{ animation: 'slide_from_right' }}>{({ navigation, route }) => <LazyScreen><CheckoutScreen navigation={navigation} route={route} /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="EventDetails" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><EventDetailsScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="EscrowStatus" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><EscrowStatusScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="Chat" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ChatScreen /></LazyScreen>}</Stack.Screen>

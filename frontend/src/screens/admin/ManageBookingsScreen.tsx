@@ -221,6 +221,50 @@ const ManageBookingsScreen = () => {
               </View>
             </View>
 
+            {/* Payment Progress Monitor */}
+            {(() => {
+              const total = totalAmount;
+              const isSplit = booking.paymentPlan === 'split_50_50' || booking.paymentPlan === 'deposit_20';
+              const amountPaid = isSplit
+                ? (booking.balancePaid ? total : booking.depositPaid ? (booking.depositAmount || 0) : 0)
+                : (paymentStatus === 'completed' ? total : 0);
+              const remaining = Math.max(0, total - amountPaid);
+              const paidPct = total > 0 ? Math.round((amountPaid / total) * 100) : 0;
+              const balanceDeadline = booking.balanceDeadline ? new Date(booking.balanceDeadline) : null;
+              const daysLeft = balanceDeadline ? Math.ceil((balanceDeadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+              const isOverdue = daysLeft !== null && daysLeft < 0 && remaining > 0;
+              const isUrgent = daysLeft !== null && daysLeft >= 0 && daysLeft <= 3 && remaining > 0;
+              const barColor = paidPct === 100 ? '#16a34a' : isOverdue ? '#dc2626' : isUrgent ? '#d97706' : C.primary;
+              return (
+                <View style={{ backgroundColor: isDark ? '#1a2e1f' : '#f0fdf4', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: isDark ? '#166534' : '#bbf7d0' }}>
+                  <Text style={{ color: isDark ? '#86efac' : '#15803d', fontSize: 11, fontWeight: '800', marginBottom: 8, letterSpacing: 0.6, fontFamily: appFont }}>PAYMENT PROGRESS</Text>
+                  <View style={{ height: 8, backgroundColor: isDark ? '#374151' : '#e5e7eb', borderRadius: 999, overflow: 'hidden', marginBottom: 8 }}>
+                    <View style={{ height: 8, width: `${paidPct}%`, backgroundColor: barColor, borderRadius: 999 }} />
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <Text style={{ color: C.muted, fontSize: 12, fontFamily: appFont }}>Paid: {paidPct}% — {formatCurrency(amountPaid)}</Text>
+                    <Text style={{ color: remaining > 0 ? '#dc2626' : '#16a34a', fontSize: 12, fontWeight: '800', fontFamily: appFont }}>
+                      {remaining > 0 ? `Remaining: ${formatCurrency(remaining)}` : 'Fully Paid ✓'}
+                    </Text>
+                  </View>
+                  {isSplit && (
+                    <Text style={{ color: C.muted, fontSize: 11, fontFamily: appFont, marginBottom: 4 }}>
+                      Plan: {booking.paymentPlan === 'deposit_20' ? '20% Deposit + 80% Balance' : '50/50 Split'}
+                      {' • Deposit: '}{booking.depositPaid ? '✓ Paid' : 'Unpaid'}
+                      {' • Balance: '}{booking.balancePaid ? '✓ Paid' : 'Unpaid'}
+                    </Text>
+                  )}
+                  {balanceDeadline && remaining > 0 && (
+                    <Text style={{ color: isOverdue ? '#dc2626' : isUrgent ? '#d97706' : '#2563eb', fontSize: 11, fontWeight: '700', fontFamily: appFont, marginTop: 4 }}>
+                      {isOverdue
+                        ? `⚠ Balance overdue since ${formatDate(balanceDeadline)} — service delivery at risk`
+                        : `Balance deadline: ${formatDate(balanceDeadline)} (${daysLeft} day${daysLeft === 1 ? '' : 's'} left)`}
+                    </Text>
+                  )}
+                </View>
+              );
+            })()}
+
             <View style={adminStyles.actionRow}>
               {booking.status === BOOKING_STATUS.PENDING && (
                 <>

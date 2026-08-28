@@ -96,6 +96,39 @@ export default function BookingsScreen({ navigation }) {
           <MaterialCommunityIcons name="cash" size={18} color={colors.primary} />
           <Text style={[styles.detailText, { color: colors.text }]}>₦{item.pricing?.totalAmount?.toLocaleString() || '0'} {item.service?.pricing?.unit ? `/ ${item.service.pricing.unit.replace('_', ' ')}` : ''}</Text>
         </View>
+
+        {/* Payment Progress Mini Bar */}
+        {(() => {
+          const total = item.pricing?.totalAmount || 0;
+          const isSplit = item.paymentPlan === 'split_50_50' || item.paymentPlan === 'deposit_20';
+          const amountPaid = isSplit
+            ? (item.balancePaid ? total : item.depositPaid ? (item.depositAmount || 0) : 0)
+            : (item.payment?.status === 'completed' ? total : 0);
+          const paidPct = total > 0 ? Math.round((amountPaid / total) * 100) : 0;
+          const remaining = Math.max(0, total - amountPaid);
+          const balanceDeadline = item.balanceDeadline ? new Date(item.balanceDeadline) : null;
+          const daysLeft = balanceDeadline ? Math.ceil((balanceDeadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+          const isOverdue = daysLeft !== null && daysLeft < 0 && remaining > 0;
+          const isUrgent = daysLeft !== null && daysLeft >= 0 && daysLeft <= 3 && remaining > 0;
+          const barColor = paidPct === 100 ? '#16a34a' : isOverdue ? '#dc2626' : isUrgent ? '#d97706' : colors.primary;
+          if (item.status === 'cancelled' || item.status === 'pending') return null;
+          return (
+            <View style={{ marginTop: 10 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                <Text style={{ color: colors.muted, fontSize: 11 }}>Payment</Text>
+                <Text style={{ color: barColor, fontSize: 11, fontWeight: '800' }}>{paidPct}% paid{remaining > 0 ? ` — ₦${remaining.toLocaleString()} left` : ' ✓'}</Text>
+              </View>
+              <View style={{ height: 6, backgroundColor: colors.border, borderRadius: 999, overflow: 'hidden' }}>
+                <View style={{ height: 6, width: `${paidPct}%`, backgroundColor: barColor, borderRadius: 999 }} />
+              </View>
+              {(isOverdue || isUrgent) && (
+                <Text style={{ color: isOverdue ? '#dc2626' : '#d97706', fontSize: 11, fontWeight: '700', marginTop: 4 }}>
+                  {isOverdue ? '⚠ Balance overdue — service at risk' : `⏰ Balance due in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`}
+                </Text>
+              )}
+            </View>
+          );
+        })()}
       </TouchableOpacity>
     );
   };

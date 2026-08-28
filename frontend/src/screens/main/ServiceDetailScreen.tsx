@@ -58,7 +58,7 @@ const ServiceDetailScreen = () => {
     setQuantity(next);
     setQuantityInput(String(next));
   };
-  const [bookingLocation] = useState({
+  const [bookingLocation, setBookingLocation] = useState({
     country: 'Nigeria',
     state: '',
     city: '',
@@ -365,22 +365,20 @@ const ServiceDetailScreen = () => {
           <View style={[styles.locationBox, { backgroundColor: colors.surfaceAlt }]}> 
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Service location</Text>
             <Text style={[styles.copy, { color: colors.muted }]}>Choose a Nigerian location that matches the provider's coverage.</Text>
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>State</Text>
-              <Text style={[styles.inputValue, { color: colors.text }]}>{bookingLocation.state || 'Required'}</Text>
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>City</Text>
-              <Text style={[styles.inputValue, { color: colors.text }]}>{bookingLocation.city || 'Required'}</Text>
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>LGA</Text>
-              <Text style={[styles.inputValue, { color: colors.text }]}>{bookingLocation.lga || 'Optional'}</Text>
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Address</Text>
-              <Text style={[styles.inputValue, { color: colors.text }]}>{bookingLocation.address || 'Optional'}</Text>
-            </View>
+            {(['state', 'city', 'lga', 'address'] as const).map((field) => (
+              <View key={field} style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>
+                  {field === 'lga' ? 'LGA' : field.charAt(0).toUpperCase() + field.slice(1)}
+                </Text>
+                <TextInput
+                  value={bookingLocation[field]}
+                  onChangeText={(value) => setBookingLocation((current) => ({ ...current, [field]: value }))}
+                  placeholder={field === 'state' || field === 'city' ? 'Required' : 'Optional'}
+                  placeholderTextColor={colors.muted}
+                  style={[styles.locationInput, { color: colors.text, borderColor: colors.border }]}
+                />
+              </View>
+            ))}
           </View>
 
           <View style={[styles.policyBox, { backgroundColor: colors.surfaceAlt }]}> 
@@ -482,6 +480,7 @@ const styles = StyleSheet.create({
   inputGroup: { marginTop: 8 },
   inputLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', fontFamily: appFont },
   inputValue: { fontSize: 14, fontWeight: '700', marginTop: 4 },
+  locationInput: { fontSize: 14, fontWeight: '700', marginTop: 4, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },
   emptyTitle: { fontSize: 18, fontWeight: '800', marginTop: 12, fontFamily: appFont },
 });
 

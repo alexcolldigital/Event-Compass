@@ -380,29 +380,82 @@ const BookingDetailScreen = () => {
             </View>
           </View>
 
-          {/* Deposit / Balance breakdown for split plans */}
-          {(currentBooking.paymentPlan === 'split_50_50' || currentBooking.paymentPlan === 'deposit_20') && (
-            <View style={{ marginTop: 10, gap: 6 }}>
-              <View style={styles.priceRow}>
-                <Text style={[styles.label, { color: colors.muted }]}>Payment Plan</Text>
-                <Text style={[styles.value, { color: colors.text }]}>
-                  {currentBooking.paymentPlan === 'deposit_20' ? '20% Deposit' : '50% Deposit'}
-                </Text>
+          {/* Payment Progress Section */}
+          {(() => {
+            const total = totalAmount;
+            const isSplit = currentBooking.paymentPlan === 'split_50_50' || currentBooking.paymentPlan === 'deposit_20';
+            const amountPaid = isSplit
+              ? (currentBooking.balancePaid ? total : currentBooking.depositPaid ? (currentBooking.depositAmount || 0) : 0)
+              : (paymentStatus === 'completed' ? total : 0);
+            const remaining = Math.max(0, total - amountPaid);
+            const paidPct = total > 0 ? Math.round((amountPaid / total) * 100) : 0;
+            const balanceDeadline = currentBooking.balanceDeadline ? new Date(currentBooking.balanceDeadline) : null;
+            const daysLeft = balanceDeadline ? Math.ceil((balanceDeadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+            const isOverdue = daysLeft !== null && daysLeft < 0 && remaining > 0;
+            const isUrgent = daysLeft !== null && daysLeft >= 0 && daysLeft <= 3 && remaining > 0;
+            const barColor = paidPct === 100 ? '#16a34a' : isOverdue ? '#dc2626' : isUrgent ? '#d97706' : colors.primary;
+
+            return (
+              <View style={{ marginTop: 14, backgroundColor: isDark ? '#1a2e1f' : '#f0fdf4', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: isDark ? '#166534' : '#bbf7d0' }}>
+                <Text style={{ color: isDark ? '#86efac' : '#15803d', fontSize: 12, fontWeight: '800', marginBottom: 10, letterSpacing: 0.6 }}>PAYMENT PROGRESS</Text>
+
+                {/* Progress Bar */}
+                <View style={{ height: 10, backgroundColor: isDark ? '#374151' : '#e5e7eb', borderRadius: 999, overflow: 'hidden', marginBottom: 10 }}>
+                  <View style={{ height: 10, width: `${paidPct}%`, backgroundColor: barColor, borderRadius: 999 }} />
+                </View>
+
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <Text style={{ color: colors.muted, fontSize: 12 }}>Paid</Text>
+                  <Text style={{ color: barColor, fontSize: 13, fontWeight: '800' }}>{paidPct}% — {formatCurrency(amountPaid)}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <Text style={{ color: colors.muted, fontSize: 12 }}>Remaining</Text>
+                  <Text style={{ color: remaining > 0 ? colors.danger : '#16a34a', fontSize: 13, fontWeight: '800' }}>
+                    {remaining > 0 ? formatCurrency(remaining) : 'Fully Paid ✓'}
+                  </Text>
+                </View>
+
+                {isSplit && (
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Text style={{ color: colors.muted, fontSize: 12 }}>Plan</Text>
+                    <Text style={{ color: colors.text, fontSize: 12, fontWeight: '700' }}>
+                      {currentBooking.paymentPlan === 'deposit_20' ? '20% Deposit + 80% Balance' : '50/50 Split'}
+                    </Text>
+                  </View>
+                )}
+
+                {balanceDeadline && remaining > 0 && (
+                  <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, borderRadius: 10, padding: 10, borderWidth: 1 },
+                    isOverdue
+                      ? { backgroundColor: isDark ? '#2d1515' : '#fef2f2', borderColor: '#fca5a5' }
+                      : isUrgent
+                      ? { backgroundColor: isDark ? '#2d1a00' : '#fff7ed', borderColor: '#fed7aa' }
+                      : { backgroundColor: isDark ? '#1e3a5f' : '#eff6ff', borderColor: '#bfdbfe' }
+                  ]}>
+                    <MaterialCommunityIcons
+                      name={isOverdue ? 'alert-circle' : isUrgent ? 'clock-alert' : 'calendar-clock'}
+                      size={16}
+                      color={isOverdue ? '#dc2626' : isUrgent ? '#d97706' : '#2563eb'}
+                    />
+                    <Text style={{ flex: 1, fontSize: 12, fontWeight: '700', color: isOverdue ? '#dc2626' : isUrgent ? '#d97706' : '#2563eb' }}>
+                      {isOverdue
+                        ? `Balance overdue! Service may not be delivered.`
+                        : isUrgent
+                        ? `Balance due in ${daysLeft} day${daysLeft === 1 ? '' : 's'} — pay now to secure service.`
+                        : `Balance deadline: ${formatDate(balanceDeadline)} (${daysLeft} days left)`}
+                    </Text>
+                  </View>
+                )}
+
+                {paidPct === 100 && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, backgroundColor: isDark ? '#14532d' : '#dcfce7', borderRadius: 10, padding: 10 }}>
+                    <MaterialCommunityIcons name="check-circle" size={16} color="#16a34a" />
+                    <Text style={{ color: '#16a34a', fontSize: 12, fontWeight: '700' }}>Payment complete — service confirmed.</Text>
+                  </View>
+                )}
               </View>
-              <View style={styles.priceRow}>
-                <Text style={[styles.label, { color: colors.muted }]}>Deposit Paid</Text>
-                <Text style={[styles.value, { color: currentBooking.depositPaid ? '#16a34a' : colors.danger }]}>
-                  {currentBooking.depositPaid ? `${formatCurrency(currentBooking.depositAmount)} ✓` : 'Not paid'}
-                </Text>
-              </View>
-              <View style={styles.priceRow}>
-                <Text style={[styles.label, { color: colors.muted }]}>Balance Due</Text>
-                <Text style={[styles.value, { color: currentBooking.balancePaid ? '#16a34a' : colors.danger }]}>
-                  {currentBooking.balancePaid ? `${formatCurrency(currentBooking.balanceDue)} ✓` : formatCurrency(currentBooking.balanceDue)}
-                </Text>
-              </View>
-            </View>
-          )}
+            );
+          })()}
         </View>
 
         {/* Party Information */}
