@@ -18,7 +18,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { normalizeCartItem } from '../../utils/cartUtils';
 import { serviceAPI } from '../../services/api.js';
 
-const logo = require('../../assets/icon.png');
+const logo = require('../../../assets/icon.png');
 
 const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
