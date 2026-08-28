@@ -6,6 +6,7 @@ import { adminAPI } from '../../services/api.js';
 import Loading from '../../components/Loading.jsx';
 import { useTheme } from '../../context/ThemeContext';
 import adminStyles, { getColors, appFont } from '../../styles/adminStyles.js';
+import Toast, { ToastType } from '../../components/Toast';
 
 const EMPTY_FORM = { name: '', description: '', icon: '', sortOrder: '0' };
 
@@ -21,6 +22,8 @@ export default function CategoryManagementScreen() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [isSaving, setIsSaving] = useState(false);
+  const [toast, setToast] = useState<{ visible: boolean; type: ToastType; message: string }>({ visible: false, type: 'success', message: '' });
+  const showToast = (type: ToastType, message: string) => setToast({ visible: true, type, message });
 
   useEffect(() => { loadCategories(); }, []);
 
@@ -41,7 +44,7 @@ export default function CategoryManagementScreen() {
   };
 
   const handleSave = async () => {
-    if (!form.name.trim()) return Alert.alert('Error', 'Name is required');
+    if (!form.name.trim()) { showToast('error', 'Name is required'); return; }
     setIsSaving(true);
     try {
       const data = { ...form, sortOrder: parseInt(form.sortOrder) || 0 };
@@ -53,7 +56,8 @@ export default function CategoryManagementScreen() {
         setCategories((c) => [...c, res.category]);
       }
       setModalVisible(false);
-    } catch (e) { Alert.alert('Error', e.message); }
+      showToast('success', editingId ? 'Category updated' : 'Category created');
+    } catch (e) { showToast('error', e.message); }
     finally { setIsSaving(false); }
   };
 
@@ -65,7 +69,7 @@ export default function CategoryManagementScreen() {
           try {
             await adminAPI.deleteCategory(cat._id);
             setCategories((c) => c.filter((x) => x._id !== cat._id));
-          } catch (e) { Alert.alert('Error', e.message); }
+          } catch (e) { showToast('error', e.message); }
         },
       },
     ]);
@@ -102,6 +106,7 @@ export default function CategoryManagementScreen() {
 
   return (
     <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
+      <Toast visible={toast.visible} type={toast.type} message={toast.message} onHide={() => setToast(t => ({ ...t, visible: false }))} />
       <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />

@@ -3,8 +3,8 @@
  * Polished booking experience with a premium marketplace feel.
  */
 
-import React, { useEffect, useState } from 'react';
-import { View, ScrollView, Text, Image, TouchableOpacity, Alert, StyleSheet, Platform, Animated, TextInput, Linking } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, ScrollView, Text, Image, TouchableOpacity, Alert, StyleSheet, Platform, Animated, TextInput, Linking, Dimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useServiceStore } from '../../context/serviceStore.js';
@@ -71,6 +71,9 @@ const ServiceDetailScreen = () => {
     return date.toISOString();
   });
   const [isFavorite, setIsFavorite] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const imageScrollRef = useRef<ScrollView>(null);
+  const screenWidth = Dimensions.get('window').width;
   const [policyAccepted, setPolicyAccepted] = useState(false);
   const [cartToast, setCartToast] = useState(false);
   const toastOpacity = React.useRef(new Animated.Value(0)).current;
@@ -234,9 +237,50 @@ const ServiceDetailScreen = () => {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <View style={styles.imageWrap}> 
-          {currentService.images && currentService.images.length > 0 ? <Image source={{ uri: currentService.images[0].url }} style={styles.image} resizeMode="cover" /> : <MaterialCommunityIcons name="briefcase" size={78} color="rgba(255,255,255,0.6)" />}
-          <View pointerEvents="none" style={styles.imageOverlay} />
+        <View style={styles.imageWrap}>
+          {currentService.images && currentService.images.length > 0 ? (
+            <>
+              <ScrollView
+                ref={imageScrollRef}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                decelerationRate="fast"
+                onMomentumScrollEnd={(e) => {
+                  const idx = Math.round(e.nativeEvent.contentOffset.x / (screenWidth - 32));
+                  setActiveImageIndex(Math.max(0, Math.min(idx, currentService.images.length - 1)));
+                }}
+                style={{ width: screenWidth - 32, height: 280 }}
+              >
+                {currentService.images.map((img: any, i: number) => (
+                  <Image
+                    key={i}
+                    source={{ uri: img.url || img }}
+                    style={[styles.image, { width: screenWidth - 32 }]}
+                    resizeMode="cover"
+                  />
+                ))}
+              </ScrollView>
+              <View pointerEvents="none" style={styles.imageOverlay} />
+              {currentService.images.length > 1 && (
+                <>
+                  <View style={styles.dotsRow}>
+                    {currentService.images.map((_: any, i: number) => (
+                      <View key={i} style={[styles.dot, i === activeImageIndex && styles.dotActive]} />
+                    ))}
+                  </View>
+                  <View style={styles.imageCountBadge}>
+                    <MaterialCommunityIcons name="image-multiple" size={11} color="#fff" />
+                    <Text style={styles.imageCountText}>{activeImageIndex + 1}/{currentService.images.length}</Text>
+                  </View>
+                </>
+              )}
+            </>
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <MaterialCommunityIcons name="briefcase" size={78} color="rgba(255,255,255,0.6)" />
+            </View>
+          )}
           <View style={styles.imageBadge}><Text style={styles.imageBadgeText}>{currentService.serviceType}</Text></View>
         </View>
 
@@ -419,10 +463,16 @@ const styles = StyleSheet.create({
   headerButtons: { position: 'absolute', top: 18, left: 16, right: 16, zIndex: 2, flexDirection: 'row', justifyContent: 'space-between' },
   circleButton: { width: 44, height: 44, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.95)', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10, elevation: 3 },
   imageWrap: { height: 280, borderRadius: 28, overflow: 'hidden', marginTop: 8, marginBottom: 12, backgroundColor: '#d7e7de' },
-  image: { width: '100%', height: '100%' },
+  image: { height: 280 },
+  imagePlaceholder: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
   imageOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.2)' },
   imageBadge: { position: 'absolute', top: 14, left: 14, backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
   imageBadgeText: { fontSize: 12, fontWeight: '800', color: '#0f172a' },
+  dotsRow: { position: 'absolute', bottom: 10, alignSelf: 'center', flexDirection: 'row', gap: 5 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.5)' },
+  dotActive: { backgroundColor: '#ffffff', width: 18 },
+  imageCountBadge: { position: 'absolute', top: 14, right: 14, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  imageCountText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   card: { borderRadius: 24, borderWidth: 1, padding: 16, marginBottom: 12 },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 },
   title: { fontSize: 22, fontWeight: '800', fontFamily: appFont },

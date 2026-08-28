@@ -7,6 +7,7 @@ import Loading from '../../components/Loading.jsx';
 import { formatCurrency } from '../../utils/helpers.js';
 import { useTheme } from '../../context/ThemeContext';
 import adminStyles, { getColors, appFont } from '../../styles/adminStyles.js';
+import Toast, { ToastType } from '../../components/Toast';
 
 export default function CommissionManagementScreen() {
   const navigation = useNavigation();
@@ -19,6 +20,8 @@ export default function CommissionManagementScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState({ commissionRate: '', minCommission: '', maxCommission: '', serviceFeePercentage: '' });
+  const [toast, setToast] = useState<{ visible: boolean; type: ToastType; message: string }>({ visible: false, type: 'success', message: '' });
+  const showToast = (type: ToastType, message: string) => setToast({ visible: true, type, message });
 
   useEffect(() => {
     Promise.all([adminAPI.getCommissionSettings(), adminAPI.getCommissionBreakdown()])
@@ -46,9 +49,9 @@ export default function CommissionManagementScreen() {
         serviceFeePercentage: parseFloat(form.serviceFeePercentage),
       });
       setSettings(res.commission);
-      Alert.alert('Success', 'Commission settings updated');
+      showToast('success', 'Commission settings updated');
     } catch (e) {
-      Alert.alert('Error', e.message || 'Failed to update');
+      showToast('error', e.message || 'Failed to update');
     } finally {
       setIsSaving(false);
     }
@@ -72,6 +75,7 @@ export default function CommissionManagementScreen() {
 
   return (
     <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
+      <Toast visible={toast.visible} type={toast.type} message={toast.message} onHide={() => setToast(t => ({ ...t, visible: false }))} />
       <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />

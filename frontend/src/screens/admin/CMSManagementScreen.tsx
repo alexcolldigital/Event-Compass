@@ -7,6 +7,7 @@ import Loading from '../../components/Loading.jsx';
 import { formatDate } from '../../utils/helpers.js';
 import { useTheme } from '../../context/ThemeContext';
 import adminStyles, { getColors, appFont } from '../../styles/adminStyles.js';
+import Toast, { ToastType } from '../../components/Toast';
 
 const PAGE_TYPES = ['page', 'faq', 'policy', 'blog'];
 const STATUSES = ['draft', 'published', 'archived'];
@@ -27,6 +28,8 @@ export default function CMSManagementScreen() {
   const [editingPage, setEditingPage] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [isSaving, setIsSaving] = useState(false);
+  const [toast, setToast] = useState<{ visible: boolean; type: ToastType; message: string }>({ visible: false, type: 'success', message: '' });
+  const showToast = (type: ToastType, message: string) => setToast({ visible: true, type, message });
   const isEditing = editingPage !== null || form.title !== '' || form.content !== '';
 
   useEffect(() => { if (!isEditing) loadPages(); }, [filterType, isEditing]);
@@ -48,11 +51,11 @@ export default function CMSManagementScreen() {
       const p = res.page;
       setForm({ title: p.title, content: p.content, excerpt: p.excerpt || '', type: p.type, status: p.status, metaTitle: p.metaTitle || '', metaDescription: p.metaDescription || '' });
       setEditingPage(p);
-    } catch (e) { Alert.alert('Error', e.message); }
+    } catch (e) { showToast('error', e.message); }
   };
 
   const handleSave = async () => {
-    if (!form.title || !form.content) return Alert.alert('Error', 'Title and content are required');
+    if (!form.title || !form.content) { showToast('error', 'Title and content are required'); return; }
     setIsSaving(true);
     try {
       if (editingPage) {
@@ -64,7 +67,8 @@ export default function CMSManagementScreen() {
       }
       setEditingPage(null);
       setForm(EMPTY_FORM);
-    } catch (e) { Alert.alert('Error', e.message); }
+      showToast('success', editingPage ? 'Page updated' : 'Page created');
+    } catch (e) { showToast('error', e.message); }
     finally { setIsSaving(false); }
   };
 
@@ -73,7 +77,7 @@ export default function CMSManagementScreen() {
       { text: 'Cancel' },
       { text: 'Delete', style: 'destructive', onPress: async () => {
         try { await adminAPI.deleteCMSPage(page._id); setPages((p) => p.filter((x) => x._id !== page._id)); }
-        catch (e) { Alert.alert('Error', e.message); }
+        catch (e) { showToast('error', e.message); }
       }},
     ]);
   };
@@ -96,6 +100,7 @@ export default function CMSManagementScreen() {
   if (isEditing) {
     return (
       <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
+        <Toast visible={toast.visible} type={toast.type} message={toast.message} onHide={() => setToast(t => ({ ...t, visible: false }))} />
         <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
           <TouchableOpacity onPress={() => { setEditingPage(null); setForm(EMPTY_FORM); }}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />

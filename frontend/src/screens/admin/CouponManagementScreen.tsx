@@ -7,6 +7,7 @@ import Loading from '../../components/Loading.jsx';
 import { formatDate } from '../../utils/helpers.js';
 import { useTheme } from '../../context/ThemeContext';
 import adminStyles, { getColors, appFont } from '../../styles/adminStyles.js';
+import Toast, { ToastType } from '../../components/Toast';
 
 const EMPTY_FORM = { code: '', description: '', discountType: 'percentage', discountValue: '', minOrderAmount: '', usageLimit: '', startDate: '', endDate: '' };
 
@@ -22,6 +23,8 @@ export default function CouponManagementScreen() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [isSaving, setIsSaving] = useState(false);
+  const [toast, setToast] = useState<{ visible: boolean; type: ToastType; message: string }>({ visible: false, type: 'success', message: '' });
+  const showToast = (type: ToastType, message: string) => setToast({ visible: true, type, message });
 
   useEffect(() => { loadCoupons(); }, []);
 
@@ -42,7 +45,7 @@ export default function CouponManagementScreen() {
   };
 
   const handleSave = async () => {
-    if (!form.code || !form.discountValue || !form.startDate || !form.endDate) return Alert.alert('Error', 'Fill required fields');
+    if (!form.code || !form.discountValue || !form.startDate || !form.endDate) { showToast('error', 'Fill required fields'); return; }
     setIsSaving(true);
     try {
       const data = { ...form, discountValue: parseFloat(form.discountValue), minOrderAmount: parseFloat(form.minOrderAmount) || 0, usageLimit: form.usageLimit ? parseInt(form.usageLimit) : null };
@@ -54,7 +57,8 @@ export default function CouponManagementScreen() {
         setCoupons((c) => [res.coupon, ...c]);
       }
       setModalVisible(false);
-    } catch (e) { Alert.alert('Error', e.message); }
+      showToast('success', editingId ? 'Coupon updated' : 'Coupon created');
+    } catch (e) { showToast('error', e.message); }
     finally { setIsSaving(false); }
   };
 
@@ -62,7 +66,7 @@ export default function CouponManagementScreen() {
     try {
       const res = await adminAPI.toggleCoupon(coupon._id);
       setCoupons((c) => c.map((x) => x._id === coupon._id ? res.coupon : x));
-    } catch (e) { Alert.alert('Error', e.message); }
+    } catch (e) { showToast('error', e.message); }
   };
 
   const handleDelete = (coupon) => {
@@ -70,7 +74,7 @@ export default function CouponManagementScreen() {
       { text: 'Cancel' },
       { text: 'Delete', style: 'destructive', onPress: async () => {
         try { await adminAPI.deleteCoupon(coupon._id); setCoupons((c) => c.filter((x) => x._id !== coupon._id)); }
-        catch (e) { Alert.alert('Error', e.message); }
+        catch (e) { showToast('error', e.message); }
       }},
     ]);
   };
@@ -128,6 +132,7 @@ export default function CouponManagementScreen() {
 
   return (
     <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
+      <Toast visible={toast.visible} type={toast.type} message={toast.message} onHide={() => setToast(t => ({ ...t, visible: false }))} />
       <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />

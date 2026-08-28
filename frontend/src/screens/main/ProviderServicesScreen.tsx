@@ -8,6 +8,7 @@ import Input from '../../components/Input.jsx';
 import { MarketplaceCard } from '../../components/Card.jsx';
 import Loading from '../../components/Loading.jsx';
 import { useTheme } from '../../context/ThemeContext';
+import Toast, { ToastType } from '../../components/Toast';
 import { fetchLocations, getLgasForState, getTownsForLga } from '../../utils/nigeriaLocations.js';
 
 const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
@@ -97,10 +98,16 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
   const [editingService, setEditingService] = useState<any>(null);
   const [priceDraft, setPriceDraft] = useState('');
   const [isSavingPrice, setIsSavingPrice] = useState(false);
+  const [editFullService, setEditFullService] = useState<any>(null);
+  const [editFormState, setEditFormState] = useState<any>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [locations, setLocations] = useState<any[]>([]);
   const [showStateMenu, setShowStateMenu] = useState(false);
   const [showLgaMenu, setShowLgaMenu] = useState(false);
   const [showTownMenu, setShowTownMenu] = useState(false);
+  const [toast, setToast] = useState<{ visible: boolean; type: ToastType; message: string }>({ visible: false, type: 'success', message: '' });
+
+  const showToast = (type: ToastType, message: string) => setToast({ visible: true, type, message });
 
   const lgaOptions = getLgasForState(locations, formState.state);
   const townOptions = getTownsForLga(locations, formState.state, formState.lga);
@@ -258,21 +265,13 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
         await uploadSelectedImages(response.service._id);
       }
 
-      setSubmissionStatus({
-        type: 'success',
-        message: 'Service created successfully. Your new service is now visible to customers.',
-      });
-      Alert.alert('Service added', 'Your service has been created and is ready for customers to view.');
       setFormState(initialFormState);
       setShowForm(false);
+      showToast('success', 'Service created successfully. Your new service is now visible to customers.');
       getMyServices().catch(() => {});
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Please try again.';
-      setSubmissionStatus({
-        type: 'error',
-        message: `Unable to create service: ${message}`,
-      });
-      Alert.alert('Unable to create service', message);
+      showToast('error', `Unable to create service: ${message}`);
     }
   };
 
@@ -286,10 +285,7 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
     try {
       setIsSavingPrice(true);
       await updateService(editingService._id, {
-        pricing: {
-          ...editingService.pricing,
-          basePrice: price,
-        },
+        pricing: { ...editingService.pricing, basePrice: price },
       });
       setEditingService(null);
       Alert.alert('Price updated', 'Your service price has been updated successfully.');
@@ -300,8 +296,89 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
     }
   };
 
+  const openEditFull = (service: any) => {
+    setEditFullService(service);
+    setEditFormState({
+      name: service.name || '',
+      shortDescription: service.shortDescription || '',
+      description: service.description || '',
+      category: service.category || '',
+      subCategory: service.subCategory || '',
+      serviceType: service.serviceType || '',
+      basePrice: String(service.pricing?.basePrice || ''),
+      unit: service.pricing?.unit || 'booking',
+      currency: service.pricing?.currency || 'NGN',
+      availabilityStatus: service.availability?.isAvailable !== false ? 'Available' : 'Unavailable',
+    });
+  };
+
+  const handleUpdateService = async () => {
+    if (!editFullService) return;
+    const price = Number(editFormState.basePrice);
+    if (!editFormState.name.trim()) { Alert.alert('Validation', 'Service name is required.'); return; }
+    if (!editFormState.description.trim()) { Alert.alert('Validation', 'Description is required.'); return; }
+    if (!Number.isFinite(price) || price <= 0) { Alert.alert('Validation', 'Enter a valid price.'); return; }
+
+    try {
+      setIsUpdating(true);
+      await updateService(editFullService._id, {
+        name: editFormState.name.trim(),
+        shortDescription: editFormState.shortDescription.trim(),
+        description: editFormState.description.trim(),
+        category: editFormState.category.trim(),
+        subCategory: editFormState.subCategory.trim(),
+        serviceType: editFormState.serviceType.trim(),
+        pricing: {
+          ...editFullService.pricing,
+          basePrice: price,
+          unit: editFormState.unit,
+          currency: editFormState.currency,
+        },
+        availability: {
+          ...editFullService.availability,
+          isAvailable: editFormState.availabilityStatus === 'Available',
+        },
+      });
+      setEditFullService(null);
+      showToast('success', 'Service updated successfully.');
+    } catch (err) {
+      Alert.alert('Update failed', err instanceof Error ? err.message : 'Please try again.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDeleteService = (service: any) => {
+    Alert.alert(
+      'Delete Service',
+      `Are you sure you want to delete "${service.name}"? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { deleteService: del } = useServiceStore.getState();
+              await del(service._id);
+              showToast('success', 'Service deleted successfully.');
+            } catch (err) {
+              Alert.alert('Delete failed', err instanceof Error ? err.message : 'Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}> 
+    <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
+      <Toast
+        visible={toast.visible}
+        type={toast.type}
+        message={toast.message}
+        onHide={() => setToast((t) => ({ ...t, visible: false }))}
+      />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={[styles.hero, { backgroundColor: colors.primary }]}>
           <View style={styles.heroRow}>
@@ -686,13 +763,22 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
                     onPress={() => navigation.navigate('ServiceDetail', { serviceId: service._id })}
                     style={{ backgroundColor: colors.surface, borderColor: colors.border }}
                   />
-                  <TouchableOpacity
-                    onPress={() => { setEditingService(service); setPriceDraft(String(service.pricing?.basePrice || '')); }}
-                    style={[styles.editPriceButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                  >
-                    <MaterialCommunityIcons name="pencil-outline" size={16} color={colors.primary} />
-                    <Text style={[styles.editPriceText, { color: colors.primary }]}>Edit price</Text>
-                  </TouchableOpacity>
+                  <View style={styles.serviceActionRow}>
+                    <TouchableOpacity
+                      onPress={() => openEditFull(service)}
+                      style={[styles.serviceActionBtn, { backgroundColor: colors.surface, borderColor: colors.primary }]}
+                    >
+                      <MaterialCommunityIcons name="pencil-outline" size={16} color={colors.primary} />
+                      <Text style={[styles.serviceActionBtnText, { color: colors.primary }]}>Edit</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleDeleteService(service)}
+                      style={[styles.serviceActionBtn, { backgroundColor: '#fef2f2', borderColor: '#fca5a5' }]}
+                    >
+                      <MaterialCommunityIcons name="trash-can-outline" size={16} color="#dc2626" />
+                      <Text style={[styles.serviceActionBtnText, { color: '#dc2626' }]}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))}
             </View>
@@ -709,6 +795,50 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
           )}
         </View>
       </ScrollView>
+
+      {/* Full Edit Service Modal */}
+      <Modal visible={!!editFullService} animationType="slide" transparent={false} onRequestClose={() => !isUpdating && setEditFullService(null)}>
+        <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
+          <View style={[styles.editModalHeader, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+            <TouchableOpacity onPress={() => !isUpdating && setEditFullService(null)}>
+              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={[styles.editModalTitle, { color: colors.text }]}>Edit Service</Text>
+            <View style={{ width: 24 }} />
+          </View>
+          <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+            {editFormState && (
+              <>
+                <Input label="Service Name *" value={editFormState.name} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, name: v }))} icon="briefcase-outline" />
+                <Input label="Short Description" value={editFormState.shortDescription} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, shortDescription: v }))} icon="text-short" maxLength={200} />
+                <Input label="Full Description *" value={editFormState.description} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, description: v }))} icon="text-box-outline" multiline numberOfLines={4} />
+                <Input label="Category" value={editFormState.category} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, category: v }))} icon="shape-outline" />
+                <Input label="Subcategory" value={editFormState.subCategory} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, subCategory: v }))} icon="shape-plus-outline" />
+                <Input label="Service Type" value={editFormState.serviceType} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, serviceType: v }))} icon="tag-outline" />
+                <Input label="Base Price (₦) *" value={editFormState.basePrice} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, basePrice: v }))} keyboardType="numeric" icon="cash" />
+                <Input label="Unit" value={editFormState.unit} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, unit: v }))} icon="calendar-blank" />
+                <View style={[styles.toggleRow, { marginTop: 8 }]}>
+                  <Text style={[styles.toggleLabel, { color: colors.text }]}>Available for Booking</Text>
+                  <TouchableOpacity
+                    onPress={() => setEditFormState((p: any) => ({ ...p, availabilityStatus: p.availabilityStatus === 'Available' ? 'Unavailable' : 'Available' }))}
+                    style={[styles.toggle, { backgroundColor: editFormState.availabilityStatus === 'Available' ? colors.primary : '#9ca3af' }]}
+                  >
+                    <Text style={[styles.toggleText, { color: '#fff' }]}>{editFormState.availabilityStatus}</Text>
+                  </TouchableOpacity>
+                </View>
+                <Button
+                  title={isUpdating ? 'Saving...' : 'Save Changes'}
+                  onPress={handleUpdateService}
+                  disabled={isUpdating}
+                  fullWidth
+                  variant="primary"
+                  size="lg"
+                />
+              </>
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
 
       <Modal visible={!!editingService} transparent animationType="fade" onRequestClose={() => !isSavingPrice && setEditingService(null)}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => !isSavingPrice && setEditingService(null)}>
@@ -831,8 +961,11 @@ const styles = StyleSheet.create({
   imagePreviewRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   imagePreviewChip: { backgroundColor: '#ecfdf3', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
   imagePreviewText: { color: '#166534', fontSize: 12, fontWeight: '700' },
-  editPriceButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderRadius: 14, paddingVertical: 10, marginTop: 8 },
-  editPriceText: { fontSize: 13, fontWeight: '800' },
+  serviceActionRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  serviceActionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderRadius: 14, paddingVertical: 10 },
+  serviceActionBtnText: { fontSize: 13, fontWeight: '800' },
+  editModalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1 },
+  editModalTitle: { fontSize: 18, fontWeight: '800', fontFamily: appFont },
   notificationBar: {
     borderWidth: 1,
     borderRadius: 18,

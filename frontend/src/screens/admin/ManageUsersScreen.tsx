@@ -3,6 +3,7 @@ import {
   View, Text, SafeAreaView, FlatList, TouchableOpacity, Alert,
   TextInput, StyleSheet, Modal, ScrollView,
 } from 'react-native';
+import Toast, { ToastType } from '../../components/Toast';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { adminAPI } from '../../services/api.js';
@@ -33,6 +34,8 @@ export default function ManageUsersScreen() {
   // Role picker modal state
   const [roleModalUser, setRoleModalUser] = useState(null);
   const [roleLoading, setRoleLoading] = useState(false);
+  const [toast, setToast] = useState<{ visible: boolean; type: ToastType; message: string }>({ visible: false, type: 'success', message: '' });
+  const showToast = (type: ToastType, message: string) => setToast({ visible: true, type, message });
 
   useEffect(() => { load(); }, []);
   useEffect(() => { filter(); }, [search, roleFilter, users]);
@@ -65,7 +68,7 @@ export default function ManageUsersScreen() {
               const r = await adminAPI.blockUser(user._id, { reason: user.isBlocked ? undefined : 'Blocked by admin' });
               setUsers(prev => prev.map(u => u._id === user._id ? r.user : u));
               setExpanded(null);
-            } catch (e) { Alert.alert('Error', e.message || 'Failed to update user'); }
+            } catch (e) { showToast('error', e.message || 'Failed to update user'); }
           },
         },
       ]
@@ -81,7 +84,7 @@ export default function ManageUsersScreen() {
             const r = await adminAPI.verifyProvider(user._id);
             setUsers(prev => prev.map(u => u._id === user._id ? r.user : u));
             setExpanded(null);
-          } catch (e) { Alert.alert('Error', e.message || 'Failed to verify'); }
+          } catch (e) { showToast('error', e.message || 'Failed to verify'); }
         },
       },
     ]);
@@ -98,9 +101,9 @@ export default function ManageUsersScreen() {
       setUsers(prev => prev.map(u => u._id === roleModalUser._id ? r.user : u));
       setExpanded(null);
       setRoleModalUser(null);
-      Alert.alert('Success', `Role updated to ${ROLES.find(r => r.value === newRole)?.label}`);
+      showToast('success', `Role updated to ${ROLES.find(r => r.value === newRole)?.label}`);
     } catch (e) {
-      Alert.alert('Error', e.message || 'Failed to assign role');
+      showToast('error', e.message || 'Failed to assign role');
     } finally {
       setRoleLoading(false);
     }
@@ -200,6 +203,7 @@ export default function ManageUsersScreen() {
 
   return (
     <SafeAreaView style={[adminStyles.screen, { backgroundColor: c.bg }]}>
+      <Toast visible={toast.visible} type={toast.type} message={toast.message} onHide={() => setToast(t => ({ ...t, visible: false }))} />
       <View style={[adminStyles.header, { backgroundColor: c.surface, borderBottomColor: c.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={c.text} />

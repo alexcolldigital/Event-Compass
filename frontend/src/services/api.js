@@ -194,6 +194,10 @@ export const adminAPI = {
   deleteService: (id) => apiClient.delete(`/admin/services/${id}`),
   toggleFeatured: (id) => apiClient.patch(`/admin/services/${id}/toggle-featured`),
   toggleActive: (id) => apiClient.patch(`/admin/services/${id}/toggle-active`),
+  uploadServiceMedia: (id, formData) =>
+    apiClient.post(`/admin/services/${id}/upload-media`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
 
   // Bookings
   getAllBookings: (query) => apiClient.get('/admin/bookings', { params: query }),

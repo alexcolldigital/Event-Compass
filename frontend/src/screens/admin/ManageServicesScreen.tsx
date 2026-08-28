@@ -26,6 +26,7 @@ import { useNavigation } from '@react-navigation/native';
 import Button from '../../components/Button.jsx';
 import Loading from '../../components/Loading.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
+import Toast, { ToastType } from '../../components/Toast';
 import { adminAPI } from '../../services/api.js';
 import { COLORS, USER_ROLES, SERVICE_PROVIDER_TYPES } from '../../utils/constants.js';
 import { formatDate } from '../../utils/helpers.js';
@@ -270,6 +271,9 @@ const ManageServicesScreen = () => {
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingImages, setPendingImages] = useState<{ uri: string; name: string; type: string }[]>([]);
+  const [toast, setToast] = useState<{ visible: boolean; type: ToastType; message: string }>({ visible: false, type: 'success', message: '' });
+
+  const showToast = (type: ToastType, message: string) => setToast({ visible: true, type, message });
 
   useEffect(() => {
     loadServices();
@@ -339,7 +343,7 @@ const ManageServicesScreen = () => {
       Alert.alert('Success', `Service ${response.service.isFeatured ? 'featured' : 'unfeatured'} successfully`);
     } catch (err) {
       const error = err as ApiError;
-      Alert.alert('Error', error.message || 'Failed to update service');
+      showToast('error', error.message || 'Failed to update service');
     }
   };
 
@@ -353,7 +357,7 @@ const ManageServicesScreen = () => {
       Alert.alert('Success', `Service ${response.service.isActive ? 'activated' : 'deactivated'} successfully`);
     } catch (err) {
       const error = err as ApiError;
-      Alert.alert('Error', error.message || 'Failed to update service');
+      showToast('error', error.message || 'Failed to update service');
     }
   };
 
@@ -371,10 +375,10 @@ const ManageServicesScreen = () => {
               await adminAPI.deleteService(service._id);
               setServices((prev) => prev.filter((s) => s._id !== service._id));
               setExpandedServiceId(null);
-              Alert.alert('Success', 'Service deleted successfully');
+              showToast('success', 'Service deleted successfully');
             } catch (err) {
               const error = err as ApiError;
-              Alert.alert('Error', error.message || 'Failed to delete service');
+              showToast('error', error.message || 'Failed to delete service');
             }
           },
         },
@@ -385,7 +389,7 @@ const ManageServicesScreen = () => {
   const pickImages = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission required', 'Please allow access to your photo library.');
+      showToast('error', 'Please allow access to your photo library.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -547,7 +551,7 @@ const ManageServicesScreen = () => {
         resetForm();
         setPendingImages([]);
         await loadServices();
-        Alert.alert('Success', 'Service updated successfully');
+        showToast('success', 'Service updated successfully');
         setExpandedServiceId(null);
       } else {
         const res = (await adminAPI.createService(submitData)) as any;
@@ -557,11 +561,11 @@ const ManageServicesScreen = () => {
         resetForm();
         setPendingImages([]);
         await loadServices();
-        Alert.alert('Success', 'Service created successfully');
+        showToast('success', 'Service created successfully');
       }
     } catch (err) {
       const error = err as ApiError;
-      Alert.alert('Error', error.message || error.error as string || 'Failed to save service. Check all required fields.');
+      showToast('error', error.message || error.error as string || 'Failed to save service. Check all required fields.');
     } finally {
       setIsSubmitting(false);
     }
@@ -797,6 +801,12 @@ const ManageServicesScreen = () => {
 
   return (
     <View style={styles.container}>
+      <Toast
+        visible={toast.visible}
+        type={toast.type}
+        message={toast.message}
+        onHide={() => setToast((t) => ({ ...t, visible: false }))}
+      />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.dark} />

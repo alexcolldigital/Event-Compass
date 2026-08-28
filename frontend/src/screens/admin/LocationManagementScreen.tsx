@@ -13,6 +13,7 @@ import { adminAPI } from '../../services/api.js';
 import { useTheme } from '../../context/ThemeContext';
 import Button from '../../components/Button.jsx';
 import { clearLocationCache } from '../../utils/nigeriaLocations.js';
+import Toast, { ToastType } from '../../components/Toast';
 
 export default function LocationManagementScreen({ navigation }: { navigation: any }) {
   const { theme } = useTheme();
@@ -31,6 +32,8 @@ export default function LocationManagementScreen({ navigation }: { navigation: a
   const [locations, setLocations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [expandedState, setExpandedState] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ visible: boolean; type: ToastType; message: string }>({ visible: false, type: 'success', message: '' });
+  const showToast = (type: ToastType, message: string) => setToast({ visible: true, type, message });
 
   // Modal state
   const [modal, setModal] = useState<{
@@ -46,7 +49,7 @@ export default function LocationManagementScreen({ navigation }: { navigation: a
       const res: any = await adminAPI.getLocations();
       setLocations(res?.locations || []);
     } catch {
-      Alert.alert('Error', 'Failed to load locations');
+      showToast('error', 'Failed to load locations');
     } finally {
       setIsLoading(false);
     }
@@ -64,7 +67,7 @@ export default function LocationManagementScreen({ navigation }: { navigation: a
       setInputValue('');
       load();
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Failed to add state');
+      showToast('error', e?.message || 'Failed to add state');
     }
   };
 
@@ -81,7 +84,7 @@ export default function LocationManagementScreen({ navigation }: { navigation: a
       setInputValue('');
       load();
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Failed to add LGA');
+      showToast('error', e?.message || 'Failed to add LGA');
     }
   };
 
@@ -102,7 +105,7 @@ export default function LocationManagementScreen({ navigation }: { navigation: a
       setInputValue('');
       load();
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Failed to add town');
+      showToast('error', e?.message || 'Failed to add town');
     }
   };
 
@@ -116,7 +119,7 @@ export default function LocationManagementScreen({ navigation }: { navigation: a
             clearLocationCache();
             load();
           } catch {
-            Alert.alert('Error', 'Failed to delete');
+            showToast('error', 'Failed to delete');
           }
         },
       },
@@ -136,7 +139,7 @@ export default function LocationManagementScreen({ navigation }: { navigation: a
             clearLocationCache();
             load();
           } catch {
-            Alert.alert('Error', 'Failed to delete LGA');
+            showToast('error', 'Failed to delete LGA');
           }
         },
       },
@@ -154,7 +157,7 @@ export default function LocationManagementScreen({ navigation }: { navigation: a
       clearLocationCache();
       load();
     } catch {
-      Alert.alert('Error', 'Failed to delete town');
+      showToast('error', 'Failed to delete town');
     }
   };
 
@@ -174,6 +177,7 @@ export default function LocationManagementScreen({ navigation }: { navigation: a
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
+      <Toast visible={toast.visible} type={toast.type} message={toast.message} onHide={() => setToast(t => ({ ...t, visible: false }))} />
       <View style={[styles.header, { backgroundColor: colors.primary }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <MaterialCommunityIcons name="arrow-left" size={22} color="#fff" />
