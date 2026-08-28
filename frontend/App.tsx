@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import 'react-native-gesture-handler';
 import './src/styles/globalStyles';
+import { Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -55,10 +56,13 @@ function AppShell() {
 
   if (!isReady) return null;
 
+  const linking = Platform.OS === 'web' ? { prefixes: [], config: {} } : undefined;
+
   return (
     <NavigationContainer
       ref={navigationRef}
-      initialState={initialState}
+      linking={linking}
+      initialState={Platform.OS !== 'web' ? initialState : undefined}
       onReady={() => setIsNavigationReady(true)}
       onStateChange={(state) =>
         AsyncStorage.setItem(NAV_STATE_KEY, JSON.stringify(state))

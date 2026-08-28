@@ -219,7 +219,8 @@ export default function BottomTabNavigator() {
     React.useCallback(() => {
       const onBackPress = () => {
         if (navigation.canGoBack()) {
-          return false;
+          navigation.goBack();
+          return true;
         }
         if (backPressedOnce.current) {
           BackHandler.exitApp();

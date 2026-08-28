@@ -28,7 +28,7 @@ type MenuItem = {
 
 export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
-  const { theme } = useTheme();
+  const { theme, preference, setLightTheme, setDarkTheme, setSystemTheme } = useTheme();
   const isDark = theme === 'dark';
   const { user, logout, isLoading } = useAuthStore();
   const [contactingSupport, setContactingSupport] = useState(false);
@@ -108,6 +108,31 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Account settings</Text>
+
+          <View style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.menuIcon, { backgroundColor: '#6366f115' }]}>
+              <MaterialCommunityIcons name={isDark ? 'weather-night' : 'white-balance-sunny'} size={22} color="#6366f1" />
+            </View>
+            <Text style={[styles.menuLabel, { color: colors.text }]}>Appearance</Text>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              {(['light', 'dark', 'system'] as const).map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  onPress={() => opt === 'light' ? setLightTheme() : opt === 'dark' ? setDarkTheme() : setSystemTheme()}
+                  style={[
+                    styles.themeChip,
+                    preference === opt && { backgroundColor: colors.primary },
+                    preference !== opt && { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
+                  ]}
+                >
+                  <Text style={[styles.themeChipText, { color: preference === opt ? '#fff' : colors.muted }]}>
+                    {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
           {menuItems.map((item) => (
             <TouchableOpacity key={item.label} onPress={item.onPress} style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
               <View style={[styles.menuIcon, { backgroundColor: `${item.color}15` }]}> 
@@ -199,4 +224,6 @@ const styles = StyleSheet.create({
   modalBtnText: { fontSize: 15, fontWeight: '800' },
   otpInput: { width: '100%', borderWidth: 1.5, borderRadius: 12, fontSize: 28, fontWeight: '800', letterSpacing: 12, textAlign: 'center', paddingVertical: 14, marginBottom: 8 },
   otpError: { color: '#dc2626', fontSize: 13, marginBottom: 8 },
+  themeChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1 },
+  themeChipText: { fontSize: 12, fontWeight: '700' },
 });
