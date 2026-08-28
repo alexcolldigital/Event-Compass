@@ -5,7 +5,7 @@ import Input from '../../components/Input.jsx';
 import Button from '../../components/Button.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { useAuthStore } from '../../context/authStore.js';
-import authStyles from '../../styles/authStyles.js';
+import authStyles, { useLogoStyle } from '../../styles/authStyles.js';
 import logo from '../../assets/logo';
 
 interface LoginErrors {
@@ -18,6 +18,7 @@ interface LoginScreenProps {
 }
 
 export default function LoginScreen({ navigation }: LoginScreenProps) {
+  const logoStyle = useLogoStyle();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<LoginErrors>({});
@@ -64,7 +65,7 @@ return (
       >
         <View style={authStyles.shell}>
           <View style={authStyles.header}>
-            <Image source={logo} style={authStyles.brandLogo} resizeMode="contain" />
+            <Image source={logo} style={logoStyle} resizeMode="contain" />
             <Text style={authStyles.subtitle}>Book premium event services instantly</Text>
           </View>
 

@@ -6,7 +6,7 @@ import PhoneCountryInput from '../../components/PhoneCountryInput.jsx';
 import Button from '../../components/Button.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { useAuthStore } from '../../context/authStore.js';
-import authStyles from '../../styles/authStyles.js';
+import authStyles, { useLogoStyle } from '../../styles/authStyles.js';
 import logo from '../../assets/logo';
 import { DEFAULT_COUNTRY } from '../../utils/countryPhoneOptions.js';
 
@@ -27,6 +27,7 @@ type RegisterScreenProps = {
 };
 
 export default function RegisterScreen({ navigation }: RegisterScreenProps) {
+  const logoStyle = useLogoStyle();
   const [formData, setFormData] = useState<FormData>({
     firstName: '',
     lastName: '',
@@ -96,7 +97,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
           </TouchableOpacity>
 
           <View style={authStyles.header}>
-            <Image source={logo} style={authStyles.brandLogo} resizeMode="contain" />
+            <Image source={logo} style={logoStyle} resizeMode="contain" />
             <Text style={authStyles.subtitle}>Discover premium event services in just a few steps</Text>
           </View>
 

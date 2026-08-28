@@ -1,4 +1,10 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, useWindowDimensions } from 'react-native';
+
+export function useLogoStyle() {
+  const { width } = useWindowDimensions();
+  const logoWidth = Math.min(width * 0.45, 200);
+  return { width: logoWidth, height: logoWidth * 0.38, marginBottom: 8 };
+}
 
 export const authStyles = StyleSheet.create({
   screen: {
@@ -30,13 +36,12 @@ export const authStyles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 16,
   },
   brandLogo: {
-    width: '100%',
-    maxWidth: 500,
-    aspectRatio: 500 / 220,
-    marginBottom: 12,
+    width: 180,
+    height: 70,
+    marginBottom: 8,
   },
   brandBadge: {
     width: 92,
