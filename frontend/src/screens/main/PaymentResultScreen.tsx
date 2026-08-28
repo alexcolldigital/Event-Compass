@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, SafeAreaView, StyleSheet } from 'react-native';
+import { View, Text, SafeAreaView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useBookingStore } from '../../context/bookingStore.js';
@@ -62,7 +62,10 @@ const PaymentResultScreen = () => {
   const isSuccess = status === 'success';
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}> 
+    <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
+      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
+      </TouchableOpacity>
       <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
         <MaterialCommunityIcons
           name={isSuccess ? 'check-circle-outline' : 'alert-circle-outline'}
@@ -122,7 +125,9 @@ const PaymentResultScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  screen: { flex: 1, padding: 20 },
+  backButton: { marginBottom: 8, alignSelf: 'flex-start', padding: 4 },
+  cardWrapper: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   card: {
     width: '100%',
     maxWidth: 440,

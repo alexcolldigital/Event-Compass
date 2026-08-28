@@ -6,7 +6,7 @@
 import React, { lazy, Suspense, useRef } from 'react';
 import { Platform, BackHandler } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -214,9 +214,13 @@ export default function BottomTabNavigator() {
   const isAdmin = user?.role === 'admin';
 
   const backPressedOnce = useRef(false);
+  const navigation = useNavigation();
   useFocusEffect(
     React.useCallback(() => {
       const onBackPress = () => {
+        if (navigation.canGoBack()) {
+          return false;
+        }
         if (backPressedOnce.current) {
           BackHandler.exitApp();
           return true;
@@ -228,7 +232,7 @@ export default function BottomTabNavigator() {
       };
       BackHandler.addEventListener('hardwareBackPress', onBackPress);
       return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
-    }, [])
+    }, [navigation])
   );
 
   const tabItems = isAdmin

@@ -303,8 +303,11 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}> 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <View style={[styles.hero, { backgroundColor: colors.primary }]}> 
+        <View style={[styles.hero, { backgroundColor: colors.primary }]}>
           <View style={styles.heroRow}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.heroBackButton}>
+              <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
+            </TouchableOpacity>
             <View style={styles.heroCopy}>
               <Text style={styles.heroTitle}>Your services</Text>
               <Text style={styles.heroSubtitle}>Manage what you provide and add new offerings.</Text>
@@ -790,6 +793,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 96 },
   hero: { borderRadius: 28, padding: 20, marginTop: 8, marginBottom: 16 },
   heroRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  heroBackButton: { padding: 4 },
   heroCopy: { flex: 1 },
   heroTitle: { color: '#fff', fontSize: 24, fontWeight: '800', fontFamily: appFont },
   heroSubtitle: { color: 'rgba(255,255,255,0.9)', fontSize: 13, marginTop: 6, fontFamily: appFont },
