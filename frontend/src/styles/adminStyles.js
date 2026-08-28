@@ -48,8 +48,8 @@ export const adminStyles = StyleSheet.create({
   cardRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
 
   // Stat grid
-  statsGrid: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  statCard: { flex: 1, borderRadius: 18, borderWidth: 1, padding: 14 },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 },
+  statCard: { flex: 1, minWidth: 120, borderRadius: 18, borderWidth: 1, padding: 14 },
   statValue: { fontSize: 22, fontWeight: '800', marginTop: 8 },
   statLabel: { fontSize: 11, fontWeight: '600', marginTop: 2 },
 

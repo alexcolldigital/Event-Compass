@@ -1049,6 +1049,28 @@ button {
   }
 }
 
+/* Responsive content container */
+.screen-content {
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (min-width: 1280px) {
+  .ec-card-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .ec-vendor-body h3 { font-size: 18px; }
+  .ec-stat strong { font-size: 22px; }
+  .ec-hero h1 { font-size: 36px; }
+  .ec-hero-copy { font-size: 15px; }
+  .ec-showcase-copy { padding: 8px; }
+}
+
 @media (max-width: 640px) {
   .ec-nav {
     width: min(100% - 24px, 1180px);

@@ -14,6 +14,7 @@ import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { MarketplaceCard } from '../../components/Card.jsx';
 import { useTheme } from '../../context/ThemeContext';
 import { normalizeCartItem } from '../../utils/cartUtils';
+import { useResponsive } from '../../utils/responsive';
 
 const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
@@ -133,6 +134,9 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
   };
 
   const displayedServices = services;
+  const { hPad, cols, colWidth } = useResponsive();
+  const numCols = cols({ base: 1, sm: 2, lg: 3 });
+  const cardW = colWidth(numCols, 12);
 
   const handleAddToCart = (service: any) => {
     const cartItem = normalizeCartItem(service, 1);
@@ -145,8 +149,8 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
   };
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}> 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+    <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingHorizontal: hPad }]}>
         <View style={[styles.hero, { backgroundColor: colors.primary }]}> 
           <Text style={styles.heroTitle}>Discover services</Text>
           <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
@@ -235,13 +239,13 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
             {displayedServices.length > 0 ? <Text style={[styles.resultText, { color: colors.primary }]}>{displayedServices.length} results</Text> : null}
           </View>
           {isLoading ? (
-            <View style={[styles.emptyState, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}> 
+            <View style={[styles.emptyState, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
               <ActivityIndicator size="large" color={colors.primary} />
             </View>
           ) : displayedServices.length > 0 ? (
-            <View style={styles.marketplaceGrid}>
+            <View style={[styles.marketplaceGrid, numCols > 1 && { flexDirection: 'row', flexWrap: 'wrap' }]}>
               {displayedServices.map((service: any) => (
-                <MarketplaceCard key={service._id} image={service.images?.[0]?.url} images={service.images} title={service.name} subtitle={service.serviceType} rating={service.averageRating || 4.5} reviewCount={service.totalReviews || 0} price={service.pricing?.basePrice || 0} unit={service.unit || 'booking'} category={service.serviceType} badge={service.availability?.isAvailable === false ? 'Unavailable' : 'Available'} onPress={() => navigation.navigate('ServiceDetail', { serviceId: service._id })} onAddToCart={() => handleAddToCart(service)} style={{ backgroundColor: colors.surface, borderColor: colors.border }} />
+                <MarketplaceCard key={service._id} image={service.images?.[0]?.url} images={service.images} title={service.name} subtitle={service.serviceType} rating={service.averageRating || 4.5} reviewCount={service.totalReviews || 0} price={service.pricing?.basePrice || 0} unit={service.unit || 'booking'} category={service.serviceType} badge={service.availability?.isAvailable === false ? 'Unavailable' : 'Available'} onPress={() => navigation.navigate('ServiceDetail', { serviceId: service._id })} onAddToCart={() => handleAddToCart(service)} style={{ backgroundColor: colors.surface, borderColor: colors.border, ...(numCols > 1 && { width: cardW }) }} />
               ))}
             </View>
           ) : (
@@ -259,7 +263,7 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { paddingHorizontal: 16, paddingBottom: 96 },
+  content: { paddingBottom: 96 },
   hero: { borderRadius: 28, padding: 18, marginTop: 8, marginBottom: 16 },
   heroTitle: { color: '#fff', fontSize: 24, fontWeight: '800', marginBottom: 12, fontFamily: appFont },
   searchBar: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 12, flexDirection: 'row', alignItems: 'center' },

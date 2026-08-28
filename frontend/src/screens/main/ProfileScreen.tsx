@@ -11,6 +11,7 @@ import { useAuthStore } from '../../context/authStore.js';
 import Button from '../../components/Button.jsx';
 import { useTheme } from '../../context/ThemeContext';
 import { messageAPI } from '../../services/api.js';
+import { useResponsive } from '../../utils/responsive';
 
 type ProfileScreenProps = {
   navigation: {
@@ -60,6 +61,10 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     primary: '#1f7a4d',
   };
 
+  const { hPad, cols, colWidth } = useResponsive();
+  const numStatCols = cols({ base: 3, sm: 3, md: 3 });
+  const statW = colWidth(numStatCols, 10);
+
   const confirmLogout = async () => {
     setShowLogoutModal(false);
     try { await logout(); } catch (error) { console.error('Logout failed', error); }
@@ -79,7 +84,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}> 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingHorizontal: hPad }]}>
         <View style={[styles.hero, { backgroundColor: colors.primary }]}> 
           <View style={styles.avatarWrap}>
             {user?.profileImage?.url ? <Image source={{ uri: user.profileImage.url }} style={styles.avatar} /> : <MaterialCommunityIcons name="account" size={70} color="#1f7a4d" />}
@@ -90,9 +95,9 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         </View>
 
         {user?.role === 'service_provider' ? (
-          <View style={styles.statsRow}>
+          <View style={[styles.statsRow, { flexWrap: 'wrap' }]}>
             {[{ label: 'Total Bookings', value: user.totalBookings || 0, icon: 'briefcase' }, { label: 'Rating', value: user.averageRating?.toFixed(1) || '0', icon: 'star' }, { label: 'Completed', value: user.completedBookings || 0, icon: 'check-circle' }].map((item) => (
-              <View key={item.label} style={[styles.statTile, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+              <View key={item.label} style={[styles.statTile, { backgroundColor: colors.surface, borderColor: colors.border, width: statW }]}> 
                 <MaterialCommunityIcons name={item.icon as React.ComponentProps<typeof MaterialCommunityIcons>['name']} size={22} color={colors.primary} />
                 <Text style={[styles.statValue, { color: colors.text }]}>{item.value}</Text>
                 <Text style={[styles.statLabel, { color: colors.muted }]}>{item.label}</Text>
@@ -154,7 +159,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { paddingHorizontal: 16, paddingBottom: 96 },
+  content: { paddingBottom: 96 },
   hero: { borderRadius: 28, padding: 24, alignItems: 'center', marginTop: 8, marginBottom: 16 },
   avatarWrap: { width: 100, height: 100, borderRadius: 999, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   avatar: { width: 100, height: 100, borderRadius: 999 },

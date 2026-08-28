@@ -5,6 +5,7 @@
 
 import React, { lazy, Suspense, useRef } from 'react';
 import { Platform, BackHandler } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -188,6 +189,7 @@ function ProfileStack() {
 export default function BottomTabNavigator() {
   const { user } = useAuthStore();
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const isProvider = user?.role === 'service_provider';
   const isDark = theme === 'dark';
 
@@ -287,8 +289,8 @@ export default function BottomTabNavigator() {
           borderTopWidth: 1,
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
-          height: 64,
-          paddingBottom: 6,
+          height: 60 + insets.bottom,
+          paddingBottom: insets.bottom || 8,
           paddingTop: 6,
           shadowColor: tabBarColors.shadow,
           shadowOffset: { width: 0, height: -4 },
@@ -300,6 +302,9 @@ export default function BottomTabNavigator() {
             bottom: 0,
             left: 0,
             right: 0,
+            maxWidth: 1200,
+            marginLeft: 'auto' as any,
+            marginRight: 'auto' as any,
           }),
         },
       })}

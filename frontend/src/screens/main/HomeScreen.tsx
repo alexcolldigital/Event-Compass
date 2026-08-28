@@ -4,13 +4,9 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Platform, Animated, Dimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Platform, Animated, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const H_PADDING = 32; // 16 * 2
-const GRID_GAP = 10;
-const COL2_WIDTH = (SCREEN_WIDTH - H_PADDING - GRID_GAP) / 2;
+import { useResponsive, contentStyle } from '../../utils/responsive';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../context/authStore.js';
 import { useServiceStore } from '../../context/serviceStore.js';
@@ -21,6 +17,8 @@ import { MarketplaceCard, FeatureCard, StatCard } from '../../components/Card.js
 import { useTheme } from '../../context/ThemeContext';
 import { normalizeCartItem } from '../../utils/cartUtils';
 import { serviceAPI } from '../../services/api.js';
+
+const logo = require('../../assets/icon.png');
 
 const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
@@ -177,6 +175,14 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
     showCartToast(service.name);
   };
 
+  const { width, hPad, cols, colWidth, isSmall } = useResponsive();
+  const GRID_GAP = 10;
+  const numCategoryCols = cols({ base: 2, sm: 2, md: 3, lg: 4 });
+  const categoryColW = colWidth(numCategoryCols, GRID_GAP);
+  const numServiceCols = cols({ base: 1, sm: 2, lg: 3 });
+  const serviceColW = colWidth(numServiceCols, 12);
+  const numQuickCols = cols({ base: 4, sm: 4, md: 4 });
+
   if (isLoading && services.length === 0) {
     return <Loading />;
   }
@@ -184,19 +190,18 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
     <SafeAreaView style={{ flex: 1 }}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}> 
-        <View style={[styles.hero, { backgroundColor: colors.primary }]}> 
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingHorizontal: hPad }]}> 
+        <View style={[styles.hero, { backgroundColor: colors.primary }]}>
           <View style={styles.heroTopRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.eyebrow}>WELCOME BACK</Text>
-              <Text style={styles.heroTitle}>{user?.firstName || 'Guest'}</Text>
-              <Text style={styles.heroSubtitle}>Ready to book premium services?</Text>
-            </View>
+            <Image source={logo} style={styles.heroLogo} resizeMode="contain" />
             <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('EventDetails' as never)}>
               <MaterialCommunityIcons name="cart-outline" size={22} color="#fff" />
               {items.length > 0 ? <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{items.length}</Text></View> : null}
             </TouchableOpacity>
           </View>
+          <Text style={styles.eyebrow}>WELCOME BACK</Text>
+          <Text style={styles.heroTitle}>{user?.firstName || 'Guest'}</Text>
+          <Text style={styles.heroSubtitle}>Ready to book premium services?</Text>
           <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
             <MaterialCommunityIcons name="magnify" size={22} color={colors.primary} />
             <TextInput
@@ -232,7 +237,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
               </TouchableOpacity>
             </View>
           </View>
-          <View style={styles.quickGrid}>
+          <View style={[styles.quickGrid, { flexWrap: numQuickCols > 4 ? 'wrap' : 'nowrap' }]}>
             {[
               { label: 'Explore', icon: 'magnify', screen: 'Search', accent: '#1f7a4d' },
               { label: 'Bookings', icon: 'calendar-check', screen: 'Bookings', accent: '#7c3aed' },
@@ -263,9 +268,9 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
               <Text style={[styles.linkText, { color: colors.primary }]}>View all</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.categoryGrid}>
-            {featureCategories.slice(0, 5).map((category, index) => (
-              <FeatureCard key={index} icon={category.icon} title={category.title} description={category.description} count={categoryCountMap[category.title] ?? category.count} variant={category.variant} onPress={() => handleCategoryPress(category.title)} style={[{ backgroundColor: colors.surface, borderColor: colors.border }, styles.categoryCardItem, index === 4 && styles.categoryCardFull]} />
+          <View style={[styles.categoryGrid, { gap: GRID_GAP }]}>
+            {featureCategories.slice(0, numCategoryCols % 2 === 0 ? numCategoryCols : numCategoryCols + 1).map((category, index) => (
+              <FeatureCard key={index} icon={category.icon} title={category.title} description={category.description} count={categoryCountMap[category.title] ?? category.count} variant={category.variant} onPress={() => handleCategoryPress(category.title)} style={[{ backgroundColor: colors.surface, borderColor: colors.border, width: categoryColW }]} />
             ))}
           </View>
         </View>
@@ -278,9 +283,9 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
             </TouchableOpacity>
           </View>
           {services.length > 0 ? (
-            <View style={styles.marketplaceGrid}>
+            <View style={[styles.marketplaceGrid, numServiceCols > 1 && { flexDirection: 'row', flexWrap: 'wrap', gap: 12 }]}>
               {services.map((service: any) => (
-                <MarketplaceCard key={service._id} image={service.images?.[0]?.url} images={service.images} title={service.name} subtitle={service.category} rating={service.averageRating || 4.5} reviewCount={service.totalReviews || 0} price={service.pricing?.basePrice || 0} unit={service.unit || 'booking'} category={service.serviceType} badge={service.availability?.isAvailable === false ? 'Unavailable' : 'Available'} onPress={() => navigation.navigate('ServiceDetail', { serviceId: service._id })} onAddToCart={() => handleAddToCart(service)} style={{ backgroundColor: colors.surface, borderColor: colors.border }} />
+                <MarketplaceCard key={service._id} image={service.images?.[0]?.url} images={service.images} title={service.name} subtitle={service.category} rating={service.averageRating || 4.5} reviewCount={service.totalReviews || 0} price={service.pricing?.basePrice || 0} unit={service.unit || 'booking'} category={service.serviceType} badge={service.availability?.isAvailable === false ? 'Unavailable' : 'Available'} onPress={() => navigation.navigate('ServiceDetail', { serviceId: service._id })} onAddToCart={() => handleAddToCart(service)} style={{ backgroundColor: colors.surface, borderColor: colors.border, ...(numServiceCols > 1 && { width: serviceColW }) }} />
               ))}
             </View>
           ) : (
@@ -326,9 +331,10 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { paddingBottom: 96, paddingHorizontal: 16 },
+  content: { paddingBottom: 96 },
   hero: { borderRadius: 28, padding: 20, marginTop: 8, marginBottom: 16 },
-  heroTopRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  heroLogo: { width: 120, height: 36, tintColor: '#ffffff' },
   eyebrow: { color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '700', letterSpacing: 1.2 },
   heroTitle: { color: '#fff', fontSize: 28, fontWeight: '800', marginTop: 6, fontFamily: appFont },
   heroSubtitle: { color: 'rgba(255,255,255,0.82)', fontSize: 14, marginTop: 6, fontFamily: appFont },
@@ -347,11 +353,9 @@ const styles = StyleSheet.create({
   quickGrid: { flexDirection: 'row', gap: 10 },
   quickCard: { flex: 1, borderRadius: 20, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', minHeight: 104 },
   quickLabel: { color: '#fff', fontSize: 14, fontWeight: '700', marginTop: 8, fontFamily: appFont },
-  statsGrid: { flexDirection: 'row', gap: 10 },
-  statCardItem: { flex: 1 },
-  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP },
-  categoryCardItem: { width: COL2_WIDTH },
-  categoryCardFull: { width: '100%' },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  statCardItem: { flex: 1, minWidth: 100 },
+  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   marketplaceGrid: { gap: 12 },
   emptyCard: { borderRadius: 22, borderWidth: 1, paddingVertical: 24, alignItems: 'center', justifyContent: 'center' },
   emptyText: { fontSize: 14, fontWeight: '700', marginTop: 10, fontFamily: appFont },

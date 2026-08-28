@@ -89,6 +89,7 @@ export const MarketplaceCard = ({ image, images, title, subtitle, rating, review
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef(null);
   const [cardWidth, setCardWidth] = useState(() => Dimensions.get('window').width - 32);
+  const imageHeight = Math.round(Math.min(cardWidth, 480) * 0.55);
 
   // Build image list: prefer `images` array, fall back to single `image`
   const imageList = images && images.length > 0
@@ -104,7 +105,7 @@ export const MarketplaceCard = ({ image, images, title, subtitle, rating, review
     <Card variant="elevated" interactive onPress={onPress} style={[styles.marketplaceCard, style]}
       onLayout={(e) => setCardWidth(e.nativeEvent.layout.width)}
     >
-      <View style={styles.imageWrap}>
+      <View style={[styles.imageWrap, { height: imageHeight }]}>
         {imageList.length > 1 ? (
           <>
             <ScrollView
@@ -117,7 +118,7 @@ export const MarketplaceCard = ({ image, images, title, subtitle, rating, review
               decelerationRate="fast"
             >
               {imageList.map((uri, i) => (
-                <Image key={i} source={{ uri }} style={[styles.image, { width: cardWidth }]} resizeMode="cover" />
+                <Image key={i} source={{ uri }} style={[styles.image, { width: cardWidth, height: imageHeight }]} resizeMode="cover" />
               ))}
             </ScrollView>
             <View style={styles.dotsRow}>
@@ -248,7 +249,7 @@ const styles = StyleSheet.create({
   card: { borderRadius: 24, borderWidth: 1, overflow: 'hidden' },
   inner: { flex: 1 },
   marketplaceCard: { overflow: 'hidden' },
-  imageWrap: { height: 210, backgroundColor: '#eef2eb' },
+  imageWrap: { backgroundColor: '#eef2eb' },
   image: { width: '100%', height: '100%' },
   imagePlaceholder: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: '#eef2eb' },
   badgeTopLeft: { position: 'absolute', top: 12, left: 12, backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
