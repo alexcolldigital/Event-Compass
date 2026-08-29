@@ -57,7 +57,7 @@ export default function EditProfileScreen() {
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         email: user.email || '',
-        phoneNumber: user.phoneNumber ? user.phoneNumber.replace(new RegExp(`^${user.dialCode || ''}`), '').trim() : '',
+        phoneNumber: user.phoneNumber ? user.phoneNumber.replace(new RegExp(`^${(user.dialCode || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), '').trim() : '',
         businessName: user.businessName || '',
         businessDescription: user.businessDescription || '',
       });

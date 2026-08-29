@@ -79,6 +79,7 @@ export type ProfileStackParamList = {
   ManageBookings: undefined;
   RevenueAnalytics: undefined;
   ManageServices: undefined;
+  Appearance: undefined;
 };
 
 // Admin Stack (nested in Profile Stack)

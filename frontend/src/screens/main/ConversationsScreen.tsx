@@ -84,7 +84,13 @@ const ConversationsScreen = () => {
   const openChat = (conv: any) => {
     const other = getOtherParty(conv);
     const booking = conv.lastMessage?.booking || null;
-    (navigation as any).navigate('Chat', { receiver: other, booking });
+    if (!other?._id) return;
+    (navigation as any).navigate('Chat', {
+      receiverId: String(other._id),
+      receiverName: getDisplayName(other),
+      receiverRole: other.role,
+      bookingId: booking?._id ? String(booking._id) : undefined,
+    });
   };
 
   if (isLoading) {

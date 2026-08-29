@@ -91,7 +91,7 @@ const EscrowStatusScreen = () => {
           title="Open chat"
           variant="secondary"
           leftIcon="message-text"
-          onPress={() => navigation.navigate('Chat' as never, { booking } as never)}
+          onPress={() => navigation.navigate('Chat' as never, { bookingId: String(booking?._id) } as never)}
           fullWidth
           style={styles.actionButton}
         />

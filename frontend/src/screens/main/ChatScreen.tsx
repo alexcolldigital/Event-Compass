@@ -26,10 +26,12 @@ import * as ImagePicker from 'expo-image-picker';
 import { io, Socket } from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../../context/authStore.js';
-import { messageAPI } from '../../services/api.js';
+import { bookingAPI, messageAPI } from '../../services/api.js';
 import { useTheme } from '../../context/ThemeContext';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'https://event-backend-kb9s.onrender.com')
+  .replace(/\/api\/?$/, '')
+  .replace(/\/$/, '');
 const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -174,8 +176,14 @@ const ChatScreen = () => {
   const isDark = theme === 'dark';
 
   const params = (route.params as any) || {};
-  const booking = params.booking || null;
-  const receiverParam = params.receiver || null;
+  const [booking, setBooking] = useState<any>(params.booking || null);
+  const bookingId = params.bookingId || booking?._id;
+  const receiverParam = params.receiver || (params.receiverId ? {
+    _id: String(params.receiverId),
+    firstName: params.receiverName || 'User',
+    lastName: '',
+    role: params.receiverRole || 'client',
+  } : null);
 
   // Determine receiver from booking or direct param
   const receiver = receiverParam || (() => {
@@ -190,8 +198,15 @@ const ChatScreen = () => {
   })();
 
   const conversationId = receiver && user
-    ? buildConversationId(String(user._id), String(receiver._id), booking?._id)
+    ? buildConversationId(String(user._id), String(receiver._id), bookingId)
     : null;
+
+  useEffect(() => {
+    if (booking || !bookingId) return;
+    bookingAPI.getBookingById(bookingId).then((response: any) => {
+      if (response?.booking) setBooking(response.booking);
+    }).catch(() => {});
+  }, [booking, bookingId]);
 
   const colors = {
     bg: isDark ? '#050816' : '#f5f7f2',
@@ -473,8 +488,8 @@ const ChatScreen = () => {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]}>
       <KeyboardAvoidingView
         style={[styles.screen, { backgroundColor: colors.bg }]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={90}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'android' ? 0 : 90}
       >
         <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -582,11 +597,7 @@ const ChatScreen = () => {
         <View
           style={[
             styles.inputBar,
-            {
-              backgroundColor: colors.surface,
-              borderTopColor: colors.border,
-              paddingBottom: Platform.OS === 'android' ? 10 : 0,
-            },
+            { backgroundColor: colors.surface, borderTopColor: colors.border },
           ]}
         >
           <TouchableOpacity style={styles.attachBtn} onPress={() => setShowAttachMenu((v) => !v)}>
@@ -686,6 +697,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingHorizontal: 12,
     paddingVertical: 10,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 10,
     borderTopWidth: 1,
     gap: 8,
   },

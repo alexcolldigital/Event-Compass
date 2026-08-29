@@ -3,8 +3,8 @@
  * Main navigation for authenticated users with bottom tabs
  */
 
-import React, { lazy, Suspense, useRef } from 'react';
-import { Platform, BackHandler } from 'react-native';
+import React, { lazy, Suspense, useRef, useEffect, useState } from 'react';
+import { Platform, BackHandler, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -12,7 +12,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../context/authStore';
 import { useTheme } from '../context/ThemeContext';
+import { authAPI, messageAPI } from '../services/api';
 import Loading from '../components/Loading';
+import { COLORS } from '../utils/constants';
+import { showToast } from '../utils/toast';
 
 // Lazy-loaded main screens
 const HomeScreen = lazy(() => import('../screens/main/HomeScreen'));
@@ -39,6 +42,7 @@ const ChatScreen = lazy(() => import('../screens/main/ChatScreen'));
 const DisputeEvidenceScreen = lazy(() => import('../screens/main/DisputeEvidenceScreen'));
 const VendorVerificationScreen = lazy(() => import('../screens/main/VendorVerificationScreen'));
 const ConversationsScreen = lazy(() => import('../screens/main/ConversationsScreen'));
+const AppearanceScreen = lazy(() => import('../screens/main/AppearanceScreen'));
 
 // Lazy-loaded admin screens
 const AdminDashboardScreen = lazy(() => import('../screens/admin/AdminDashboardScreen'));
@@ -60,10 +64,6 @@ const CMSManagementScreen = lazy(() => import('../screens/admin/CMSManagementScr
 const AuditLogsScreen = lazy(() => import('../screens/admin/AuditLogsScreen'));
 const LocationManagementScreen = lazy(() => import('../screens/admin/LocationManagementScreen'));
 
-// Import constants
-import { COLORS } from '../utils/constants';
-import { showToast } from '../utils/toast';
-
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
@@ -71,7 +71,16 @@ const LazyScreen = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<Loading fullScreen />}>{children}</Suspense>
 );
 
-// Home stack
+function BadgeDot({ color }: { color: string }) {
+  return (
+    <View style={{
+      position: 'absolute', top: 0, right: 0,
+      width: 8, height: 8, borderRadius: 4,
+      backgroundColor: color, borderWidth: 1.5, borderColor: '#fff',
+    }} />
+  );
+}
+
 function HomeStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -87,7 +96,6 @@ function HomeStack() {
   );
 }
 
-// Search stack
 function SearchStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -103,7 +111,6 @@ function SearchStack() {
   );
 }
 
-// Bookings stack
 function BookingsStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -122,7 +129,6 @@ function BookingsStack() {
   );
 }
 
-// Messages stack
 function MessagesStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -132,7 +138,15 @@ function MessagesStack() {
   );
 }
 
-// Provider services stack
+function NotificationsStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="NotificationsScreen">{({ navigation }) => <LazyScreen><NotificationsScreen navigation={navigation} /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="BookingDetail" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><BookingDetailScreen /></LazyScreen>}</Stack.Screen>
+    </Stack.Navigator>
+  );
+}
+
 function ProviderServicesStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -141,7 +155,6 @@ function ProviderServicesStack() {
   );
 }
 
-// Admin stack
 function AdminStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -169,21 +182,21 @@ function AdminStack() {
   );
 }
 
-// Profile stack
 function ProfileStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="ProfileScreen">{() => <LazyScreen><ProfileScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="ProfileScreen">{({ navigation }) => <LazyScreen><ProfileScreen navigation={navigation} /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="EditProfile" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><EditProfileScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="ChangePassword" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ChangePasswordScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="Verify" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><VerifyScreen /></LazyScreen>}</Stack.Screen>
-      <Stack.Screen name="Notifications" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><NotificationsScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="Notifications" options={{ animation: 'slide_from_right' }}>{({ navigation }) => <LazyScreen><NotificationsScreen navigation={navigation} /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="HelpSupport" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><HelpSupportScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="About" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><AboutScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="ProviderServices" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ProviderServicesScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="AdminDashboard" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><AdminDashboardScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="Conversations" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ConversationsScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="Chat" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ChatScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="Appearance" options={{ animation: 'slide_from_right' }}>{({ navigation }) => <LazyScreen><AppearanceScreen navigation={navigation} /></LazyScreen>}</Stack.Screen>
     </Stack.Navigator>
   );
 }
@@ -195,21 +208,32 @@ export default function BottomTabNavigator() {
   const isProvider = user?.role === 'service_provider';
   const isDark = theme === 'dark';
 
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchCounts = async () => {
+      try {
+        const [convRes, notifRes] = await Promise.all([
+          messageAPI.getConversations(),
+          authAPI.getMyNotifications({ limit: 1 }),
+        ]);
+        const totalUnreadMsgs = (convRes.conversations || []).reduce(
+          (sum: number, c: any) => sum + (c.unreadCount || 0), 0
+        );
+        setUnreadMessages(totalUnreadMsgs);
+        setUnreadNotifs(notifRes.unreadCount || 0);
+      } catch (_) {}
+    };
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
+
   const tabBarColors = isDark
-    ? {
-        background: '#0f172a',
-        border: '#334155',
-        active: '#34d399',
-        inactive: '#94a3b8',
-        shadow: 'rgba(2, 6, 23, 0.45)',
-      }
-    : {
-        background: '#ffffff',
-        border: '#e2e8f0',
-        active: COLORS.primary,
-        inactive: '#64748b',
-        shadow: 'rgba(15, 23, 42, 0.16)',
-      };
+    ? { background: '#0f172a', border: '#334155', active: '#34d399', inactive: '#94a3b8', shadow: 'rgba(2, 6, 23, 0.45)' }
+    : { background: '#ffffff', border: '#e2e8f0', active: COLORS.primary, inactive: '#64748b', shadow: 'rgba(15, 23, 42, 0.16)' };
 
   const isAdmin = user?.role === 'admin';
 
@@ -218,14 +242,8 @@ export default function BottomTabNavigator() {
   useFocusEffect(
     React.useCallback(() => {
       const onBackPress = () => {
-        if (navigation.canGoBack()) {
-          navigation.goBack();
-          return true;
-        }
-        if (backPressedOnce.current) {
-          BackHandler.exitApp();
-          return true;
-        }
+        if (navigation.canGoBack()) { navigation.goBack(); return true; }
+        if (backPressedOnce.current) { BackHandler.exitApp(); return true; }
         backPressedOnce.current = true;
         showToast('Press back again to exit');
         setTimeout(() => { backPressedOnce.current = false; }, 2000);
@@ -240,6 +258,7 @@ export default function BottomTabNavigator() {
     ? [
         { name: 'Admin', component: AdminStack, label: 'Admin' },
         { name: 'Messages', component: MessagesStack, label: 'Messages' },
+        { name: 'Notifications', component: NotificationsStack, label: 'Alerts' },
         { name: 'Profile', component: ProfileStack, label: 'Profile' },
       ]
     : [
@@ -247,6 +266,7 @@ export default function BottomTabNavigator() {
         { name: 'Search', component: SearchStack, label: 'Search' },
         { name: 'Bookings', component: BookingsStack, label: 'Bookings' },
         { name: 'Messages', component: MessagesStack, label: 'Messages' },
+        { name: 'Notifications', component: NotificationsStack, label: 'Alerts' },
         ...(isProvider ? [{ name: 'Services', component: ProviderServicesStack, label: 'Services' }] : []),
         { name: 'Profile', component: ProfileStack, label: 'Profile' },
       ];
@@ -258,47 +278,39 @@ export default function BottomTabNavigator() {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: React.ComponentProps<typeof MaterialCommunityIcons>['name'] = 'home';
 
-          if (route.name === 'Home') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Search') {
-            iconName = 'magnify';
-          } else if (route.name === 'Bookings') {
-            iconName = focused ? 'calendar-check' : 'calendar-outline';
-          } else if (route.name === 'Messages') {
-            iconName = focused ? 'message-text' : 'message-text-outline';
-          } else if (route.name === 'Services') {
-            iconName = focused ? 'briefcase' : 'briefcase-outline';
-          } else if (route.name === 'Admin') {
-            iconName = focused ? 'view-dashboard' : 'view-dashboard-outline';
-          } else if (route.name === 'Profile') {
-            iconName = focused ? 'account' : 'account-outline';
-          }
+          if (route.name === 'Home') iconName = focused ? 'home' : 'home-outline';
+          else if (route.name === 'Search') iconName = 'magnify';
+          else if (route.name === 'Bookings') iconName = focused ? 'calendar-check' : 'calendar-outline';
+          else if (route.name === 'Messages') iconName = focused ? 'message-text' : 'message-text-outline';
+          else if (route.name === 'Notifications') iconName = focused ? 'bell' : 'bell-outline';
+          else if (route.name === 'Services') iconName = focused ? 'briefcase' : 'briefcase-outline';
+          else if (route.name === 'Admin') iconName = focused ? 'view-dashboard' : 'view-dashboard-outline';
+          else if (route.name === 'Profile') iconName = focused ? 'account' : 'account-outline';
 
-          return <MaterialCommunityIcons name={iconName} size={size} color={color} />;
+          const hasBadge =
+            (route.name === 'Messages' && unreadMessages > 0) ||
+            (route.name === 'Notifications' && unreadNotifs > 0);
+
+          return (
+            <View>
+              <MaterialCommunityIcons name={iconName} size={size} color={color} />
+              {hasBadge && <BadgeDot color="#ef4444" />}
+            </View>
+          );
         },
         tabBarActiveTintColor: tabBarColors.active,
         tabBarInactiveTintColor: tabBarColors.inactive,
-        tabBarLabelStyle: {
-          fontWeight: '600',
-          fontSize: 10,
-          marginTop: 1,
-          textTransform: 'capitalize',
-        },
-        tabBarItemStyle: {
-          paddingVertical: 4,
-          borderRadius: 12,
-          minWidth: 0,
-          flex: 1,
-        },
+        tabBarLabelStyle: { fontWeight: '600', fontSize: 11, marginTop: 2, textTransform: 'capitalize', includeFontPadding: false },
+        tabBarItemStyle: { paddingVertical: 4, borderRadius: 12, flex: 1 },
         tabBarStyle: {
           backgroundColor: tabBarColors.background,
           borderTopColor: tabBarColors.border,
           borderTopWidth: 1,
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
-          height: 60 + insets.bottom,
-          paddingBottom: insets.bottom || 8,
-          paddingTop: 6,
+          height: 68 + insets.bottom,
+          paddingBottom: insets.bottom || 10,
+          paddingTop: 8,
           shadowColor: tabBarColors.shadow,
           shadowOffset: { width: 0, height: -4 },
           shadowOpacity: 0.22,
@@ -321,9 +333,7 @@ export default function BottomTabNavigator() {
           key={tab.name}
           name={tab.name}
           component={tab.component}
-          options={{
-            tabBarLabel: tab.label,
-          }}
+          options={{ tabBarLabel: tab.label }}
         />
       ))}
     </Tab.Navigator>

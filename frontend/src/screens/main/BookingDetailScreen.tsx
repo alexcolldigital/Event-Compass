@@ -202,7 +202,12 @@ const BookingDetailScreen = () => {
         Alert.alert('Unavailable', 'Cannot open chat for this booking yet.');
         return;
       }
-      (navigation as any).navigate('Chat', { receiver: otherParty, booking: currentBooking });
+      (navigation as any).navigate('Chat', {
+        receiverId: otherParty._id,
+        receiverName: [otherParty.firstName, otherParty.lastName].filter(Boolean).join(' ') || otherParty.businessName,
+        receiverRole: otherParty.role,
+        bookingId: String(currentBooking._id),
+      });
       return;
     }
     const contactValue = type === 'call' ? (isProvider ? client.phoneNumber : provider.phoneNumber) || '' : '';

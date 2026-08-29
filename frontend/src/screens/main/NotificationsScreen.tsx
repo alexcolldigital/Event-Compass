@@ -295,15 +295,15 @@ export default function NotificationsScreen({ navigation }: { navigation: any })
                   }
                 }}
               >
-                <View style={[styles.feedIconWrap, { backgroundColor: isUnread ? colors.primary : colors.section }]}>
+                <View pointerEvents="none" style={[styles.feedIconWrap, { backgroundColor: isUnread ? colors.primary : colors.section }]}>
                   <MaterialCommunityIcons name={icon as any} size={20} color={isUnread ? '#fff' : colors.muted} />
                 </View>
-                <View style={styles.feedText}>
+                <View pointerEvents="none" style={styles.feedText}>
                   <Text style={[styles.feedTitle, { color: colors.text, fontWeight: isUnread ? '700' : '500' }]}>{item.title}</Text>
                   <Text style={[styles.feedBody, { color: colors.muted }]}>{item.message}</Text>
                   <Text style={[styles.feedTime, { color: colors.muted }]}>{new Date(item.createdAt).toLocaleString()}</Text>
                 </View>
-                {isUnread && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
+                  {isUnread && <View pointerEvents="none" style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
               </TouchableOpacity>
             );
           }}

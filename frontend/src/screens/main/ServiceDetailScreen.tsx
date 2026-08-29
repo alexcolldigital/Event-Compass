@@ -162,14 +162,9 @@ const ServiceDetailScreen = () => {
     }
 
     const messageParams = {
-      receiver: {
-        _id: provider._id,
-        firstName: provider.firstName || 'Event',
-        lastName: provider.lastName || 'Compass',
-        businessName: provider.businessName || '',
-        role: provider.role || 'service_provider',
-      },
-      service: currentService,
+      receiverId: String(provider._id),
+      receiverName: provider.businessName || `${provider.firstName || 'Event'} ${provider.lastName || 'Compass'}`.trim(),
+      receiverRole: provider.role || 'service_provider',
     };
     navigation.navigate('Chat' as never, messageParams as never);
   };

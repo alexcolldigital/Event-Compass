@@ -28,7 +28,7 @@ type MenuItem = {
 
 export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
-  const { theme, preference, setLightTheme, setDarkTheme, setSystemTheme } = useTheme();
+  const { theme } = useTheme();
   const isDark = theme === 'dark';
   const { user, logout, isLoading } = useAuthStore();
   const [contactingSupport, setContactingSupport] = useState(false);
@@ -43,7 +43,11 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         Alert.alert('Unavailable', 'No support agents are available right now.');
         return;
       }
-      navigation.navigate('Chat', { receiver: admin });
+      navigation.navigate('Chat', {
+        receiverId: String(admin._id),
+        receiverName: admin.businessName || `${admin.firstName || ''} ${admin.lastName || ''}`.trim() || 'Support',
+        receiverRole: admin.role || 'admin',
+      });
     } catch {
       Alert.alert('Error', 'Could not connect to support. Please try again.');
     } finally {
@@ -109,29 +113,13 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Account settings</Text>
 
-          <View style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <TouchableOpacity onPress={() => navigation.navigate('Appearance')} style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={[styles.menuIcon, { backgroundColor: '#6366f115' }]}>
               <MaterialCommunityIcons name={isDark ? 'weather-night' : 'white-balance-sunny'} size={22} color="#6366f1" />
             </View>
             <Text style={[styles.menuLabel, { color: colors.text }]}>Appearance</Text>
-            <View style={{ flexDirection: 'row', gap: 6 }}>
-              {(['light', 'dark', 'system'] as const).map((opt) => (
-                <TouchableOpacity
-                  key={opt}
-                  onPress={() => opt === 'light' ? setLightTheme() : opt === 'dark' ? setDarkTheme() : setSystemTheme()}
-                  style={[
-                    styles.themeChip,
-                    preference === opt && { backgroundColor: colors.primary },
-                    preference !== opt && { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
-                  ]}
-                >
-                  <Text style={[styles.themeChipText, { color: preference === opt ? '#fff' : colors.muted }]}>
-                    {opt.charAt(0).toUpperCase() + opt.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.muted} />
+          </TouchableOpacity>
 
           {menuItems.map((item) => (
             <TouchableOpacity key={item.label} onPress={item.onPress} style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
