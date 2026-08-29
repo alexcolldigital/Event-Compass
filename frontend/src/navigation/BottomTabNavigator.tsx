@@ -258,7 +258,6 @@ export default function BottomTabNavigator() {
     ? [
         { name: 'Admin', component: AdminStack, label: 'Admin' },
         { name: 'Messages', component: MessagesStack, label: 'Messages' },
-        { name: 'Notifications', component: NotificationsStack, label: 'Alerts' },
         { name: 'Profile', component: ProfileStack, label: 'Profile' },
       ]
     : [
@@ -266,7 +265,6 @@ export default function BottomTabNavigator() {
         { name: 'Search', component: SearchStack, label: 'Search' },
         { name: 'Bookings', component: BookingsStack, label: 'Bookings' },
         { name: 'Messages', component: MessagesStack, label: 'Messages' },
-        { name: 'Notifications', component: NotificationsStack, label: 'Alerts' },
         ...(isProvider ? [{ name: 'Services', component: ProviderServicesStack, label: 'Services' }] : []),
         { name: 'Profile', component: ProfileStack, label: 'Profile' },
       ];

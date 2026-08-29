@@ -72,8 +72,26 @@ const ConversationsScreen = () => {
   const getOtherParty = (conv: any) => {
     const msg = conv.lastMessage;
     if (!msg) return null;
+
     const senderId = msg.sender?._id || msg.sender;
-    return String(senderId) === String(user?._id) ? msg.receiver : msg.sender;
+    const receiverId = msg.receiver?._id || msg.receiver;
+    const ids = [senderId, receiverId].filter(Boolean).map(String);
+
+    if (ids.length > 0) {
+      const otherId = ids.find((id) => String(id) !== String(user?._id));
+      if (otherId) {
+        return {
+          _id: String(otherId),
+          firstName: msg.sender?._id === otherId ? msg.sender.firstName : msg.receiver?.firstName,
+          lastName: msg.sender?._id === otherId ? msg.sender.lastName : msg.receiver?.lastName,
+          businessName: msg.sender?._id === otherId ? msg.sender.businessName : msg.receiver?.businessName,
+          role: msg.sender?._id === otherId ? msg.sender.role : msg.receiver?.role,
+        };
+      }
+    }
+
+    const fallbackId = String(conv._id || '').split('_').find((id) => id && String(id) !== String(user?._id));
+    return fallbackId ? { _id: fallbackId } : null;
   };
 
   const getDisplayName = (party: any) => {

@@ -29,9 +29,16 @@ import { useAuthStore } from '../../context/authStore.js';
 import { bookingAPI, messageAPI } from '../../services/api.js';
 import { useTheme } from '../../context/ThemeContext';
 
-const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'https://event-backend-kb9s.onrender.com')
-  .replace(/\/api\/?$/, '')
-  .replace(/\/$/, '');
+const API_URL = (() => {
+  const configured = process.env.EXPO_PUBLIC_API_URL && process.env.EXPO_PUBLIC_API_URL.trim();
+  if (configured) return configured.replace(/\/api\/?$/, '').replace(/\/$/, '');
+
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return 'http://localhost:5000';
+  }
+
+  return 'https://event-backend-kb9s.onrender.com';
+})();
 const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -218,6 +225,8 @@ const ChatScreen = () => {
     primary: isDark ? '#34d399' : '#1f7a4d',
     inputBg: isDark ? '#1e293b' : '#f8fafc',
   };
+
+  const composerBottomPadding = Platform.OS === 'ios' ? 24 : Platform.OS === 'web' ? 84 : 10;
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -419,8 +428,15 @@ const ChatScreen = () => {
       const fd = new FormData();
       fd.append('receiverId', String(receiver._id));
       if (booking?._id) fd.append('bookingId', booking._id);
-      fd.append('attachment', { uri, type: mimeType, name: fileName } as any);
 
+      let attachmentPayload: any = { uri, type: mimeType, name: fileName };
+      if (typeof File !== 'undefined' && typeof window !== 'undefined') {
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        attachmentPayload = new File([blob], fileName, { type: mimeType });
+      }
+
+      fd.append('attachment', attachmentPayload as any);
       await messageAPI.sendMessage(fd);
     } catch (err: any) {
       Alert.alert('Error', err?.message || 'Failed to send attachment');
@@ -597,7 +613,11 @@ const ChatScreen = () => {
         <View
           style={[
             styles.inputBar,
-            { backgroundColor: colors.surface, borderTopColor: colors.border },
+            {
+              backgroundColor: colors.surface,
+              borderTopColor: colors.border,
+              paddingBottom: composerBottomPadding,
+            },
           ]}
         >
           <TouchableOpacity style={styles.attachBtn} onPress={() => setShowAttachMenu((v) => !v)}>
@@ -636,7 +656,7 @@ const ChatScreen = () => {
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   screen: { flex: 1 },
-  messageArea: { flex: 1 },
+  messageArea: { flex: 1, paddingBottom: Platform.OS === 'web' ? 8 : 0 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -658,7 +678,7 @@ const styles = StyleSheet.create({
   bookingBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1 },
   bookingBannerText: { fontSize: 12, fontWeight: '600', fontFamily: appFont },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  messageList: { paddingHorizontal: 12, paddingVertical: 16, flexGrow: 1 },
+  messageList: { paddingHorizontal: 12, paddingVertical: 16, flexGrow: 1, paddingBottom: 20 },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
   emptyText: { fontSize: 16, fontWeight: '700', marginTop: 12, fontFamily: appFont },
   emptySubText: { fontSize: 13, marginTop: 4, fontFamily: appFont },
@@ -697,7 +717,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 10,
     borderTopWidth: 1,
     gap: 8,
   },

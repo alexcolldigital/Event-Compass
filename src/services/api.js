@@ -7,7 +7,16 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'https://event-backend-kb9s.onrender.com').replace(/\/$/, '');
+const API_URL = (() => {
+  const configured = process.env.EXPO_PUBLIC_API_URL && process.env.EXPO_PUBLIC_API_URL.trim();
+  if (configured) return configured.replace(/\/$/, '');
+
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return 'http://localhost:5000';
+  }
+
+  return 'https://event-backend-kb9s.onrender.com';
+})();
 const API_BASE_URL = API_URL.includes('/api') ? API_URL : `${API_URL}/api`;
 const API_TIMEOUT = Number(process.env.EXPO_PUBLIC_API_TIMEOUT || 30000);
 

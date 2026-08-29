@@ -16,7 +16,7 @@ import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { MarketplaceCard, FeatureCard, StatCard } from '../../components/Card.jsx';
 import { useTheme } from '../../context/ThemeContext';
 import { normalizeCartItem } from '../../utils/cartUtils';
-import { serviceAPI } from '../../services/api.js';
+import { serviceAPI, authAPI } from '../../services/api.js';
 
 const logo = require('../../../assets/icon.png');
 
@@ -56,6 +56,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
   const [searchInput, setSearchInput] = useState('');
   const [platformStats, setPlatformStats] = useState<{ completedBookings: number; verifiedVendors: number; totalClients: number; averageRating: string } | null>(null);
   const [categoryCountMap, setCategoryCountMap] = useState<Record<string, number>>({});
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
 
   const colors = {
     bg: isDark ? '#050816' : '#f5f7f2',
@@ -83,6 +84,19 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
       })
       .catch(() => fetchCategoryCountsFallback());
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchUnreadNotifications = async () => {
+      try {
+        const notifRes = await authAPI.getMyNotifications({ limit: 1 });
+        setUnreadNotifs(notifRes.unreadCount || 0);
+      } catch (_) {}
+    };
+    fetchUnreadNotifications();
+    const interval = setInterval(fetchUnreadNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const fetchCategoryCountsFallback = async () => {
     // Only fetch counts for the 5 visible categories to minimize requests
@@ -194,10 +208,18 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
         <View style={[styles.hero, { backgroundColor: colors.primary }]}>
           <View style={styles.heroTopRow}>
             <Image source={logo} style={styles.heroLogo} resizeMode="contain" />
-            <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('EventDetails' as never)}>
-              <MaterialCommunityIcons name="cart-outline" size={22} color="#fff" />
-              {items.length > 0 ? <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{items.length}</Text></View> : null}
-            </TouchableOpacity>
+            <View style={styles.heroIcons}>
+              <TouchableOpacity style={styles.iconButton} onPress={() => {
+                navigation.navigate('Profile', { screen: 'Notifications' });
+              }}>
+                <MaterialCommunityIcons name="bell" size={22} color="#fff" />
+                {unreadNotifs > 0 ? <View style={styles.notifBadge}><Text style={styles.notifBadgeText}>{unreadNotifs > 9 ? '9+' : unreadNotifs}</Text></View> : null}
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('EventDetails' as never)}>
+                <MaterialCommunityIcons name="cart-outline" size={22} color="#fff" />
+                {items.length > 0 ? <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{items.length}</Text></View> : null}
+              </TouchableOpacity>
+            </View>
           </View>
           <Text style={styles.eyebrow}>WELCOME BACK</Text>
           <Text style={styles.heroTitle}>{user?.firstName || 'Guest'}</Text>
@@ -334,6 +356,7 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 96 },
   hero: { borderRadius: 28, padding: 20, marginTop: 8, marginBottom: 16 },
   heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  heroIcons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   heroLogo: { width: 120, height: 36, tintColor: '#ffffff' },
   eyebrow: { color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '700', letterSpacing: 1.2 },
   heroTitle: { color: '#fff', fontSize: 28, fontWeight: '800', marginTop: 6, fontFamily: appFont },
@@ -341,6 +364,8 @@ const styles = StyleSheet.create({
   iconButton: { width: 42, height: 42, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
   cartBadge: { position: 'absolute', top: -4, right: -4, backgroundColor: '#fef3c7', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 2 },
   cartBadgeText: { color: '#92400e', fontSize: 11, fontWeight: '800' },
+  notifBadge: { position: 'absolute', top: -4, right: -4, backgroundColor: '#ef4444', borderRadius: 999, paddingHorizontal: 5, paddingVertical: 1, minWidth: 20, alignItems: 'center', justifyContent: 'center' },
+  notifBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800' },
   searchBar: { marginTop: 16, borderRadius: 20, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', gap: 10 },
   searchText: { flex: 1, fontSize: 14, fontWeight: '600', fontFamily: appFont },
   errorWrap: { marginBottom: 10 },
