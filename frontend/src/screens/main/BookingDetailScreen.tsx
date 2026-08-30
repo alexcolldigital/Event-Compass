@@ -329,6 +329,20 @@ const BookingDetailScreen = () => {
             <Text style={[styles.value, { color: colors.text }]}>{service.name || 'Service'}</Text>
             {(service.category || service.subCategory) ? (
               <View style={styles.tagRow}>
+                {service.category ? (
+                  <View style={[styles.tagGray, { backgroundColor: colors.surfaceAlt }]}>
+                    <Text style={[styles.tagGrayText, { color: colors.muted }]}>{service.category}</Text>
+                  </View>
+                ) : null}
+                {service.subCategory ? (
+                  <View style={[styles.tagGray, { backgroundColor: colors.surfaceAlt }]}>
+                    <Text style={[styles.tagGrayText, { color: colors.muted }]}>{service.subCategory}</Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+          </View>
+
           <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
             <View style={styles.iconLabel}>
               <MaterialCommunityIcons name="calendar" size={20} color={colors.primary} />
