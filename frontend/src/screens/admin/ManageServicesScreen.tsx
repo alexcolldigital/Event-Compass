@@ -244,6 +244,8 @@ const ManageServicesScreen = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [showSubCategoryDropdown, setShowSubCategoryDropdown] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: '',
     description: '',
@@ -400,6 +402,11 @@ const ManageServicesScreen = () => {
   };
 
   const handleOpenDeleteModal = (service: Service) => {
+    if (!service?._id) {
+      showToast('error', 'Unable to delete this service.');
+      return;
+    }
+
     setServiceToDelete(service);
     setShowDeleteModal(true);
   };
@@ -411,15 +418,19 @@ const ManageServicesScreen = () => {
   };
 
   const handleConfirmDeleteService = async () => {
-    if (!serviceToDelete) return;
+    if (!serviceToDelete?._id) {
+      showToast('error', 'Unable to delete this service.');
+      return;
+    }
 
     setIsDeleting(true);
     try {
-      const response = await adminAPI.deleteService(serviceToDelete._id);
+      const response = (await adminAPI.deleteService(serviceToDelete._id)) as { message?: string };
       setServices((prev) => prev.filter((s) => s._id !== serviceToDelete._id));
       setExpandedServiceId((current) => (current === serviceToDelete._id ? null : current));
       setShowDeleteModal(false);
       setServiceToDelete(null);
+      await loadServices();
       showToast('success', response?.message || 'Service deleted successfully');
     } catch (err) {
       const error = err as ApiError;
@@ -477,6 +488,8 @@ const ManageServicesScreen = () => {
   const handleOpenAddModal = () => {
     resetForm();
     setPendingImages([]);
+    setShowCategoryDropdown(false);
+    setShowSubCategoryDropdown(false);
     setShowAddModal(true);
   };
 
@@ -484,6 +497,8 @@ const ManageServicesScreen = () => {
     setSelectedService(service);
     setExpandedServiceId(null);
     setPendingImages([]);
+    setShowCategoryDropdown(false);
+    setShowSubCategoryDropdown(false);
     setFormData({
       name: service.name || '',
       description: service.description || '',
@@ -789,69 +804,119 @@ const ManageServicesScreen = () => {
         serviceType: category,
       });
       setFormErrors((prev) => ({ ...prev, category: undefined, subCategory: undefined }));
+      setShowCategoryDropdown(false);
     };
 
     const selectSubCategory = (subCategory: string) => {
       setFormData({ ...formData, subCategory });
       setFormErrors((prev) => ({ ...prev, subCategory: undefined }));
+      setShowSubCategoryDropdown(false);
     };
 
     return (
       <>
         <View style={styles.formField}>
           <Text style={styles.formLabel}>Category *</Text>
-          <View style={styles.categoryOptions}>
-            {APP_CATEGORY_ORDER.map((category) => {
-              const active = formData.category === category;
-              return (
-                <TouchableOpacity
-                  key={category}
-                  onPress={() => selectCategory(category)}
-                  style={[styles.categoryOption, active ? styles.activeCategoryOption : styles.inactiveCategoryOption]}
-                  activeOpacity={0.85}
-                >
-                  <MaterialCommunityIcons
-                    name={(CATEGORY_ICONS[category] || 'shape-outline') as any}
-                    size={15}
-                    color={active ? '#ffffff' : '#16a34a'}
-                  />
-                  <Text style={[styles.categoryOptionText, active ? styles.activeCategoryText : styles.inactiveCategoryText]}>
-                    {category}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          <TouchableOpacity
+            onPress={() => setShowCategoryDropdown(true)}
+            style={styles.dropdownField}
+            activeOpacity={0.85}
+          >
+            <View style={styles.dropdownTextWrap}>
+              <MaterialCommunityIcons
+                name={(CATEGORY_ICONS[formData.category] || 'shape-outline') as any}
+                size={18}
+                color={formData.category ? '#16a34a' : '#9ca3af'}
+              />
+              <Text style={[styles.dropdownText, !formData.category && styles.dropdownPlaceholder]}>
+                {formData.category || 'Select category'}
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-down" size={20} color="#6b7280" />
+          </TouchableOpacity>
           {formErrors.category ? <Text style={styles.errorText}>{formErrors.category}</Text> : null}
         </View>
 
         <View style={styles.formField}>
           <Text style={styles.formLabel}>Sub-category</Text>
-          {formData.category && subcategoryOptions.length > 0 ? (
-            <View style={styles.categoryOptions}>
-              {subcategoryOptions.map((subCategory) => {
-                const active = formData.subCategory === subCategory;
-                return (
-                  <TouchableOpacity
-                    key={subCategory}
-                    onPress={() => selectSubCategory(subCategory)}
-                    style={[styles.categoryOption, active ? styles.activeCategoryOption : styles.inactiveCategoryOption]}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={[styles.categoryOptionText, active ? styles.activeCategoryText : styles.inactiveCategoryText]}>
-                      {subCategory}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          ) : (
-            <Text style={styles.helperText}>
-              {formData.category ? 'No sub-categories available for this category.' : 'Select a category first.'}
+          <TouchableOpacity
+            onPress={() => formData.category && subcategoryOptions.length > 0 && setShowSubCategoryDropdown(true)}
+            style={[styles.dropdownField, (!formData.category || subcategoryOptions.length === 0) && styles.disabledDropdownField]}
+            activeOpacity={formData.category && subcategoryOptions.length > 0 ? 0.85 : 1}
+          >
+            <Text style={[styles.dropdownText, !formData.subCategory && styles.dropdownPlaceholder]}>
+              {formData.subCategory || (formData.category ? 'Select sub-category' : 'Select category first')}
             </Text>
-          )}
+            <MaterialCommunityIcons name="chevron-down" size={20} color="#6b7280" />
+          </TouchableOpacity>
+          {formData.category && subcategoryOptions.length === 0 ? (
+            <Text style={styles.helperText}>No sub-categories available for this category.</Text>
+          ) : null}
           {formErrors.subCategory ? <Text style={styles.errorText}>{formErrors.subCategory}</Text> : null}
         </View>
+
+        <Modal visible={showCategoryDropdown} transparent animationType="fade" onRequestClose={() => setShowCategoryDropdown(false)}>
+          <TouchableOpacity style={styles.dropdownModalOverlay} activeOpacity={1} onPress={() => setShowCategoryDropdown(false)}>
+            <View style={styles.dropdownModalCard} onStartShouldSetResponder={() => true}>
+              <View style={styles.dropdownModalHeader}>
+                <Text style={styles.dropdownModalTitle}>Select Category</Text>
+                <TouchableOpacity onPress={() => setShowCategoryDropdown(false)}>
+                  <MaterialCommunityIcons name="close" size={20} color="#1f2937" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.dropdownModalList}>
+                {APP_CATEGORY_ORDER.map((category) => {
+                  const active = formData.category === category;
+                  return (
+                    <TouchableOpacity
+                      key={category}
+                      onPress={() => selectCategory(category)}
+                      style={[styles.dropdownOption, active && styles.activeDropdownOption]}
+                      activeOpacity={0.8}
+                    >
+                      <MaterialCommunityIcons
+                        name={(CATEGORY_ICONS[category] || 'shape-outline') as any}
+                        size={18}
+                        color={active ? '#ffffff' : '#16a34a'}
+                      />
+                      <Text style={[styles.dropdownOptionText, active && styles.activeDropdownOptionText]}>{category}</Text>
+                      {active ? <MaterialCommunityIcons name="check" size={18} color="#ffffff" /> : null}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+
+        <Modal visible={showSubCategoryDropdown} transparent animationType="fade" onRequestClose={() => setShowSubCategoryDropdown(false)}>
+          <TouchableOpacity style={styles.dropdownModalOverlay} activeOpacity={1} onPress={() => setShowSubCategoryDropdown(false)}>
+            <View style={styles.dropdownModalCard} onStartShouldSetResponder={() => true}>
+              <View style={styles.dropdownModalHeader}>
+                <Text style={styles.dropdownModalTitle}>Select Sub-category</Text>
+                <TouchableOpacity onPress={() => setShowSubCategoryDropdown(false)}>
+                  <MaterialCommunityIcons name="close" size={20} color="#1f2937" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.dropdownModalList}>
+                {subcategoryOptions.map((subCategory) => {
+                  const active = formData.subCategory === subCategory;
+                  return (
+                    <TouchableOpacity
+                      key={subCategory}
+                      onPress={() => selectSubCategory(subCategory)}
+                      style={[styles.dropdownOption, active && styles.activeDropdownOption]}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.dropdownOptionText, active && styles.activeDropdownOptionText]}>{subCategory}</Text>
+                      {active ? <MaterialCommunityIcons name="check" size={18} color="#ffffff" /> : null}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </>
     );
   };
@@ -2018,38 +2083,91 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 4,
   },
-  categoryOptions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  categoryOption: {
+  dropdownField: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
     borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginBottom: 6,
-  },
-  activeCategoryOption: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
-  },
-  inactiveCategoryOption: {
-    backgroundColor: '#ffffff',
     borderColor: '#d1d5db',
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    minHeight: 44,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
-  categoryOptionText: {
-    fontSize: 12,
+  disabledDropdownField: {
+    opacity: 0.55,
+    backgroundColor: '#f3f4f6',
+  },
+  dropdownTextWrap: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginRight: 8,
+  },
+  dropdownText: {
+    flex: 1,
+    color: '#1f2937',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  dropdownPlaceholder: {
+    color: '#9ca3af',
+  },
+  dropdownModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.45)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  dropdownModalCard: {
+    maxHeight: '78%',
+    borderRadius: 16,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    overflow: 'hidden',
+  },
+  dropdownModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  dropdownModalTitle: {
+    color: '#1f2937',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  dropdownModalList: {
+    maxHeight: 420,
+  },
+  dropdownOption: {
+    minHeight: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  activeDropdownOption: {
+    backgroundColor: '#16a34a',
+  },
+  dropdownOptionText: {
+    flex: 1,
+    color: '#1f2937',
+    fontSize: 14,
     fontWeight: '700',
   },
-  activeCategoryText: {
+  activeDropdownOptionText: {
     color: '#ffffff',
-  },
-  inactiveCategoryText: {
-    color: '#1f2937',
   },
   textInput: {
     borderWidth: 1,

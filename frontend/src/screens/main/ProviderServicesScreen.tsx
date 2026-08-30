@@ -501,22 +501,23 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
             </View>
             <View style={styles.fieldBlock}>
               <Text style={styles.label}>Subcategory (Optional)</Text>
-              {formState.category && subcategoryOptions.length > 0 ? (
-                <TouchableOpacity
-                  onPress={() => setShowSubCategoryMenu(true)}
-                  style={[styles.dropdownTrigger, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
-                  activeOpacity={0.9}
-                >
-                  <Text style={[styles.dropdownValue, { color: formState.subCategory ? colors.text : colors.muted }]}>
-                    {formState.subCategory || 'Select a subcategory'}
-                  </Text>
-                  <MaterialCommunityIcons name="chevron-down" size={18} color={colors.text} />
-                </TouchableOpacity>
-              ) : (
-                <Text style={styles.mutedText}>
-                  {formState.category ? 'No subcategories available for this category.' : 'Select a category first.'}
+              <TouchableOpacity
+                onPress={() => formState.category && subcategoryOptions.length > 0 && setShowSubCategoryMenu(true)}
+                style={[
+                  styles.dropdownTrigger,
+                  { borderColor: colors.border, backgroundColor: colors.surfaceAlt },
+                  (!formState.category || subcategoryOptions.length === 0) && styles.disabledDropdownTrigger,
+                ]}
+                activeOpacity={formState.category && subcategoryOptions.length > 0 ? 0.9 : 1}
+              >
+                <Text style={[styles.dropdownValue, { color: formState.subCategory ? colors.text : colors.muted }]}>
+                  {formState.subCategory || (formState.category ? 'Select a subcategory' : 'Select category first')}
                 </Text>
-              )}
+                <MaterialCommunityIcons name="chevron-down" size={18} color={colors.text} />
+              </TouchableOpacity>
+              {formState.category && subcategoryOptions.length === 0 ? (
+                <Text style={styles.mutedText}>No subcategories available for this category.</Text>
+              ) : null}
               {formErrors.subCategory ? <Text style={styles.errorText}>{formErrors.subCategory}</Text> : null}
             </View>
             <Text style={[styles.sectionLabel, { color: colors.text }]}>2. Media and portfolio</Text>
@@ -879,25 +880,26 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
                     <Text style={styles.errorText}>No categories available. Please contact support.</Text>
                   )}
                 </View>
-                <View style={styles.fieldBlock}>
-                  <Text style={[styles.label, { color: colors.text }]}>Subcategory</Text>
-                  {editFormState.category && editSubcategoryOptions.length > 0 ? (
+                  <View style={styles.fieldBlock}>
+                    <Text style={[styles.label, { color: colors.text }]}>Subcategory</Text>
                     <TouchableOpacity
-                      onPress={() => setShowEditSubCategoryMenu(true)}
-                      style={[styles.dropdownTrigger, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
-                      activeOpacity={0.9}
+                      onPress={() => editFormState.category && editSubcategoryOptions.length > 0 && setShowEditSubCategoryMenu(true)}
+                      style={[
+                        styles.dropdownTrigger,
+                        { borderColor: colors.border, backgroundColor: colors.surfaceAlt },
+                        (!editFormState.category || editSubcategoryOptions.length === 0) && styles.disabledDropdownTrigger,
+                      ]}
+                      activeOpacity={editFormState.category && editSubcategoryOptions.length > 0 ? 0.9 : 1}
                     >
                       <Text style={[styles.dropdownValue, { color: editFormState.subCategory ? colors.text : colors.muted }]}>
-                        {editFormState.subCategory || 'Select a subcategory'}
+                        {editFormState.subCategory || (editFormState.category ? 'Select a subcategory' : 'Select category first')}
                       </Text>
                       <MaterialCommunityIcons name="chevron-down" size={18} color={colors.text} />
                     </TouchableOpacity>
-                  ) : (
-                    <Text style={styles.mutedText}>
-                      {editFormState.category ? 'No subcategories available for this category.' : 'Select a category first.'}
-                    </Text>
-                  )}
-                </View>
+                    {editFormState.category && editSubcategoryOptions.length === 0 ? (
+                      <Text style={styles.mutedText}>No subcategories available for this category.</Text>
+                    ) : null}
+                  </View>
                 <Input label="Base Price (₦) *" value={editFormState.basePrice} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, basePrice: v }))} keyboardType="numeric" icon="cash" />
                 <View style={[styles.toggleRow, { marginTop: 8 }]}>
                   <Text style={[styles.toggleLabel, { color: colors.text }]}>Available for Booking</Text>
@@ -1071,9 +1073,14 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     marginTop: 8,
   },
+  disabledDropdownTrigger: {
+    opacity: 0.55,
+  },
   dropdownValue: {
     fontSize: 15,
     fontWeight: '700',
+    flex: 1,
+    marginRight: 8,
   },
   modalOverlay: {
     flex: 1,
