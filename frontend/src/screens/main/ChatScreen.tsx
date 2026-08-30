@@ -28,6 +28,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../../context/authStore.js';
 import { bookingAPI, messageAPI } from '../../services/api.js';
 import { useTheme } from '../../context/ThemeContext';
+import EndChatModal from '../../components/EndChatModal';
+import ChatDormancyBanner from '../../components/ChatDormancyBanner';
 
 const API_URL = (() => {
   const configured = process.env.EXPO_PUBLIC_API_URL && process.env.EXPO_PUBLIC_API_URL.trim();
@@ -235,6 +237,10 @@ const ChatScreen = () => {
   const [isClearing, setIsClearing] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Record<string, string>>({});
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [showEndChatModal, setShowEndChatModal] = useState(false);
+  const [dormancyInfo, setDormancyInfo] = useState<any>(null);
+  const [chatSessionStatus, setChatSessionStatus] = useState<any>(null);
+  const [dismissedDormancyBanner, setDismissedDormancyBanner] = useState(false);
 
   const flatListRef = useRef<FlatList>(null);
   const socketRef = useRef<Socket | null>(null);
@@ -254,6 +260,24 @@ const ChatScreen = () => {
       // silent — show empty state
     } finally {
       setIsLoading(false);
+    }
+  }, [conversationId]);
+
+  // ── Load chat session status with dormancy info ──────────────────────────
+
+  const loadChatSessionStatus = useCallback(async () => {
+    if (!conversationId) return;
+    try {
+      const res: any = await messageAPI.getChatSessionStatus(conversationId);
+      if (res?.data) {
+        setChatSessionStatus(res.data);
+        if (res.data.dormancyWarning) {
+          setDormancyInfo(res.data.dormancyWarning);
+          setDismissedDormancyBanner(false);
+        }
+      }
+    } catch (error) {
+      console.log('Failed to load chat session status:', error);
     }
   }, [conversationId]);
 
@@ -320,16 +344,28 @@ const ChatScreen = () => {
           setMessages([]);
         }
       });
+
+      socket.on('chat_session_ended', ({ conversationId: endedId, reason }: any) => {
+        if (endedId === conversationId) {
+          setChatSessionStatus((prev) => ({
+            ...prev,
+            isActive: false,
+            endReason: reason,
+          }));
+          setDormancyInfo(null);
+        }
+      });
     };
 
     loadMessages();
+    loadChatSessionStatus();
     connectSocket();
 
     return () => {
       socketRef.current?.disconnect();
       socketRef.current = null;
     };
-  }, [conversationId, user]);
+  }, [conversationId, user, loadChatSessionStatus]);
 
   // ── Typing indicator ───────────────────────────────────────────────────────
 
@@ -465,6 +501,32 @@ const ChatScreen = () => {
     ]);
   };
 
+  // ── End chat session with satisfaction feedback ─────────────────────────
+
+  const handleEndChatSession = async (reason: string, feedback?: string) => {
+    if (!conversationId || !user) return;
+
+    try {
+      const payload = { reason, feedback };
+      await messageAPI.endChatSession(conversationId, payload);
+
+      // Show success message
+      const successMessages: Record<string, string> = {
+        user_satisfied: '✓ Chat ended. User is satisfied.',
+        user_unsatisfied: '✗ Chat ended. Note: User unsatisfied.',
+        want_follow_up: '📞 Chat ended. Follow-up scheduled.',
+      };
+
+      Alert.alert('Success', successMessages[reason] || 'Chat session ended');
+
+      // Reload session status and disable further messaging
+      await loadChatSessionStatus();
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || 'Failed to end chat session');
+      throw error;
+    }
+  };
+
   const handleClearConversation = () => {
     if (!conversationId || !user || (user.role !== 'admin' && user.role !== 'service_provider')) return;
 
@@ -528,7 +590,18 @@ const ChatScreen = () => {
             </View>
           </View>
 
-          {(user?.role === 'admin' || user?.role === 'service_provider') && (
+          {(user?.role === 'admin' || user?.role === 'service_provider') && chatSessionStatus?.isActive && (
+            <TouchableOpacity
+              onPress={() => setShowEndChatModal(true)}
+              style={[styles.endChatButton, { backgroundColor: colors.primary }]}
+            >
+              <Text style={[styles.endChatButtonText, { color: '#fff' }]}>
+                End
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {(user?.role === 'admin' || user?.role === 'service_provider') && chatSessionStatus?.isActive && (
             <TouchableOpacity
               onPress={handleClearConversation}
               disabled={isClearing}
@@ -553,6 +626,17 @@ const ChatScreen = () => {
               {booking.bookingNumber} · {booking.status}
             </Text>
           </View>
+        )}
+
+        {/* Dormancy Information Banner */}
+        {!dismissedDormancyBanner && (
+          <ChatDormancyBanner
+            dormancyInfo={dormancyInfo}
+            isActive={chatSessionStatus?.isActive}
+            endReason={chatSessionStatus?.endReason}
+            colors={colors}
+            onDismiss={() => setDismissedDormancyBanner(true)}
+          />
         )}
 
         <View style={styles.messageArea}>
@@ -647,6 +731,14 @@ const ChatScreen = () => {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* End Chat Modal */}
+      <EndChatModal
+        visible={showEndChatModal}
+        onClose={() => setShowEndChatModal(false)}
+        onSubmit={handleEndChatSession}
+        colors={colors}
+      />
     </SafeAreaView>
   );
 };
@@ -673,6 +765,8 @@ const styles = StyleSheet.create({
   headerSub: { fontSize: 11, marginTop: 1, fontFamily: appFont },
   secureTag: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 },
   secureText: { fontSize: 11, fontWeight: '700' },
+  endChatButton: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, marginRight: 4 },
+  endChatButtonText: { fontSize: 11, fontWeight: '800', fontFamily: appFont },
   clearButton: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, marginRight: 6 },
   clearButtonText: { fontSize: 11, fontWeight: '800', fontFamily: appFont },
   bookingBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1 },

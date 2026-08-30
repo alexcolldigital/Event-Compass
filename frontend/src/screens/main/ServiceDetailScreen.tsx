@@ -276,7 +276,6 @@ const ServiceDetailScreen = () => {
               <MaterialCommunityIcons name="briefcase" size={78} color="rgba(255,255,255,0.6)" />
             </View>
           )}
-          <View style={styles.imageBadge}><Text style={styles.imageBadgeText}>{currentService.serviceType}</Text></View>
         </View>
 
         <Card variant="elevated" style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
@@ -314,7 +313,7 @@ const ServiceDetailScreen = () => {
             <View style={styles.providerIcon}><MaterialCommunityIcons name="account" size={26} color="#fff" /></View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.providerName, { color: colors.text }]}>{currentService.provider?.businessName || (currentService.provider?.role === 'admin' ? 'Event Compass Admin' : 'Service Provider')}</Text>
-              <Text style={[styles.providerSubtitle, { color: colors.muted }]}>{currentService.serviceType}</Text>
+              <Text style={[styles.providerSubtitle, { color: colors.muted }]}>{currentService.category || currentService.subCategory || 'Service'}</Text>
             </View>
           </View>
           <View style={styles.contactRow}>

@@ -307,7 +307,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
           {services.length > 0 ? (
             <View style={[styles.marketplaceGrid, numServiceCols > 1 && { flexDirection: 'row', flexWrap: 'wrap', gap: 12 }]}>
               {services.map((service: any) => (
-                <MarketplaceCard key={service._id} image={service.images?.[0]?.url} images={service.images} title={service.name} subtitle={service.category} rating={service.averageRating || 4.5} reviewCount={service.totalReviews || 0} price={service.pricing?.basePrice || 0} unit={service.unit || 'booking'} category={service.serviceType} badge={service.availability?.isAvailable === false ? 'Unavailable' : 'Available'} onPress={() => navigation.navigate('ServiceDetail', { serviceId: service._id })} onAddToCart={() => handleAddToCart(service)} style={{ backgroundColor: colors.surface, borderColor: colors.border, ...(numServiceCols > 1 && { width: serviceColW }) }} />
+                <MarketplaceCard key={service._id} image={service.images?.[0]?.url} images={service.images} title={service.name} subtitle={service.category} rating={service.averageRating || 4.5} reviewCount={service.totalReviews || 0} price={service.pricing?.basePrice || 0} unit={service.unit || 'booking'} category={service.category || service.subCategory} badge={service.availability?.isAvailable === false ? 'Unavailable' : 'Available'} onPress={() => navigation.navigate('ServiceDetail', { serviceId: service._id })} onAddToCart={() => handleAddToCart(service)} style={{ backgroundColor: colors.surface, borderColor: colors.border, ...(numServiceCols > 1 && { width: serviceColW }) }} />
               ))}
             </View>
           ) : (

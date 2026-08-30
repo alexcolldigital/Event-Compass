@@ -141,6 +141,7 @@ export const authAPI = {
 export const serviceAPI = {
   getAllServices: (query) => apiClient.get('/services', { params: query }),
   getPublicStats: () => apiClient.get('/services/stats'),
+  getAvailableCategories: () => apiClient.get('/services/categories/available'),
   getServiceById: (id) => apiClient.get(`/services/${id}`),
   getMyServices: () => apiClient.get('/services/provider/my-services'),
   createService: (data) => apiClient.post('/services', data),
@@ -291,6 +292,10 @@ export const messageAPI = {
     apiClient.patch(`/messages/conversation/${conversationId}/read`),
   deleteMessage: (id) => apiClient.delete(`/messages/${id}`),
   clearConversation: (conversationId) => apiClient.delete(`/messages/conversation/${conversationId}`),
+  endChatSession: (conversationId, data) =>
+    apiClient.post(`/messages/conversation/${conversationId}/end`, data),
+  getChatSessionStatus: (conversationId) =>
+    apiClient.get(`/messages/conversation/${conversationId}/status`),
   getAdminContacts: () => apiClient.get('/auth/admin-contacts'),
 };
 

@@ -63,12 +63,12 @@ export default function BookingsScreen({ navigation }) {
         </View>
         <Text style={[styles.cardTitle, { color: colors.text }]}>{item.service?.name || item.venue?.name || 'Booking'}</Text>
         <Text style={[styles.cardMeta, { color: colors.muted }]}>{item.bookingNumber || 'No reference'}</Text>
-        {(item.service?.serviceType || item.service?.category) && (
+        {(item.service?.category || item.service?.subCategory) && (
           <View style={styles.tagRow}>
-            {item.service?.serviceType ? (
-              <View style={[styles.tag, { backgroundColor: colors.surfaceAlt }]}>
-                <MaterialCommunityIcons name="briefcase-outline" size={12} color={colors.primary} />
-                <Text style={[styles.tagText, { color: colors.primary }]}>{item.service.serviceType}</Text>
+            {item.service?.category ? (
+              <View style={[styles.tag, { backgroundColor: colors.surfaceAlt }]}> 
+                <MaterialCommunityIcons name="tag-outline" size={12} color={colors.muted} />
+                <Text style={[styles.tagText, { color: colors.muted }]}>{item.service.category}</Text>
               </View>
             ) : null}
             {item.service?.category ? (

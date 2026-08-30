@@ -234,6 +234,7 @@ const ManageServicesScreen = () => {
   const [searchText, setSearchText] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [showFilters, setShowFilters] = useState(true);
   const [expandedServiceId, setExpandedServiceId] = useState<string | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -376,9 +377,16 @@ const ManageServicesScreen = () => {
               setServices((prev) => prev.filter((s) => s._id !== service._id));
               setExpandedServiceId(null);
               showToast('success', 'Service deleted successfully');
+              Alert.alert(
+                '✓ Service Deleted',
+                `"${service.name}" has been removed from the platform.`,
+                [{ text: 'OK', onPress: () => {} }]
+              );
             } catch (err) {
               const error = err as ApiError;
-              showToast('error', error.message || 'Failed to delete service');
+              const errorMsg = error.message || 'Failed to delete service';
+              showToast('error', errorMsg);
+              Alert.alert('✗ Delete Failed', errorMsg);
             }
           },
         },
@@ -512,7 +520,6 @@ const ManageServicesScreen = () => {
     const errors: FormErrors = {};
     if (!formData.name.trim()) errors.name = 'Name is required';
     if (!formData.description.trim()) errors.description = 'Description is required';
-    if (!formData.serviceType.trim()) errors.serviceType = 'Service type is required';
     const price = parseFloat(formData.pricing.basePrice);
     if (!formData.pricing.basePrice || isNaN(price) || price < 0) {
       errors.pricing = 'Valid base price is required';
@@ -552,6 +559,11 @@ const ManageServicesScreen = () => {
         setPendingImages([]);
         await loadServices();
         showToast('success', 'Service updated successfully');
+        Alert.alert(
+          '✓ Service Updated',
+          `The service has been successfully updated and is live.`,
+          [{ text: 'OK', onPress: () => {} }]
+        );
         setExpandedServiceId(null);
       } else {
         const res = (await adminAPI.createService(submitData)) as any;
@@ -562,10 +574,21 @@ const ManageServicesScreen = () => {
         setPendingImages([]);
         await loadServices();
         showToast('success', 'Service created successfully');
+        Alert.alert(
+          '✓ Service Created',
+          `"${submitData.name}" has been successfully added to the platform.`,
+          [{ text: 'Great!', onPress: () => {} }]
+        );
       }
     } catch (err) {
       const error = err as ApiError;
-      showToast('error', error.message || error.error as string || 'Failed to save service. Check all required fields.');
+      const errorMsg = error.message || (error.error as string) || 'Failed to save service. Check all required fields.';
+      showToast('error', errorMsg);
+      Alert.alert(
+        '✗ Operation Failed',
+        errorMsg,
+        [{ text: 'OK', onPress: () => {} }]
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -618,7 +641,7 @@ const ManageServicesScreen = () => {
                   </Text>
                 </View>
               </View>
-              <Text style={styles.serviceType} numberOfLines={1}>{service.serviceType || service.category}</Text>
+              <Text style={styles.serviceType} numberOfLines={1}>{service.category || service.subCategory || 'General'}</Text>
               {service.provider && (
                 <Text style={styles.providerText} numberOfLines={1}>
                   {typeof service.provider === 'object'
@@ -824,86 +847,104 @@ const ManageServicesScreen = () => {
       )}
 
       <View style={styles.filterContainer}>
-        <TouchableOpacity
-          style={[styles.groupToggle, groupByCategory && styles.groupToggleActive]}
-          onPress={() => setGroupByCategory(!groupByCategory)}
-        >
-          <MaterialCommunityIcons name="format-list-group" size={16} color={groupByCategory ? 'white' : '#374151'} />
-          <Text style={[styles.groupToggleText, groupByCategory && styles.groupToggleTextActive]}>Group by Category</Text>
-        </TouchableOpacity>
-        <View style={[styles.searchInputContainer, { marginTop: 10 }]}>
-          <MaterialCommunityIcons name="magnify" size={20} color={COLORS.gray[400]} />
-          <TextInput
-            placeholder="Search by name, type, provider..."
-            value={searchText}
-            onChangeText={setSearchText}
-            style={styles.searchInput}
-            placeholderTextColor={COLORS.gray[400]}
-          />
-          {searchText !== '' && (
-            <TouchableOpacity onPress={() => setSearchText('')}>
-              <MaterialCommunityIcons name="close-circle" size={18} color={COLORS.gray[400]} />
-            </TouchableOpacity>
-          )}
+        <View style={styles.filterHeader}>
+          <Text style={styles.filterHeaderTitle}>Filters & Search</Text>
+          <TouchableOpacity 
+            style={styles.filterToggle}
+            onPress={() => setShowFilters(!showFilters)}
+          >
+            <MaterialCommunityIcons 
+              name={showFilters ? 'chevron-up' : 'chevron-down'} 
+              size={24} 
+              color={COLORS.primary} 
+            />
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.filterRow}>
-          <Text style={styles.filterLabel}>Category:</Text>
-          {[
-            { label: 'All', value: 'all' },
-            { label: 'Venue', value: 'venue' },
-            { label: 'Catering', value: 'catering' },
-            { label: 'Photography', value: 'photography' },
-            { label: 'Entertainment', value: 'entertainment' },
-            { label: 'Decoration', value: 'decoration' },
-            { label: 'Other', value: 'other' },
-          ].map((filter) => (
+        {showFilters && (
+          <>
             <TouchableOpacity
-              key={filter.value}
-              style={[
-                styles.filterChip,
-                filterCategory === filter.value ? styles.activeFilterChip : styles.inactiveFilterChip,
-              ]}
-              onPress={() => setFilterCategory(filter.value)}
+              style={[styles.groupToggle, groupByCategory && styles.groupToggleActive]}
+              onPress={() => setGroupByCategory(!groupByCategory)}
             >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  filterCategory === filter.value ? styles.activeFilterChipText : styles.inactiveFilterChipText,
-                ]}
-              >
-                {filter.label}
-              </Text>
+              <MaterialCommunityIcons name="format-list-group" size={16} color={groupByCategory ? 'white' : '#374151'} />
+              <Text style={[styles.groupToggleText, groupByCategory && styles.groupToggleTextActive]}>Group by Category</Text>
             </TouchableOpacity>
-          ))}
-        </View>
+            <View style={[styles.searchInputContainer, { marginTop: 10 }]}>
+              <MaterialCommunityIcons name="magnify" size={20} color={COLORS.gray[400]} />
+              <TextInput
+                placeholder="Search by name, type, provider..."
+                value={searchText}
+                onChangeText={setSearchText}
+                style={styles.searchInput}
+                placeholderTextColor={COLORS.gray[400]}
+              />
+              {searchText !== '' && (
+                <TouchableOpacity onPress={() => setSearchText('')}>
+                  <MaterialCommunityIcons name="close-circle" size={18} color={COLORS.gray[400]} />
+                </TouchableOpacity>
+              )}
+            </View>
 
-        <View style={styles.filterRow}>
-          <Text style={styles.filterLabel}>Status:</Text>
-          {[
-            { label: 'All', value: 'all' },
-            { label: 'Active', value: 'active' },
-            { label: 'Inactive', value: 'inactive' },
-          ].map((filter) => (
-            <TouchableOpacity
-              key={filter.value}
-              style={[
-                styles.filterChip,
-                filterStatus === filter.value ? styles.activeFilterChip : styles.inactiveFilterChip,
-              ]}
-              onPress={() => setFilterStatus(filter.value)}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  filterStatus === filter.value ? styles.activeFilterChipText : styles.inactiveFilterChipText,
-                ]}
-              >
-                {filter.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+            <View style={styles.filterRow}>
+              <Text style={styles.filterLabel}>Category:</Text>
+              {[
+                { label: 'All', value: 'all' },
+                { label: 'Venue', value: 'venue' },
+                { label: 'Catering', value: 'catering' },
+                { label: 'Photography', value: 'photography' },
+                { label: 'Entertainment', value: 'entertainment' },
+                { label: 'Decoration', value: 'decoration' },
+                { label: 'Other', value: 'other' },
+              ].map((filter) => (
+                <TouchableOpacity
+                  key={filter.value}
+                  style={[
+                    styles.filterChip,
+                    filterCategory === filter.value ? styles.activeFilterChip : styles.inactiveFilterChip,
+                  ]}
+                  onPress={() => setFilterCategory(filter.value)}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      filterCategory === filter.value ? styles.activeFilterChipText : styles.inactiveFilterChipText,
+                    ]}
+                  >
+                    {filter.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.filterRow}>
+              <Text style={styles.filterLabel}>Status:</Text>
+              {[
+                { label: 'All', value: 'all' },
+                { label: 'Active', value: 'active' },
+                { label: 'Inactive', value: 'inactive' },
+              ].map((filter) => (
+                <TouchableOpacity
+                  key={filter.value}
+                  style={[
+                    styles.filterChip,
+                    filterStatus === filter.value ? styles.activeFilterChip : styles.inactiveFilterChip,
+                  ]}
+                  onPress={() => setFilterStatus(filter.value)}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      filterStatus === filter.value ? styles.activeFilterChipText : styles.inactiveFilterChipText,
+                    ]}
+                  >
+                    {filter.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
       </View>
 
       <View style={styles.statsContainer}>
@@ -1009,11 +1050,9 @@ const ManageServicesScreen = () => {
               <View style={styles.modalSection}>
                 <Text style={styles.sectionTitle}>Basic Information</Text>
                 {renderFormField({ label: 'Service Name *', name: 'name', type: 'text', placeholder: 'Enter service name' })}
-                {renderFormField({ label: 'Service Type *', name: 'serviceType', type: 'text', placeholder: 'e.g., venue, catering, photography' })}
                 {renderFormField({ label: 'Category', name: 'category', type: 'text', placeholder: 'e.g., venue, catering, photography' })}
                 {renderFormField({ label: 'Sub-category', name: 'subCategory', type: 'text', placeholder: 'Optional sub-category' })}
-                {renderFormField({ label: 'Short Description', name: 'shortDescription', type: 'text', placeholder: 'Brief description for listings', multiline: true })}
-                {renderFormField({ label: 'Full Description *', name: 'description', type: 'text', placeholder: 'Detailed description', multiline: true })}
+                {renderFormField({ label: 'Description *', name: 'description', type: 'text', placeholder: 'Describe the service in detail', multiline: true })}
               </View>
 
               <View style={styles.modalSection}>
@@ -1164,11 +1203,9 @@ const ManageServicesScreen = () => {
               <View style={styles.modalSection}>
                 <Text style={styles.sectionTitle}>Basic Information</Text>
                 {renderFormField({ label: 'Service Name *', name: 'name', type: 'text', placeholder: 'Enter service name' })}
-                {renderFormField({ label: 'Service Type *', name: 'serviceType', type: 'text', placeholder: 'e.g., venue, catering, photography' })}
                 {renderFormField({ label: 'Category', name: 'category', type: 'text', placeholder: 'e.g., venue, catering, photography' })}
                 {renderFormField({ label: 'Sub-category', name: 'subCategory', type: 'text', placeholder: 'Optional sub-category' })}
-                {renderFormField({ label: 'Short Description', name: 'shortDescription', type: 'text', placeholder: 'Brief description for listings', multiline: true })}
-                {renderFormField({ label: 'Full Description *', name: 'description', type: 'text', placeholder: 'Detailed description', multiline: true })}
+                {renderFormField({ label: 'Description *', name: 'description', type: 'text', placeholder: 'Describe the service in detail', multiline: true })}
               </View>
 
               <View style={styles.modalSection}>
@@ -1332,9 +1369,28 @@ const styles = StyleSheet.create({
   },
   filterContainer: {
     backgroundColor: 'white',
-    padding: 12,
-    margin: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginHorizontal: 12,
+    marginTop: 8,
+    marginBottom: 8,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  filterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  filterHeaderTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  filterToggle: {
+    padding: 4,
   },
   searchInputContainer: {
     flexDirection: 'row',
@@ -1343,19 +1399,20 @@ const styles = StyleSheet.create({
     borderColor: '#d1d5db',
     borderRadius: 8,
     paddingHorizontal: 12,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 6,
     marginLeft: 8,
     color: '#1f2937',
+    fontSize: 14,
   },
   filterRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
+    gap: 6,
+    marginBottom: 8,
   },
   filterLabel: {
     color: '#1f2937',
@@ -1365,8 +1422,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   filterChip: {
-    paddingVertical: 4,
-    paddingHorizontal: 12,
+    paddingVertical: 3,
+    paddingHorizontal: 10,
     borderRadius: 9999,
     borderWidth: 1,
   },
@@ -1390,14 +1447,14 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
     paddingHorizontal: 12,
-    marginTop: 12,
+    marginVertical: 6,
   },
   statCard: {
     flex: 1,
     backgroundColor: '#eff6ff',
-    padding: 12,
+    padding: 8,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#bfdbfe',
@@ -1420,40 +1477,40 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     color: '#1d4ed8',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '500',
   },
   statLabelActive: {
     color: '#166534',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '500',
   },
   statLabelFeatured: {
     color: '#a16207',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '500',
   },
   statValue: {
     color: '#1e3a8a',
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
-    marginTop: 4,
+    marginTop: 2,
   },
   statValueActive: {
     color: '#14532d',
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
-    marginTop: 4,
+    marginTop: 2,
   },
   statValueFeatured: {
     color: '#854d0e',
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
-    marginTop: 4,
+    marginTop: 2,
   },
   listContent: {
-    padding: 12,
-    paddingTop: 12,
+    padding: 8,
+    paddingTop: 4,
   },
   emptyState: {
     alignItems: 'center',
@@ -1473,14 +1530,14 @@ const styles = StyleSheet.create({
   serviceCard: {
     backgroundColor: 'white',
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#e5e7eb',
     overflow: 'hidden',
   },
   cardImageContainer: {
     width: '100%',
-    height: 140,
+    height: 100,
     position: 'relative',
   },
   cardImage: {
@@ -1530,7 +1587,7 @@ const styles = StyleSheet.create({
     marginLeft: 3,
   },
   cardBody: {
-    padding: 12,
+    padding: 10,
   },
   cardHeader: {
     flexDirection: 'row',

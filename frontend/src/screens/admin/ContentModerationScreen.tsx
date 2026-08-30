@@ -100,7 +100,7 @@ export default function ContentModerationScreen() {
     <View style={[adminStyles.card, { backgroundColor: C.surface, borderColor: C.border }]}>
       <Text style={{ color: C.text, fontWeight: '700', fontSize: 14, marginBottom: 4, fontFamily: appFont }}>{item.name}</Text>
       <Text style={{ color: C.muted, fontSize: 12, fontFamily: appFont }}>{item.provider?.businessName || `${item.provider?.firstName} ${item.provider?.lastName}`}</Text>
-      <Text style={{ color: C.muted, fontSize: 11, marginTop: 2, fontFamily: appFont }}>{item.serviceType} · {formatDate(item.createdAt)}</Text>
+      <Text style={{ color: C.muted, fontSize: 11, marginTop: 2, fontFamily: appFont }}>{item.category || item.subCategory || 'Service'} · {formatDate(item.createdAt)}</Text>
       <View style={adminStyles.actionRow}>
         <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: isDark ? '#14532d' : '#dcfce7' }]} onPress={() => handleModerateService(item, 'approve')}>
           <Text style={[adminStyles.actionBtnText, { color: '#166534', fontFamily: appFont }]}>Approve</Text>

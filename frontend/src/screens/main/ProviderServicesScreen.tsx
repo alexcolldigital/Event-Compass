@@ -10,30 +10,9 @@ import Loading from '../../components/Loading.jsx';
 import { useTheme } from '../../context/ThemeContext';
 import Toast, { ToastType } from '../../components/Toast';
 import { fetchLocations, getLgasForState, getTownsForLga } from '../../utils/nigeriaLocations.js';
+import { serviceAPI } from '../../services/api.js';
 
 const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
-
-const categoryOptions = [
-  'Event Venue',
-  'Photographer',
-  'Videographer',
-  'DJ',
-  'MC',
-  'Catering',
-  'Decoration',
-  'Makeup Artist',
-  'Security',
-  'Live Band',
-  'Chair Rental',
-  'Table Rental',
-  'Tent Rental',
-  'Sound System',
-  'Lighting',
-  'Generator',
-  'Car Hire',
-  'Event Planner',
-  'Others',
-];
 
 const serviceTypeOptions = ['Physical Item Rental', 'Professional Service', 'Package (Service + Items)'];
 const pricingTypeOptions = ['Fixed Price', 'Hourly', 'Daily', 'Weekly', 'Monthly', 'Per Guest', 'Per Item', 'Negotiable'];
@@ -45,10 +24,8 @@ const weekdayOptions = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 
 
 const initialFormState = {
   name: '',
-  shortDescription: '',
   description: '',
-  serviceType: 'Professional Service',
-  category: 'Event Venue',
+  category: '',
   subCategory: '',
   pricingType: 'Fixed Price',
   basePrice: '',
@@ -105,6 +82,11 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
   const [showStateMenu, setShowStateMenu] = useState(false);
   const [showLgaMenu, setShowLgaMenu] = useState(false);
   const [showTownMenu, setShowTownMenu] = useState(false);
+  const [showCategoryMenu, setShowCategoryMenu] = useState(false);
+  const [showSubCategoryMenu, setShowSubCategoryMenu] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<any[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
   const [toast, setToast] = useState<{ visible: boolean; type: ToastType; message: string }>({ visible: false, type: 'success', message: '' });
 
   const showToast = (type: ToastType, message: string) => setToast({ visible: true, type, message });
@@ -125,11 +107,42 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
   useEffect(() => {
     getMyServices().catch(() => {});
     fetchLocations().then(setLocations).catch(() => {});
+    fetchAvailableCategories();
 
     if (route?.params?.showForm) {
       setShowForm(true);
     }
   }, [route?.params?.showForm]);
+
+  const fetchAvailableCategories = async () => {
+    try {
+      setLoadingCategories(true);
+      const response = await serviceAPI.getAvailableCategories();
+      const categoryList = response?.categories || [];
+      setAvailableCategories(categoryList);
+      setCategories(categoryList.map((cat: any) => cat.name).filter(Boolean));
+    } catch (error) {
+      console.log('Failed to fetch categories:', error);
+      setAvailableCategories([]);
+      setCategories([]);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  const selectedCategoryData = availableCategories.find((cat: any) => cat.name === formState.category) || null;
+  const subcategoryOptions = selectedCategoryData?.subcategories?.map((sub: any) => sub.name).filter(Boolean) || [];
+
+  const handleCategoryChange = (category: string) => {
+    updateField('category', category);
+    updateField('subCategory', '');
+    setShowCategoryMenu(false);
+  };
+
+  const handleSubCategoryChange = (subcategory: string) => {
+    updateField('subCategory', subcategory);
+    setShowSubCategoryMenu(false);
+  };
 
   const updateField = (field: string, value: string | boolean) => {
     setFormState((prev: any) => ({ ...prev, [field]: value }));
@@ -151,10 +164,8 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
   const validateForm = () => {
     const nextErrors: Record<string, string> = {};
     if (!formState.name.trim()) nextErrors.name = 'Service name is required';
-    if (!formState.shortDescription.trim()) nextErrors.shortDescription = 'Short description is required';
-    if (!formState.description.trim()) nextErrors.description = 'Full description is required';
+    if (!formState.description.trim()) nextErrors.description = 'Description is required';
     if (!formState.category.trim()) nextErrors.category = 'Category is required';
-    if (!formState.serviceType.trim()) nextErrors.serviceType = 'Service type is required';
     if (!formState.coverImage.trim()) nextErrors.coverImage = 'Cover image URL is required';
     if (!formState.basePrice.trim() || Number.isNaN(Number(formState.basePrice)) || Number(formState.basePrice) <= 0) {
       nextErrors.basePrice = 'Enter a valid price';
@@ -210,9 +221,7 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
 
       const payload = {
         name: formState.name.trim(),
-        shortDescription: formState.shortDescription.trim(),
         description: formState.description.trim(),
-        serviceType: formState.serviceType,
         category: formState.category.trim(),
         subCategory: formState.subCategory.trim(),
         pricing: {
@@ -268,17 +277,27 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
       setFormState(initialFormState);
       setShowForm(false);
       showToast('success', 'Service created successfully. Your new service is now visible to customers.');
+      Alert.alert(
+        '✓ Service Created',
+        `Your service "${payload.name}" has been successfully added and is now visible to customers!`,
+        [{ text: 'Great!', onPress: () => {} }]
+      );
       getMyServices().catch(() => {});
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Please try again.';
       showToast('error', `Unable to create service: ${message}`);
+      Alert.alert(
+        '✗ Service Creation Failed',
+        `Failed to add your service. ${message}. Please check all required fields and try again.`,
+        [{ text: 'OK', onPress: () => {} }]
+      );
     }
   };
 
   const handleSavePrice = async () => {
     const price = Number(priceDraft);
     if (!editingService || !Number.isFinite(price) || price <= 0) {
-      Alert.alert('Invalid price', 'Enter a price greater than zero.');
+      Alert.alert('✗ Invalid Price', 'Please enter a price greater than zero.');
       return;
     }
 
@@ -288,9 +307,12 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
         pricing: { ...editingService.pricing, basePrice: price },
       });
       setEditingService(null);
-      Alert.alert('Price updated', 'Your service price has been updated successfully.');
+      showToast('success', `Price updated to ₦${price.toLocaleString()}`);
+      Alert.alert('✓ Price Updated', `Your service price has been updated to ₦${price.toLocaleString()}.`);
     } catch (err) {
-      Alert.alert('Unable to update price', err instanceof Error ? err.message : 'Please try again.');
+      const errMsg = err instanceof Error ? err.message : 'Please try again.';
+      showToast('error', `Update failed: ${errMsg}`);
+      Alert.alert('✗ Unable to Update Price', errMsg);
     } finally {
       setIsSavingPrice(false);
     }
@@ -323,11 +345,9 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
       setIsUpdating(true);
       await updateService(editFullService._id, {
         name: editFormState.name.trim(),
-        shortDescription: editFormState.shortDescription.trim(),
         description: editFormState.description.trim(),
         category: editFormState.category.trim(),
         subCategory: editFormState.subCategory.trim(),
-        serviceType: editFormState.serviceType.trim(),
         pricing: {
           ...editFullService.pricing,
           basePrice: price,
@@ -341,8 +361,15 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
       });
       setEditFullService(null);
       showToast('success', 'Service updated successfully.');
+      Alert.alert(
+        '✓ Service Updated',
+        `Your service has been successfully updated and changes are now live!`,
+        [{ text: 'Excellent!', onPress: () => {} }]
+      );
     } catch (err) {
-      Alert.alert('Update failed', err instanceof Error ? err.message : 'Please try again.');
+      const errMsg = err instanceof Error ? err.message : 'Please try again.';
+      showToast('error', `Update failed: ${errMsg}`);
+      Alert.alert('✗ Update Failed', errMsg);
     } finally {
       setIsUpdating(false);
     }
@@ -362,8 +389,15 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
               const { deleteService: del } = useServiceStore.getState();
               await del(service._id);
               showToast('success', 'Service deleted successfully.');
+              Alert.alert(
+                '✓ Service Deleted',
+                `"${service.name}" has been removed from your services.`,
+                [{ text: 'OK', onPress: () => {} }]
+              );
             } catch (err) {
-              Alert.alert('Delete failed', err instanceof Error ? err.message : 'Please try again.');
+              const errMsg = err instanceof Error ? err.message : 'Please try again.';
+              showToast('error', `Delete failed: ${errMsg}`);
+              Alert.alert('✗ Delete Failed', errMsg);
             }
           },
         },
@@ -416,17 +450,8 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
               error={formErrors.name}
             />
             <Input
-              label="Short Description"
-              placeholder="Premium wedding photography with drone coverage"
-              value={formState.shortDescription}
-              onChangeText={(text) => updateField('shortDescription', text)}
-              maxLength={200}
-              icon="text-short"
-              error={formErrors.shortDescription}
-            />
-            <Input
-              label="Full Description"
-              placeholder="Explain experience, equipment, process, deliverables, inclusions and exclusions"
+              label="Description"
+              placeholder="Describe your service, experience, deliverables, and what clients should expect"
               value={formState.description}
               onChangeText={(text) => updateField('description', text)}
               multiline
@@ -435,23 +460,49 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
               error={formErrors.description}
             />
             <View style={styles.fieldBlock}>
-              <Text style={styles.label}>Category</Text>
-              {renderChoicePills(categoryOptions, formState.category, (value) => updateField('category', value), colors)}
+              <Text style={styles.label}>Category *</Text>
+              {loadingCategories ? (
+                <Text style={styles.mutedText}>Loading categories...</Text>
+              ) : categories.length > 0 ? (
+                <TouchableOpacity
+                  onPress={() => setShowCategoryMenu(true)}
+                  style={[styles.dropdownTrigger, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
+                  activeOpacity={0.9}
+                >
+                  <Text style={[styles.dropdownValue, { color: formState.category ? colors.text : colors.muted }]}>
+                    {formState.category || 'Select a category'}
+                  </Text>
+                  <MaterialCommunityIcons name="chevron-down" size={18} color={colors.text} />
+                </TouchableOpacity>
+              ) : (
+                <Text style={styles.errorText}>No categories available. Please contact support.</Text>
+              )}
               {formErrors.category ? <Text style={styles.errorText}>{formErrors.category}</Text> : null}
             </View>
-            <Input
-              label="Subcategory"
-              placeholder="Plastic chairs, drone package, bridal package"
-              value={formState.subCategory}
-              onChangeText={(text) => updateField('subCategory', text)}
-              icon="shape-outline"
-            />
             <View style={styles.fieldBlock}>
-              <Text style={styles.label}>Service Type</Text>
-              {renderChoicePills(serviceTypeOptions, formState.serviceType, (value) => updateField('serviceType', value), colors)}
-              {formErrors.serviceType ? <Text style={styles.errorText}>{formErrors.serviceType}</Text> : null}
+              <Text style={styles.label}>Subcategory (Optional)</Text>
+              {formState.category && subcategoryOptions.length > 0 ? (
+                <TouchableOpacity
+                  onPress={() => setShowSubCategoryMenu(true)}
+                  style={[styles.dropdownTrigger, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
+                  activeOpacity={0.9}
+                >
+                  <Text style={[styles.dropdownValue, { color: formState.subCategory ? colors.text : colors.muted }]}>
+                    {formState.subCategory || 'Select a subcategory'}
+                  </Text>
+                  <MaterialCommunityIcons name="chevron-down" size={18} color={colors.text} />
+                </TouchableOpacity>
+              ) : (
+                <Input
+                  label=""
+                  placeholder="e.g., Plastic chairs, drone package, bridal package"
+                  value={formState.subCategory}
+                  onChangeText={(text) => updateField('subCategory', text)}
+                  icon="shape-outline"
+                  editable={!!formState.category}
+                />
+              )}
             </View>
-
             <Text style={[styles.sectionLabel, { color: colors.text }]}>2. Media and portfolio</Text>
             <Input
               label="Cover Image URL"
@@ -740,6 +791,8 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
           {renderDropdownModal(showStateMenu, () => setShowStateMenu(false), 'Select state', locations.map((l: any) => l.state), formState.state, (v) => { updateField('state', v); updateField('lga', ''); updateField('city', ''); }, colors)}
           {renderDropdownModal(showLgaMenu, () => setShowLgaMenu(false), 'Select LGA', lgaOptions.map((l: any) => l.lga), formState.lga, (v) => { updateField('lga', v); updateField('city', ''); }, colors)}
           {renderDropdownModal(showTownMenu, () => setShowTownMenu(false), 'Select town', townOptions, formState.city, (v) => updateField('city', v), colors)}
+          {renderDropdownModal(showCategoryMenu, () => setShowCategoryMenu(false), 'Select category', categories, formState.category, handleCategoryChange, colors)}
+          {renderDropdownModal(showSubCategoryMenu, () => setShowSubCategoryMenu(false), 'Select subcategory', subcategoryOptions, formState.subCategory, handleSubCategoryChange, colors)}
 
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>My services</Text>
@@ -755,10 +808,10 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
                   <MarketplaceCard
                     image={service.images?.[0]?.url}
                     title={service.name}
-                    subtitle={service.category}
+                    subtitle={service.category || service.subCategory}
                     price={service.pricing?.basePrice || 0}
                     unit={service.pricing?.unit || 'booking'}
-                    category={service.serviceType}
+                    category={service.category || service.subCategory}
                     badge={service.availability?.isAvailable === false ? 'Unavailable' : 'Available'}
                     onPress={() => navigation.navigate('ServiceDetail', { serviceId: service._id })}
                     style={{ backgroundColor: colors.surface, borderColor: colors.border }}
@@ -810,11 +863,41 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
             {editFormState && (
               <>
                 <Input label="Service Name *" value={editFormState.name} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, name: v }))} icon="briefcase-outline" />
-                <Input label="Short Description" value={editFormState.shortDescription} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, shortDescription: v }))} icon="text-short" maxLength={200} />
-                <Input label="Full Description *" value={editFormState.description} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, description: v }))} icon="text-box-outline" multiline numberOfLines={4} />
-                <Input label="Category" value={editFormState.category} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, category: v }))} icon="shape-outline" />
-                <Input label="Subcategory" value={editFormState.subCategory} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, subCategory: v }))} icon="shape-plus-outline" />
-                <Input label="Service Type" value={editFormState.serviceType} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, serviceType: v }))} icon="tag-outline" />
+                <Input label="Description *" value={editFormState.description} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, description: v }))} icon="text-box-outline" multiline numberOfLines={4} />
+                <View style={styles.fieldBlock}>
+                  <Text style={[styles.label, { color: colors.text }]}>Category *</Text>
+                  {categories.length > 0 ? (
+                    <TouchableOpacity
+                      onPress={() => setShowCategoryMenu(true)}
+                      style={[styles.dropdownTrigger, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
+                      activeOpacity={0.9}
+                    >
+                      <Text style={[styles.dropdownValue, { color: editFormState.category ? colors.text : colors.muted }]}>
+                        {editFormState.category || 'Select a category'}
+                      </Text>
+                      <MaterialCommunityIcons name="chevron-down" size={18} color={colors.text} />
+                    </TouchableOpacity>
+                  ) : (
+                    <Input label="Category" value={editFormState.category} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, category: v }))} icon="shape-outline" />
+                  )}
+                </View>
+                <View style={styles.fieldBlock}>
+                  <Text style={[styles.label, { color: colors.text }]}>Subcategory</Text>
+                  {editFormState.category && subcategoryOptions.length > 0 ? (
+                    <TouchableOpacity
+                      onPress={() => setShowSubCategoryMenu(true)}
+                      style={[styles.dropdownTrigger, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
+                      activeOpacity={0.9}
+                    >
+                      <Text style={[styles.dropdownValue, { color: editFormState.subCategory ? colors.text : colors.muted }]}>
+                        {editFormState.subCategory || 'Select a subcategory'}
+                      </Text>
+                      <MaterialCommunityIcons name="chevron-down" size={18} color={colors.text} />
+                    </TouchableOpacity>
+                  ) : (
+                    <Input label="Subcategory" value={editFormState.subCategory} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, subCategory: v }))} icon="shape-plus-outline" placeholder="e.g., Plastic chairs, drone package" />
+                  )}
+                </View>
                 <Input label="Base Price (₦) *" value={editFormState.basePrice} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, basePrice: v }))} keyboardType="numeric" icon="cash" />
                 <Input label="Unit" value={editFormState.unit} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, unit: v }))} icon="calendar-blank" />
                 <View style={[styles.toggleRow, { marginTop: 8 }]}>
@@ -1032,5 +1115,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#0f172a',
+  },
+  mutedText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748b',
+    marginTop: 8,
   },
 });
