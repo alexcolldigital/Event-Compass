@@ -7,6 +7,7 @@ import Loading from '../../components/Loading.jsx';
 import { formatDate } from '../../utils/helpers.js';
 import { useTheme } from '../../context/ThemeContext';
 import adminStyles, { getColors, appFont } from '../../styles/adminStyles.js';
+import { goBackToAdminDashboard } from '../../utils/adminNavigation';
 import Toast, { ToastType } from '../../components/Toast';
 
 const PAGE_TYPES = ['page', 'faq', 'policy', 'blog'];
@@ -176,7 +177,7 @@ export default function CMSManagementScreen() {
   return (
     <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
       <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => goBackToAdminDashboard(navigation)}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />
         </TouchableOpacity>
         <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>CMS Pages</Text>

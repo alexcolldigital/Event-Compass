@@ -7,6 +7,7 @@ import Loading from '../../components/Loading.jsx';
 import { formatDate } from '../../utils/helpers.js';
 import { useTheme } from '../../context/ThemeContext';
 import adminStyles, { getColors, appFont } from '../../styles/adminStyles.js';
+import { goBackToAdminDashboard } from '../../utils/adminNavigation';
 import Toast, { ToastType } from '../../components/Toast';
 
 const EMPTY_FORM = { code: '', description: '', discountType: 'percentage', discountValue: '', minOrderAmount: '', usageLimit: '', startDate: '', endDate: '' };
@@ -134,7 +135,7 @@ export default function CouponManagementScreen() {
     <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
       <Toast visible={toast.visible} type={toast.type} message={toast.message} onHide={() => setToast(t => ({ ...t, visible: false }))} />
       <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => goBackToAdminDashboard(navigation)}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />
         </TouchableOpacity>
         <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>Coupon Management</Text>

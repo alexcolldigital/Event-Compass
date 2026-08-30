@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { adminAPI } from '../../services/api.js';
+import { goBackToAdminDashboard } from '../../utils/adminNavigation';
 import { useTheme } from '../../context/ThemeContext';
 import Button from '../../components/Button.jsx';
 import { clearLocationCache } from '../../utils/nigeriaLocations.js';
@@ -179,7 +180,7 @@ export default function LocationManagementScreen({ navigation }: { navigation: a
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
       <Toast visible={toast.visible} type={toast.type} message={toast.message} onHide={() => setToast(t => ({ ...t, visible: false }))} />
       <View style={[styles.header, { backgroundColor: colors.primary }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => goBackToAdminDashboard(navigation)} style={styles.backBtn}>
           <MaterialCommunityIcons name="arrow-left" size={22} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Location Management</Text>

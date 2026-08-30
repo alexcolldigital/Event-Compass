@@ -207,7 +207,9 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingHorizontal: hPad }]}> 
         <View style={[styles.hero, { backgroundColor: colors.primary }]}>
           <View style={styles.heroTopRow}>
-            <Image source={logo} style={styles.heroLogo} resizeMode="contain" />
+            <View style={styles.logoBadge}>
+              <Image source={logo} style={styles.heroLogo} resizeMode="contain" />
+            </View>
             <View style={styles.heroIcons}>
               <TouchableOpacity style={styles.iconButton} onPress={() => {
                 navigation.navigate('Profile', { screen: 'Notifications' });
@@ -357,7 +359,22 @@ const styles = StyleSheet.create({
   hero: { borderRadius: 28, padding: 20, marginTop: 8, marginBottom: 16 },
   heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   heroIcons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  heroLogo: { width: 120, height: 36, tintColor: '#ffffff' },
+  logoBadge: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.72)',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 14,
+    elevation: 8,
+  },
+  heroLogo: { width: 40, height: 40, borderRadius: 10 },
   eyebrow: { color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '700', letterSpacing: 1.2 },
   heroTitle: { color: '#fff', fontSize: 28, fontWeight: '800', marginTop: 6, fontFamily: appFont },
   heroSubtitle: { color: 'rgba(255,255,255,0.82)', fontSize: 14, marginTop: 6, fontFamily: appFont },

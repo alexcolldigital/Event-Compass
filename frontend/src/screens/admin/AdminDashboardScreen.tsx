@@ -24,6 +24,7 @@ const MENU_ITEMS = [
   { icon: 'bullhorn', label: 'Promotions', screen: 'PromotionsManagement', accent: '#9333ea' },
   { icon: 'chart-line', label: 'Analytics Dashboard', screen: 'AnalyticsDashboard', accent: '#0f766e' },
   { icon: 'bell-outline', label: 'Notification Management', screen: 'NotificationManagement', accent: '#ec4899' },
+  { icon: 'headset', label: 'Support Contact', screen: 'NotificationManagement', accent: '#f59e0b' },
   { icon: 'file-document-outline', label: 'CMS Pages', screen: 'CMSManagement', accent: '#64748b' },
   { icon: 'clipboard-list-outline', label: 'Audit Logs', screen: 'AuditLogs', accent: '#374151' },
   { icon: 'map-marker-multiple', label: 'Location Management', screen: 'LocationManagement', accent: '#0f766e' },

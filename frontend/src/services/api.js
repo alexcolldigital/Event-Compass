@@ -137,6 +137,11 @@ export const authAPI = {
   markAllNotificationsRead: () => apiClient.patch('/auth/notifications/read-all'),
 };
 
+// Support API calls
+export const supportAPI = {
+  getContact: () => apiClient.get('/support/contact'),
+};
+
 // Service API calls
 export const serviceAPI = {
   getAllServices: (query) => apiClient.get('/services', { params: query }),
@@ -266,6 +271,8 @@ export const adminAPI = {
   createNotification: (data) => apiClient.post('/admin/notifications', data),
   sendNotification: (id) => apiClient.post(`/admin/notifications/${id}/send`),
   deleteNotification: (id) => apiClient.delete(`/admin/notifications/${id}`),
+  getSupportContactSettings: () => apiClient.get('/admin/settings/support-contact'),
+  updateSupportContactSettings: (data) => apiClient.put('/admin/settings/support-contact', data),
 
   // CMS Pages
   getCMSPages: (query) => apiClient.get('/admin/cms', { params: query }),

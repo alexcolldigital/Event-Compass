@@ -256,6 +256,35 @@ const BookingDetailScreen = () => {
   const discount = currentBooking.discount || pricing.discount || 0;
   const tax = currentBooking.tax || pricing.tax || 0;
   const totalAmount = currentBooking.totalAmount || pricing.totalAmount || 0;
+  const receipt = currentBooking.receipt || {};
+  const receiptItems = receipt.items || (
+    currentBooking.adminSetPrices?.length
+      ? currentBooking.adminSetPrices.map((item: any) => ({
+          name: item.serviceName,
+          quantity: 1,
+          unitPrice: item.price,
+          amount: item.price,
+        }))
+      : [{
+          name: service.name || 'Service',
+          category: service.category || service.subCategory || currentBooking.bookingType,
+          quantity,
+          unitPrice: pricing.unitPrice || basePrice,
+          amount: subtotal || totalAmount,
+        }]
+  );
+  const receiptAmounts = receipt.amounts || {
+    subtotal,
+    serviceAndDeliveryFee: pricing.serviceAndDeliveryFee || 0,
+    discount,
+    tax,
+    totalAmount,
+    amountPaid: currentBooking.balancePaid
+      ? totalAmount
+      : currentBooking.depositPaid
+      ? currentBooking.depositAmount || 0
+      : 0,
+  };
   const isPending = currentBooking.status === BOOKING_STATUS.PENDING;
   const isConfirmed = currentBooking.status === BOOKING_STATUS.CONFIRMED;
   const isCompleted = currentBooking.status === BOOKING_STATUS.COMPLETED;
@@ -490,6 +519,73 @@ const BookingDetailScreen = () => {
           })()}
         </View>
 
+        {/* Receipt */}
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={styles.receiptHeader}>
+            <View>
+              <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 4 }]}>Receipt</Text>
+              <Text style={[styles.meta, { color: colors.muted }]}>{receipt.receiptNumber || `RCPT-${currentBooking.bookingNumber}`}</Text>
+            </View>
+            <View style={[styles.pill, { backgroundColor: colors.surfaceAlt }]}>
+              <Text style={[styles.pillText, { color: colors.text }]}>{paymentStatus || 'Pending'}</Text>
+            </View>
+          </View>
+
+          <View style={[styles.receiptEventBox, { backgroundColor: colors.surfaceAlt }]}>
+            <Text style={[styles.receiptEventTitle, { color: colors.text }]}>Event Details</Text>
+            <Text style={[styles.meta, { color: colors.muted }]}>Date: {formatDate(currentBooking.eventDate)}</Text>
+            {currentBooking.eventTime ? <Text style={[styles.meta, { color: colors.muted }]}>Time: {currentBooking.eventTime}</Text> : null}
+            <Text style={[styles.meta, { color: colors.muted }]}>Guests: {currentBooking.numberOfGuests || quantity}</Text>
+            {currentBooking.bookingLocation?.address ? (
+              <Text style={[styles.meta, { color: colors.muted }]}>Location: {currentBooking.bookingLocation.address}</Text>
+            ) : null}
+          </View>
+
+          <Text style={[styles.receiptEventTitle, { color: colors.text }]}>Selected Services</Text>
+          {receiptItems.map((item: any, index: number) => (
+            <View key={`${item.name}-${index}`} style={[styles.receiptItem, { borderBottomColor: colors.border }]}>
+              <View style={{ flex: 1, marginRight: 10 }}>
+                <Text style={[styles.value, { color: colors.text }]}>{item.name || 'Service'}</Text>
+                <Text style={[styles.meta, { color: colors.muted }]}>
+                  Qty {item.quantity || 1}{item.category ? ` - ${item.category}` : ''}
+                </Text>
+              </View>
+              <Text style={[styles.value, { color: colors.text }]}>{formatCurrency(item.amount || item.unitPrice || 0)}</Text>
+            </View>
+          ))}
+
+          <View style={styles.receiptTotals}>
+            <View style={styles.priceRow}>
+              <Text style={[styles.label, { color: colors.muted }]}>Subtotal</Text>
+              <Text style={[styles.value, { color: colors.text }]}>{formatCurrency(receiptAmounts.subtotal || 0)}</Text>
+            </View>
+            <View style={styles.priceRow}>
+              <Text style={[styles.label, { color: colors.muted }]}>Service & Delivery Fee</Text>
+              <Text style={[styles.value, { color: colors.text }]}>{formatCurrency(receiptAmounts.serviceAndDeliveryFee || 0)}</Text>
+            </View>
+            {receiptAmounts.discount > 0 ? (
+              <View style={styles.priceRow}>
+                <Text style={[styles.label, { color: colors.muted }]}>Discount</Text>
+                <Text style={[styles.value, { color: '#16a34a' }]}>-{formatCurrency(receiptAmounts.discount)}</Text>
+              </View>
+            ) : null}
+            <View style={[styles.totalRow, { borderTopColor: colors.border, marginBottom: 6 }]}>
+              <Text style={[styles.totalLabel, { color: colors.text }]}>Total</Text>
+              <Text style={[styles.totalValue, { color: colors.primary }]}>{formatCurrency(receiptAmounts.totalAmount || totalAmount)}</Text>
+            </View>
+            <View style={styles.priceRow}>
+              <Text style={[styles.label, { color: colors.muted }]}>Paid</Text>
+              <Text style={[styles.value, { color: '#16a34a' }]}>{formatCurrency(receiptAmounts.amountPaid || 0)}</Text>
+            </View>
+            <View style={styles.priceRow}>
+              <Text style={[styles.label, { color: colors.muted }]}>Balance</Text>
+              <Text style={[styles.value, { color: Math.max(0, (receiptAmounts.totalAmount || totalAmount) - (receiptAmounts.amountPaid || 0)) > 0 ? colors.danger : '#16a34a' }]}>
+                {formatCurrency(Math.max(0, (receiptAmounts.totalAmount || totalAmount) - (receiptAmounts.amountPaid || 0)))}
+              </Text>
+            </View>
+          </View>
+        </View>
+
         {/* Party Information */}
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Party Information</Text>
@@ -669,6 +765,11 @@ const styles = StyleSheet.create({
   totalLabel: { fontSize: 16, fontWeight: '800' },
   totalValue: { fontSize: 16, fontWeight: '800' },
   paymentStatusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, paddingTop: 12 },
+  receiptHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
+  receiptEventBox: { borderRadius: 14, padding: 12, marginBottom: 14 },
+  receiptEventTitle: { fontSize: 13, fontWeight: '800', marginBottom: 8 },
+  receiptItem: { flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 10, marginBottom: 10, borderBottomWidth: 1 },
+  receiptTotals: { marginTop: 2 },
   pill: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   pillText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.6, textTransform: 'capitalize' },
   contactRow: { flexDirection: 'row', gap: 10, marginTop: 4 },

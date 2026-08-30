@@ -4,13 +4,13 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, Modal, StyleSheet, ActivityIndicator, TextInput, Alert, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, Modal, StyleSheet, ActivityIndicator, TextInput, Alert, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../context/authStore.js';
 import Button from '../../components/Button.jsx';
 import { useTheme } from '../../context/ThemeContext';
-import { messageAPI } from '../../services/api.js';
+import { messageAPI, supportAPI } from '../../services/api.js';
 import { useResponsive } from '../../utils/responsive';
 
 type ProfileScreenProps = {
@@ -37,17 +37,40 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const handleContactSupport = async () => {
     setContactingSupport(true);
     try {
-      const res = await messageAPI.getAdminContacts();
-      const admin = res.admins?.[0];
-      if (!admin) {
-        Alert.alert('Unavailable', 'No support agents are available right now.');
+      const [settingsRes, adminsRes] = await Promise.all([
+        supportAPI.getContact().catch(() => ({ supportContact: null })),
+        messageAPI.getAdminContacts().catch(() => ({ admins: [] })),
+      ]);
+      const supportContact = settingsRes.supportContact || {};
+      const admin = adminsRes.admins?.[0];
+      const buttons = [];
+
+      if (supportContact.phoneNumber) {
+        buttons.push({ text: 'Call', onPress: () => Linking.openURL(`tel:${supportContact.phoneNumber}`) });
+      }
+      if (supportContact.whatsappUrl) {
+        buttons.push({ text: 'WhatsApp', onPress: () => Linking.openURL(supportContact.whatsappUrl) });
+      }
+      if (admin) {
+        buttons.push({
+          text: 'Chat',
+          onPress: () => navigation.navigate('Chat', {
+            receiverId: String(admin._id),
+            receiverName: admin.businessName || `${admin.firstName || ''} ${admin.lastName || ''}`.trim() || 'Support',
+            receiverRole: admin.role || 'admin',
+          }),
+        });
+      }
+
+      if (!buttons.length) {
+        Alert.alert('Unavailable', 'Support contact details are not available right now.');
         return;
       }
-      navigation.navigate('Chat', {
-        receiverId: String(admin._id),
-        receiverName: admin.businessName || `${admin.firstName || ''} ${admin.lastName || ''}`.trim() || 'Support',
-        receiverRole: admin.role || 'admin',
-      });
+
+      Alert.alert('Contact Support', 'Choose how you want to reach support.', [
+        ...buttons,
+        { text: 'Cancel', style: 'cancel' },
+      ]);
     } catch {
       Alert.alert('Error', 'Could not connect to support. Please try again.');
     } finally {
@@ -81,7 +104,6 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     { icon: 'message-text', label: 'Messages', onPress: () => navigation.navigate('Conversations'), color: '#0ea5e9' },
     { icon: 'headset', label: 'Contact Support', onPress: handleContactSupport, color: '#f59e0b' },
     { icon: 'bell', label: 'Notifications', onPress: () => navigation.navigate('Notifications'), color: '#ec4899' },
-    { icon: 'help-circle', label: 'Help & Support', onPress: () => navigation.navigate('HelpSupport'), color: '#f59e0b' },
     ...(user?.role === 'service_provider' ? [{ icon: 'briefcase-plus', label: 'Manage Services', onPress: () => navigation.navigate('ProviderServices'), color: '#16a34a' }] : []),
     { icon: 'information', label: 'About', onPress: () => navigation.navigate('About'), color: '#0ea5e9' },
   ];

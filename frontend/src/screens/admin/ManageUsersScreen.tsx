@@ -10,6 +10,7 @@ import { adminAPI } from '../../services/api.js';
 import Loading from '../../components/Loading.jsx';
 import { useTheme } from '../../context/ThemeContext';
 import { getColors, adminStyles, appFont as font } from '../../styles/adminStyles';
+import { goBackToAdminDashboard } from '../../utils/adminNavigation';
 import { formatDate } from '../../utils/helpers.js';
 
 const ROLES = [
@@ -205,7 +206,7 @@ export default function ManageUsersScreen() {
     <SafeAreaView style={[adminStyles.screen, { backgroundColor: c.bg }]}>
       <Toast visible={toast.visible} type={toast.type} message={toast.message} onHide={() => setToast(t => ({ ...t, visible: false }))} />
       <View style={[adminStyles.header, { backgroundColor: c.surface, borderBottomColor: c.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => goBackToAdminDashboard(navigation)}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={c.text} />
         </TouchableOpacity>
         <Text style={[adminStyles.headerTitle, { color: c.text, fontFamily: font }]}>Manage Users</Text>

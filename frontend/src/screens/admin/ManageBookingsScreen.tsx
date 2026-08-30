@@ -9,6 +9,7 @@ import { BOOKING_STATUS, PAYMENT_STATUS } from '../../utils/constants.js';
 import { formatDate, formatDateTime, formatCurrency, getStatusColor } from '../../utils/helpers.js';
 import { useTheme } from '../../context/ThemeContext';
 import adminStyles, { getColors, appFont } from '../../styles/adminStyles.js';
+import { goBackToAdminDashboard } from '../../utils/adminNavigation';
 
 const ManageBookingsScreen = () => {
   const navigation = useNavigation();
@@ -293,7 +294,7 @@ const ManageBookingsScreen = () => {
   return (
     <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
       <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => goBackToAdminDashboard(navigation)}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />
         </TouchableOpacity>
         <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>Manage Bookings</Text>

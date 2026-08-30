@@ -7,6 +7,7 @@ import Loading from '../../components/Loading.jsx';
 import { formatCurrency, formatDateTime } from '../../utils/helpers.js';
 import { useTheme } from '../../context/ThemeContext';
 import adminStyles, { getColors, appFont } from '../../styles/adminStyles.js';
+import { goBackToAdminDashboard } from '../../utils/adminNavigation';
 
 export default function RefundApprovalScreen() {
   const navigation = useNavigation();
@@ -90,7 +91,7 @@ export default function RefundApprovalScreen() {
   return (
     <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
       <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => goBackToAdminDashboard(navigation)}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />
         </TouchableOpacity>
         <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>Refund Approval</Text>

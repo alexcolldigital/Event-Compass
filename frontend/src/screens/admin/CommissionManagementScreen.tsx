@@ -7,6 +7,7 @@ import Loading from '../../components/Loading.jsx';
 import { formatCurrency } from '../../utils/helpers.js';
 import { useTheme } from '../../context/ThemeContext';
 import adminStyles, { getColors, appFont } from '../../styles/adminStyles.js';
+import { goBackToAdminDashboard } from '../../utils/adminNavigation';
 import Toast, { ToastType } from '../../components/Toast';
 
 export default function CommissionManagementScreen() {
@@ -77,7 +78,7 @@ export default function CommissionManagementScreen() {
     <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
       <Toast visible={toast.visible} type={toast.type} message={toast.message} onHide={() => setToast(t => ({ ...t, visible: false }))} />
       <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => goBackToAdminDashboard(navigation)}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />
         </TouchableOpacity>
         <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>Commission Management</Text>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, SafeAreaView, ScrollView, TouchableOpacity,
   TextInput, Alert, Linking, StyleSheet,
@@ -6,7 +6,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import Button from '../../components/Button.jsx';
-import apiClient from '../../services/api.js';
+import apiClient, { supportAPI } from '../../services/api.js';
 
 const FAQS = [
   { q: 'How do I book a service?', a: 'Browse services, add them to your cart, fill in event details, and proceed to checkout. Payment is processed securely via Paystack.' },
@@ -33,6 +33,13 @@ export default function HelpSupportScreen({ navigation }: { navigation: any }) {
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [supportContact, setSupportContact] = useState({ phoneNumber: '', whatsappUrl: '' });
+
+  useEffect(() => {
+    supportAPI.getContact()
+      .then((res) => setSupportContact({ phoneNumber: '', whatsappUrl: '', ...(res.supportContact || {}) }))
+      .catch(() => {});
+  }, []);
 
   const handleSend = async () => {
     if (!subject.trim() || !message.trim()) {
@@ -69,8 +76,8 @@ export default function HelpSupportScreen({ navigation }: { navigation: any }) {
         <View style={styles.contactRow}>
           {[
             { icon: 'email-outline', label: 'Email Us', action: () => Linking.openURL('mailto:support@eventcompass.com') },
-            { icon: 'whatsapp', label: 'WhatsApp', action: () => Linking.openURL('https://wa.me/2348000000000') },
-            { icon: 'web', label: 'Website', action: () => Linking.openURL('https://eventcompass.com') },
+            ...(supportContact.phoneNumber ? [{ icon: 'phone', label: 'Call', action: () => Linking.openURL(`tel:${supportContact.phoneNumber}`) }] : []),
+            ...(supportContact.whatsappUrl ? [{ icon: 'whatsapp', label: 'WhatsApp', action: () => Linking.openURL(supportContact.whatsappUrl) }] : []),
           ].map((c) => (
             <TouchableOpacity key={c.label} onPress={c.action} style={[styles.contactChip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <MaterialCommunityIcons name={c.icon as any} size={22} color={colors.primary} />

@@ -7,10 +7,12 @@ import Loading from '../../components/Loading.jsx';
 import { formatDateTime } from '../../utils/helpers.js';
 import { useTheme } from '../../context/ThemeContext';
 import adminStyles, { getColors, appFont } from '../../styles/adminStyles.js';
+import { goBackToAdminDashboard } from '../../utils/adminNavigation';
 
 const CHANNELS = ['in_app', 'email', 'push', 'all'];
 const ROLES = ['all', 'client', 'service_provider', 'admin'];
 const EMPTY_FORM = { title: '', message: '', type: 'broadcast', targetRole: 'all', channel: 'in_app' };
+const EMPTY_SUPPORT_FORM = { phoneNumber: '', whatsappUrl: '' };
 const STATUS_COLORS = { sent: '#10b981', draft: '#f59e0b', scheduled: '#3b82f6' };
 
 export default function NotificationManagementScreen() {
@@ -23,9 +25,14 @@ export default function NotificationManagementScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [supportForm, setSupportForm] = useState(EMPTY_SUPPORT_FORM);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingSupport, setIsSavingSupport] = useState(false);
 
-  useEffect(() => { loadNotifications(); }, []);
+  useEffect(() => {
+    loadNotifications();
+    loadSupportContact();
+  }, []);
 
   const loadNotifications = async () => {
     setIsLoading(true);
@@ -34,6 +41,26 @@ export default function NotificationManagementScreen() {
       setNotifications(res.notifications || []);
     } catch (_) {}
     finally { setIsLoading(false); }
+  };
+
+  const loadSupportContact = async () => {
+    try {
+      const res = await adminAPI.getSupportContactSettings();
+      setSupportForm({ ...EMPTY_SUPPORT_FORM, ...(res.supportContact || {}) });
+    } catch (_) {}
+  };
+
+  const handleSaveSupportContact = async () => {
+    setIsSavingSupport(true);
+    try {
+      const res = await adminAPI.updateSupportContactSettings(supportForm);
+      setSupportForm({ ...EMPTY_SUPPORT_FORM, ...(res.supportContact || {}) });
+      Alert.alert('Saved', 'Support contact details updated successfully.');
+    } catch (e) {
+      Alert.alert('Error', e.message || 'Unable to update support contact details');
+    } finally {
+      setIsSavingSupport(false);
+    }
   };
 
   const handleCreate = async () => {
@@ -74,7 +101,7 @@ export default function NotificationManagementScreen() {
   return (
     <SafeAreaView style={[adminStyles.screen, { backgroundColor: C.bg }]}>
       <View style={[adminStyles.header, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => goBackToAdminDashboard(navigation)}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={C.text} />
         </TouchableOpacity>
         <Text style={[adminStyles.headerTitle, { color: C.text, fontFamily: appFont }]}>Notification Management</Text>
@@ -90,6 +117,15 @@ export default function NotificationManagementScreen() {
           renderItem={({ item }) => <NotifCard item={item} C={C} isDark={isDark} onSend={handleSend} onDelete={handleDelete} />}
           contentContainerStyle={{ padding: 16, paddingBottom: 96 }}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <SupportContactCard
+              form={supportForm}
+              setForm={setSupportForm}
+              onSave={handleSaveSupportContact}
+              isSaving={isSavingSupport}
+              C={C}
+            />
+          }
           ListEmptyComponent={
             <View style={adminStyles.emptyState}>
               <MaterialCommunityIcons name="bell-off-outline" size={48} color={C.muted} />
@@ -128,6 +164,51 @@ export default function NotificationManagementScreen() {
         </View>
       </Modal>
     </SafeAreaView>
+  );
+}
+
+function SupportContactCard({ form, setForm, onSave, isSaving, C }) {
+  return (
+    <View style={[adminStyles.card, { backgroundColor: C.surface, borderColor: C.border, marginBottom: 16 }]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+        <View style={{ width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: `${C.primary}18`, marginRight: 10 }}>
+          <MaterialCommunityIcons name="headset" size={20} color={C.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[adminStyles.sectionTitle, { color: C.text, fontFamily: appFont, marginBottom: 2 }]}>Support Contact</Text>
+          <Text style={{ color: C.muted, fontSize: 12, fontFamily: appFont }}>Used by the Contact Support button in user profiles.</Text>
+        </View>
+      </View>
+
+      <View style={adminStyles.formField}>
+        <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>Phone Number</Text>
+        <TextInput
+          style={[adminStyles.formInput, { color: C.text, borderColor: C.inputBorder, backgroundColor: C.surfaceAlt, fontFamily: appFont }]}
+          value={form.phoneNumber}
+          onChangeText={(phoneNumber) => setForm((f) => ({ ...f, phoneNumber }))}
+          placeholder="+2348000000000"
+          placeholderTextColor={C.muted}
+          keyboardType="phone-pad"
+        />
+      </View>
+
+      <View style={adminStyles.formField}>
+        <Text style={[adminStyles.formLabel, { color: C.text, fontFamily: appFont }]}>WhatsApp Link</Text>
+        <TextInput
+          style={[adminStyles.formInput, { color: C.text, borderColor: C.inputBorder, backgroundColor: C.surfaceAlt, fontFamily: appFont }]}
+          value={form.whatsappUrl}
+          onChangeText={(whatsappUrl) => setForm((f) => ({ ...f, whatsappUrl }))}
+          placeholder="https://wa.me/2348000000000"
+          placeholderTextColor={C.muted}
+          autoCapitalize="none"
+          keyboardType="url"
+        />
+      </View>
+
+      <TouchableOpacity style={[adminStyles.modalBtn, { backgroundColor: C.primary, marginTop: 2 }]} onPress={onSave} disabled={isSaving}>
+        <Text style={[adminStyles.modalBtnText, { color: '#fff', fontFamily: appFont }]}>{isSaving ? 'Saving...' : 'Save Support Contact'}</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 

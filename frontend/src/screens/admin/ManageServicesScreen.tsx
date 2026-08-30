@@ -30,6 +30,7 @@ import Toast, { ToastType } from '../../components/Toast';
 import { adminAPI } from '../../services/api.js';
 import { COLORS, USER_ROLES, SERVICE_PROVIDER_TYPES } from '../../utils/constants.js';
 import { formatDate } from '../../utils/helpers.js';
+import { goBackToAdminDashboard } from '../../utils/adminNavigation';
 
 // Same category order as HomeScreen featureCategories
 const APP_CATEGORY_ORDER = [
@@ -237,8 +238,10 @@ const ManageServicesScreen = () => {
   const [showFilters, setShowFilters] = useState(true);
   const [expandedServiceId, setExpandedServiceId] = useState<string | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: '',
     description: '',
@@ -271,6 +274,7 @@ const ManageServicesScreen = () => {
   });
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [pendingImages, setPendingImages] = useState<{ uri: string; name: string; type: string }[]>([]);
   const [toast, setToast] = useState<{ visible: boolean; type: ToastType; message: string }>({ visible: false, type: 'success', message: '' });
 
@@ -392,6 +396,38 @@ const ManageServicesScreen = () => {
         },
       ]
     );
+  };
+
+  const handleOpenDeleteModal = (service: Service) => {
+    setServiceToDelete(service);
+    setShowDeleteModal(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    if (isDeleting) return;
+    setShowDeleteModal(false);
+    setServiceToDelete(null);
+  };
+
+  const handleConfirmDeleteService = async () => {
+    if (!serviceToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await adminAPI.deleteService(serviceToDelete._id);
+      setServices((prev) => prev.filter((s) => s._id !== serviceToDelete._id));
+      setExpandedServiceId((current) => (current === serviceToDelete._id ? null : current));
+      setShowDeleteModal(false);
+      setServiceToDelete(null);
+      showToast('success', response?.message || 'Service deleted successfully');
+    } catch (err) {
+      const error = err as ApiError;
+      const errorMsg = error.message || 'Failed to delete service';
+      showToast('error', errorMsg);
+      Alert.alert('Delete Failed', errorMsg);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const pickImages = async () => {
@@ -604,13 +640,13 @@ const ManageServicesScreen = () => {
     const iconColor = CATEGORY_COLORS[categoryKey] || CATEGORY_COLORS[Object.keys(CATEGORY_COLORS).find(k => k.toLowerCase() === categoryKey.toLowerCase()) || ''] || '#16a34a';
 
     return (
-      <TouchableOpacity
-        onPress={() => setExpandedServiceId(expandedServiceId === service._id ? null : service._id)}
-        style={styles.serviceCard}
-        activeOpacity={0.85}
-      >
+      <View style={styles.serviceCard}>
         {/* Image / Icon header — matches app MarketplaceCard */}
-        <View style={styles.cardImageContainer}>
+        <TouchableOpacity
+          onPress={() => setExpandedServiceId(expandedServiceId === service._id ? null : service._id)}
+          style={styles.cardImageContainer}
+          activeOpacity={0.85}
+        >
           {imageUrl ? (
             <Image source={{ uri: imageUrl }} style={styles.cardImage} resizeMode="cover" />
           ) : (
@@ -628,10 +664,14 @@ const ManageServicesScreen = () => {
               <Text style={styles.featuredText}>Featured</Text>
             </View>
           )}
-        </View>
+        </TouchableOpacity>
 
         <View style={styles.cardBody}>
-          <View style={styles.cardHeader}>
+          <TouchableOpacity
+            onPress={() => setExpandedServiceId(expandedServiceId === service._id ? null : service._id)}
+            style={styles.cardHeader}
+            activeOpacity={0.85}
+          >
             <View style={styles.cardContent}>
               <View style={styles.nameRow}>
                 <Text style={styles.serviceName} numberOfLines={1}>{service.name}</Text>
@@ -660,7 +700,7 @@ const ManageServicesScreen = () => {
               color="#d1d5db"
               style={{ alignSelf: 'flex-start', marginTop: 2 }}
             />
-          </View>
+          </TouchableOpacity>
 
         {expandedServiceId === service._id && (
           <View style={styles.additionalInfo}>
@@ -718,7 +758,7 @@ const ManageServicesScreen = () => {
 
               <TouchableOpacity
                 style={[styles.actionButton, styles.deleteAction]}
-                onPress={() => handleDeleteService(service)}
+                onPress={() => handleOpenDeleteModal(service)}
               >
                 <Text style={styles.deleteActionText}>Delete</Text>
               </TouchableOpacity>
@@ -726,7 +766,7 @@ const ManageServicesScreen = () => {
           </View>
         )}
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -831,7 +871,7 @@ const ManageServicesScreen = () => {
         onHide={() => setToast((t) => ({ ...t, visible: false }))}
       />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => goBackToAdminDashboard(navigation)}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.dark} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Manage Services</Text>
@@ -845,6 +885,40 @@ const ManageServicesScreen = () => {
           <ErrorMessage error={error} />
         </View>
       )}
+
+      <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={handleCloseDeleteModal}>
+        <View style={styles.deleteModalOverlay}>
+          <View style={styles.deleteModalCard}>
+            <View style={styles.deleteModalIcon}>
+              <MaterialCommunityIcons name="trash-can-outline" size={30} color="#b91c1c" />
+            </View>
+            <Text style={styles.deleteModalTitle}>Delete Service</Text>
+            <Text style={styles.deleteModalMessage}>
+              Are you sure you want to delete "{serviceToDelete?.name || 'this service'}"? This action cannot be undone.
+            </Text>
+            <View style={styles.deleteModalActions}>
+              <TouchableOpacity
+                style={[styles.deleteModalButton, styles.deleteCancelButton, isDeleting && styles.disabledAction]}
+                onPress={handleCloseDeleteModal}
+                disabled={isDeleting}
+              >
+                <Text style={styles.deleteCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.deleteModalButton, styles.deleteConfirmButton, isDeleting && styles.disabledAction]}
+                onPress={handleConfirmDeleteService}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.deleteConfirmText}>Delete</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <View style={styles.filterContainer}>
         <View style={styles.filterHeader}>
@@ -1800,6 +1874,76 @@ const styles = StyleSheet.create({
   },
   deleteActionText: {
     color: '#b91c1c',
+  },
+  deleteModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  deleteModalCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+  },
+  deleteModalIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#fee2e2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  deleteModalTitle: {
+    color: '#1f2937',
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  deleteModalMessage: {
+    color: '#6b7280',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  deleteModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+    width: '100%',
+  },
+  deleteModalButton: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteCancelButton: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    backgroundColor: 'white',
+  },
+  deleteConfirmButton: {
+    backgroundColor: '#dc2626',
+  },
+  deleteCancelText: {
+    color: '#374151',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  deleteConfirmText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  disabledAction: {
+    opacity: 0.6,
   },
   formField: {
     marginBottom: 12,
