@@ -62,6 +62,7 @@ export default function ResetPasswordScreen({ navigation, route }: { navigation:
             secureTextEntry
             icon="lock"
             error={errors.newPassword}
+            returnKeyType="next"
           />
           <Input
             label="Confirm Password"
@@ -71,6 +72,8 @@ export default function ResetPasswordScreen({ navigation, route }: { navigation:
             secureTextEntry
             icon="lock-check"
             error={errors.confirmPassword}
+            onSubmitEditing={handleSubmit}
+            returnKeyType="go"
           />
         </View>
 

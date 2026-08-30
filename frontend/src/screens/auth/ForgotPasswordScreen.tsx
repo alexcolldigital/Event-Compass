@@ -62,6 +62,8 @@ export default function ForgotPasswordScreen() {
               keyboardType="default"
               icon="account"
               error={errors.identifier}
+              onSubmitEditing={handleSubmit}
+              returnKeyType="send"
             />
           </View>
 

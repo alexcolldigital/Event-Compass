@@ -62,6 +62,9 @@ const PhoneCountryInput = ({
   onCountryChange,
   placeholder,
   error,
+  onSubmitEditing,
+  returnKeyType = 'done',
+  blurOnSubmit = true,
 }) => {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const countryOptions = useMemo(() => COUNTRY_PHONE_OPTIONS, []);
@@ -84,6 +87,9 @@ const PhoneCountryInput = ({
           placeholderTextColor="#94a3b8"
           keyboardType="phone-pad"
           style={styles.input}
+          onSubmitEditing={onSubmitEditing}
+          returnKeyType={returnKeyType}
+          blurOnSubmit={blurOnSubmit}
         />
       </View>
 

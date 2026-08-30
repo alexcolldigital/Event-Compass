@@ -113,6 +113,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
                   onChangeText={(text) => updateField('firstName', text)}
                   icon="account"
                   error={errors.firstName}
+                  returnKeyType="next"
                 />
               </View>
               <View style={authStyles.flex}>
@@ -123,6 +124,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
                   onChangeText={(text) => updateField('lastName', text)}
                   icon="account"
                   error={errors.lastName}
+                  returnKeyType="next"
                 />
               </View>
             </View>
@@ -134,6 +136,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
               keyboardType="email-address"
               icon="email"
               error={errors.email}
+              returnKeyType="next"
             />
             <PhoneCountryInput
               label="Phone Number"
@@ -143,6 +146,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
               selectedCountry={selectedCountry}
               onCountryChange={handleCountryChange}
               error={errors.phoneNumber}
+              returnKeyType="next"
             />
             <Input
               label="Password"
@@ -153,6 +157,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
               icon="lock"
               error={errors.password}
               helperText="Use uppercase, lowercase and numbers for security"
+              returnKeyType="next"
             />
             <Input
               label="Confirm Password"
@@ -162,6 +167,8 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
               secureTextEntry
               icon="lock-check"
               error={errors.passwordConfirm}
+              onSubmitEditing={handleRegister}
+              returnKeyType="go"
             />
           </View>
 

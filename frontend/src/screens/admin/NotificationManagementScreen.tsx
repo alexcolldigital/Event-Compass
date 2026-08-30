@@ -189,6 +189,7 @@ function SupportContactCard({ form, setForm, onSave, isSaving, C }) {
           placeholder="+2348000000000"
           placeholderTextColor={C.muted}
           keyboardType="phone-pad"
+          returnKeyType="next"
         />
       </View>
 
@@ -202,6 +203,9 @@ function SupportContactCard({ form, setForm, onSave, isSaving, C }) {
           placeholderTextColor={C.muted}
           autoCapitalize="none"
           keyboardType="url"
+          onSubmitEditing={onSave}
+          returnKeyType="save"
+          blurOnSubmit
         />
       </View>
 

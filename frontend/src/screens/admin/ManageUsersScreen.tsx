@@ -30,6 +30,7 @@ export default function ManageUsersScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
   const [expanded, setExpanded] = useState(null);
 
   // Role picker modal state
@@ -117,6 +118,16 @@ export default function ManageUsersScreen() {
     { label: 'Admins', value: 'admin' },
   ];
 
+  const roleBg = (role) => isDark ? `${role.color}24` : role.bg;
+  const successBg = isDark ? 'rgba(22, 163, 74, 0.22)' : '#dcfce7';
+  const dangerBg = isDark ? 'rgba(220, 38, 38, 0.22)' : '#fee2e2';
+  const infoBg = isDark ? 'rgba(37, 99, 235, 0.22)' : '#eff6ff';
+  const accentBg = isDark ? 'rgba(124, 58, 237, 0.22)' : '#f5f3ff';
+  const successText = isDark ? '#86efac' : '#15803d';
+  const dangerText = isDark ? '#fca5a5' : '#dc2626';
+  const infoText = isDark ? '#93c5fd' : '#2563eb';
+  const accentText = isDark ? '#c4b5fd' : '#7c3aed';
+
   const UserCard = ({ item }) => {
     const open = expanded === item._id;
     const isProvider = item.role === 'service_provider';
@@ -141,14 +152,14 @@ export default function ManageUsersScreen() {
               : null}
           </View>
           <View style={{ alignItems: 'flex-end', gap: 4 }}>
-            <View style={[adminStyles.badge, { backgroundColor: item.isBlocked ? '#fee2e2' : '#dcfce7' }]}>
-              <Text style={[adminStyles.badgeText, { color: item.isBlocked ? '#dc2626' : '#15803d', fontFamily: font }]}>
+            <View style={[adminStyles.badge, { backgroundColor: item.isBlocked ? dangerBg : successBg }]}>
+              <Text style={[adminStyles.badgeText, { color: item.isBlocked ? dangerText : successText, fontFamily: font }]}>
                 {item.isBlocked ? 'Blocked' : 'Active'}
               </Text>
             </View>
             {roleInfo && (
-              <View style={[adminStyles.badge, { backgroundColor: roleInfo.bg }]}>
-                <Text style={[adminStyles.badgeText, { color: roleInfo.color, fontFamily: font }]}>{roleInfo.label}</Text>
+              <View style={[adminStyles.badge, { backgroundColor: roleBg(roleInfo) }]}>
+                <Text style={[adminStyles.badgeText, { color: isDark ? accentText : roleInfo.color, fontFamily: font }]}>{roleInfo.label}</Text>
               </View>
             )}
           </View>
@@ -169,29 +180,29 @@ export default function ManageUsersScreen() {
               </View>
             ))}
             {item.isBlocked && item.blockReason ? (
-              <View style={[s.reasonBox, { backgroundColor: '#fee2e2' }]}>
-                <Text style={{ color: '#dc2626', fontSize: 12, fontFamily: font }}>Reason: {item.blockReason}</Text>
+              <View style={[s.reasonBox, { backgroundColor: dangerBg }]}>
+                <Text style={{ color: dangerText, fontSize: 12, fontFamily: font }}>Reason: {item.blockReason}</Text>
               </View>
             ) : null}
             <View style={adminStyles.actionRow}>
               {isProvider && !(item.isBusinessVerified) && (
-                <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: '#eff6ff' }]} onPress={() => handleVerify(item)}>
-                  <Text style={[adminStyles.actionBtnText, { color: '#2563eb', fontFamily: font }]}>Verify</Text>
+                <TouchableOpacity style={[adminStyles.actionBtn, { backgroundColor: infoBg }]} onPress={() => handleVerify(item)}>
+                  <Text style={[adminStyles.actionBtnText, { color: infoText, fontFamily: font }]}>Verify</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
-                style={[adminStyles.actionBtn, { backgroundColor: item.isBlocked ? '#dcfce7' : '#fee2e2' }]}
+                style={[adminStyles.actionBtn, { backgroundColor: item.isBlocked ? successBg : dangerBg }]}
                 onPress={() => handleBlock(item)}
               >
-                <Text style={[adminStyles.actionBtnText, { color: item.isBlocked ? '#15803d' : '#dc2626', fontFamily: font }]}>
+                <Text style={[adminStyles.actionBtnText, { color: item.isBlocked ? successText : dangerText, fontFamily: font }]}>
                   {item.isBlocked ? 'Unblock' : 'Block'}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[adminStyles.actionBtn, { backgroundColor: '#f5f3ff' }]}
+                style={[adminStyles.actionBtn, { backgroundColor: accentBg }]}
                 onPress={() => setRoleModalUser(item)}
               >
-                <Text style={[adminStyles.actionBtnText, { color: '#7c3aed', fontFamily: font }]}>Assign Role</Text>
+                <Text style={[adminStyles.actionBtnText, { color: accentText, fontFamily: font }]}>Assign Role</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -212,46 +223,65 @@ export default function ManageUsersScreen() {
         <Text style={[adminStyles.headerTitle, { color: c.text, fontFamily: font }]}>Manage Users</Text>
       </View>
 
-      <View style={[adminStyles.statsRow, { paddingHorizontal: 16, marginTop: 12 }]}>
+      <View style={s.summaryRow}>
         {[
-          { label: 'Total', value: users.length, bg: '#eff6ff', color: '#2563eb' },
-          { label: 'Active', value: users.filter(u => !u.isBlocked).length, bg: '#f0fdf4', color: '#15803d' },
-          { label: 'Blocked', value: users.filter(u => u.isBlocked).length, bg: '#fff1f2', color: '#dc2626' },
+          { label: 'Total', value: users.length, bg: infoBg, color: infoText },
+          { label: 'Active', value: users.filter(u => !u.isBlocked).length, bg: successBg, color: successText },
+          { label: 'Blocked', value: users.filter(u => u.isBlocked).length, bg: dangerBg, color: dangerText },
         ].map(st => (
-          <View key={st.label} style={[adminStyles.statCard, { backgroundColor: st.bg, borderColor: st.color + '30' }]}>
-            <Text style={[adminStyles.statLabel, { color: st.color, fontFamily: font }]}>{st.label}</Text>
-            <Text style={[adminStyles.statValue, { color: st.color, fontFamily: font }]}>{st.value}</Text>
+          <View key={st.label} style={[s.summaryCard, { backgroundColor: st.bg, borderColor: st.color + '30' }]}>
+            <Text style={[s.summaryValue, { color: st.color, fontFamily: font }]}>{st.value}</Text>
+            <Text style={[s.summaryLabel, { color: st.color, fontFamily: font }]}>{st.label}</Text>
           </View>
         ))}
       </View>
 
-      <View style={[adminStyles.searchBar, { backgroundColor: c.surface, borderColor: c.inputBorder }]}>
-        <MaterialCommunityIcons name="magnify" size={20} color={c.muted} />
-        <TextInput
-          style={[adminStyles.searchInput, { color: c.text, fontFamily: font }]}
-          placeholder="Search name, email..."
-          placeholderTextColor={c.muted}
-          value={search}
-          onChangeText={setSearch}
-        />
-        {search ? <TouchableOpacity onPress={() => setSearch('')}><MaterialCommunityIcons name="close-circle" size={18} color={c.muted} /></TouchableOpacity> : null}
+      <View style={s.controlsWrap}>
+        <View style={[s.searchBar, { backgroundColor: c.surface, borderColor: c.inputBorder }]}>
+          <MaterialCommunityIcons name="magnify" size={20} color={c.muted} />
+          <TextInput
+            style={[s.searchInput, { color: c.text, fontFamily: font }]}
+            placeholder="Search name, email..."
+            placeholderTextColor={c.muted}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+          />
+          {search ? <TouchableOpacity onPress={() => setSearch('')}><MaterialCommunityIcons name="close-circle" size={18} color={c.muted} /></TouchableOpacity> : null}
+        </View>
+        <TouchableOpacity
+          onPress={() => setShowFilters((value) => !value)}
+          style={[s.filterToggle, { backgroundColor: showFilters || roleFilter !== 'all' ? c.primary : c.surface, borderColor: showFilters || roleFilter !== 'all' ? c.primary : c.inputBorder }]}
+          activeOpacity={0.85}
+        >
+          <MaterialCommunityIcons name="filter-variant" size={18} color={showFilters || roleFilter !== 'all' ? '#fff' : c.muted} />
+          {roleFilter !== 'all' ? <View style={s.filterDot} /> : null}
+        </TouchableOpacity>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[{ backgroundColor: c.surface, borderBottomWidth: 1, borderBottomColor: c.border }]} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}>
-        {ROLE_FILTERS.map(r => (
-          <TouchableOpacity
-            key={r.value}
-            style={[adminStyles.chip, { backgroundColor: roleFilter === r.value ? c.primary : 'transparent', borderColor: roleFilter === r.value ? c.primary : c.inputBorder }]}
-            onPress={() => setRoleFilter(r.value)}
-          >
-            <Text style={[adminStyles.chipText, { color: roleFilter === r.value ? '#fff' : c.muted, fontFamily: font }]}>{r.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      {showFilters ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={[s.filterStrip, { backgroundColor: c.surface, borderColor: c.border }]}
+          contentContainerStyle={s.filterContent}
+        >
+          {ROLE_FILTERS.map(r => (
+            <TouchableOpacity
+              key={r.value}
+              style={[adminStyles.chip, { backgroundColor: roleFilter === r.value ? c.primary : 'transparent', borderColor: roleFilter === r.value ? c.primary : c.inputBorder }]}
+              onPress={() => setRoleFilter(r.value)}
+            >
+              <Text style={[adminStyles.chipText, { color: roleFilter === r.value ? '#fff' : c.muted, fontFamily: font }]}>{r.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      ) : null}
 
       <FlatList
         data={filtered}
         keyExtractor={i => i._id}
+        style={s.userList}
         contentContainerStyle={{ padding: 16, paddingBottom: 96 }}
         renderItem={({ item }) => <UserCard item={item} />}
         ListEmptyComponent={
@@ -287,17 +317,17 @@ export default function ManageUsersScreen() {
               return (
                 <TouchableOpacity
                   key={r.value}
-                  style={[s.roleOption, { backgroundColor: isCurrent ? r.bg : 'transparent', opacity: roleLoading ? 0.5 : 1 }]}
+                  style={[s.roleOption, { backgroundColor: isCurrent ? roleBg(r) : 'transparent', opacity: roleLoading ? 0.5 : 1 }]}
                   onPress={() => !roleLoading && handleAssignRole(r.value)}
                   disabled={roleLoading}
                   activeOpacity={0.75}
                 >
-                  <View style={[s.roleIconWrap, { backgroundColor: r.bg }]}>
-                    <MaterialCommunityIcons name={r.icon as any} size={20} color={r.color} />
+                  <View style={[s.roleIconWrap, { backgroundColor: roleBg(r) }]}>
+                    <MaterialCommunityIcons name={r.icon as any} size={20} color={isDark ? accentText : r.color} />
                   </View>
-                  <Text style={[s.roleOptionLabel, { color: isCurrent ? r.color : c.text, fontFamily: font }]}>{r.label}</Text>
+                  <Text style={[s.roleOptionLabel, { color: isCurrent ? (isDark ? accentText : r.color) : c.text, fontFamily: font }]}>{r.label}</Text>
                   {isCurrent && (
-                    <MaterialCommunityIcons name="check-circle" size={18} color={r.color} />
+                    <MaterialCommunityIcons name="check-circle" size={18} color={isDark ? accentText : r.color} />
                   )}
                 </TouchableOpacity>
               );
@@ -317,6 +347,87 @@ export default function ManageUsersScreen() {
 }
 
 const s = StyleSheet.create({
+  summaryRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 6,
+  },
+  summaryCard: {
+    flex: 1,
+    minHeight: 54,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    lineHeight: 22,
+  },
+  summaryLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 1,
+  },
+  controlsWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  searchBar: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    paddingVertical: 0,
+    minHeight: 38,
+  },
+  filterToggle: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterDot: {
+    position: 'absolute',
+    top: 9,
+    right: 9,
+    width: 7,
+    height: 7,
+    borderRadius: 999,
+    backgroundColor: '#fef3c7',
+  },
+  filterStrip: {
+    maxHeight: 52,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+  },
+  filterContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  userList: {
+    flex: 1,
+  },
   expandedCard: { borderRadius: 16, borderWidth: 1, padding: 14, marginTop: -8, marginBottom: 10 },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
   infoKey: { fontSize: 12, fontWeight: '600' },

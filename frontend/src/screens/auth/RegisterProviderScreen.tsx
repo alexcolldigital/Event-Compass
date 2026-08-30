@@ -132,6 +132,7 @@ export default function RegisterProviderScreen({ navigation }: RegisterProviderS
                   onChangeText={(text: string) => updateField('firstName', text)}
                   icon="account"
                   error={errors.firstName}
+                  returnKeyType="next"
                 />
               </View>
               <View style={authStyles.flex}>
@@ -142,6 +143,7 @@ export default function RegisterProviderScreen({ navigation }: RegisterProviderS
                   onChangeText={(text: string) => updateField('lastName', text)}
                   icon="account"
                   error={errors.lastName}
+                  returnKeyType="next"
                 />
               </View>
             </View>
@@ -153,6 +155,7 @@ export default function RegisterProviderScreen({ navigation }: RegisterProviderS
               keyboardType="email-address"
               icon="email"
               error={errors.email}
+              returnKeyType="next"
             />
             <PhoneCountryInput
               label="Phone Number"
@@ -162,6 +165,7 @@ export default function RegisterProviderScreen({ navigation }: RegisterProviderS
               selectedCountry={selectedCountry}
               onCountryChange={handleCountryChange}
               error={errors.phoneNumber}
+              returnKeyType="next"
             />
           </View>
 
@@ -177,6 +181,7 @@ export default function RegisterProviderScreen({ navigation }: RegisterProviderS
               onChangeText={(text: string) => updateField('businessName', text)}
               icon="store"
               error={errors.businessName}
+              returnKeyType="next"
             />
             <View style={styles.categorySection}>
               <Text style={authStyles.smallLabel}>Business Category</Text>
@@ -240,6 +245,8 @@ export default function RegisterProviderScreen({ navigation }: RegisterProviderS
               icon="text-box-outline"
               multiline
               numberOfLines={4}
+              returnKeyType="default"
+              blurOnSubmit={false}
             />
           </View>
 
@@ -257,6 +264,7 @@ export default function RegisterProviderScreen({ navigation }: RegisterProviderS
               icon="lock"
               error={errors.password}
               helperText="Use uppercase, lowercase and numbers for security"
+              returnKeyType="next"
             />
             <Input
               label="Confirm Password"
@@ -266,6 +274,8 @@ export default function RegisterProviderScreen({ navigation }: RegisterProviderS
               secureTextEntry
               icon="lock-check"
               error={errors.passwordConfirm}
+              onSubmitEditing={handleRegister}
+              returnKeyType="go"
             />
           </View>
 

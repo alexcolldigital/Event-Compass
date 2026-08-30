@@ -83,6 +83,7 @@ return (
               keyboardType="default"
               icon="account"
               error={errors.identifier}
+              returnKeyType="next"
             />
             <Input
               label="Password"
@@ -95,6 +96,8 @@ return (
               secureTextEntry
               icon="lock"
               error={errors.password}
+              onSubmitEditing={handleLogin}
+              returnKeyType="go"
             />
             <TouchableOpacity
               onPress={() => navigation.navigate('ForgotPassword')}

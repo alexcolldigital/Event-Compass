@@ -21,6 +21,19 @@ import { serviceAPI, authAPI } from '../../services/api.js';
 const logo = require('../../../assets/icon.png');
 
 const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
+const TRENDING_SERVICE_POOL_LIMIT = 50;
+const TRENDING_SERVICE_DISPLAY_LIMIT = 10;
+
+const pickRandomServices = (source: any[] = [], limit = TRENDING_SERVICE_DISPLAY_LIMIT) => {
+  const shuffled = [...source];
+
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  return shuffled.slice(0, limit);
+};
 
 const featureCategories = [
   { icon: <MaterialCommunityIcons name="tent" size={24} color="#2f855a" />, title: 'Canopies and Tent', description: 'Canopies, tents & marquees', count: 210, variant: 'primary' },
@@ -57,6 +70,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
   const [platformStats, setPlatformStats] = useState<{ completedBookings: number; verifiedVendors: number; totalClients: number; averageRating: string } | null>(null);
   const [categoryCountMap, setCategoryCountMap] = useState<Record<string, number>>({});
   const [unreadNotifs, setUnreadNotifs] = useState(0);
+  const [trendingServices, setTrendingServices] = useState<any[]>([]);
 
   const colors = {
     bg: isDark ? '#050816' : '#f5f7f2',
@@ -69,7 +83,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
   };
 
   useEffect(() => {
-    getAllServices({ limit: 8 }).catch(() => {});
+    getAllServices({ limit: TRENDING_SERVICE_POOL_LIMIT }).catch(() => {});
     serviceAPI.getPublicStats()
       .then((res: any) => {
         setPlatformStats(res.stats);
@@ -84,6 +98,10 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
       })
       .catch(() => fetchCategoryCountsFallback());
   }, []);
+
+  useEffect(() => {
+    setTrendingServices(pickRandomServices(services));
+  }, [services]);
 
   useEffect(() => {
     if (!user) return;
@@ -157,7 +175,8 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
 
   const handleRefresh = async () => {
     try {
-      await getAllServices({ limit: 8 });
+      const response = await getAllServices({ limit: TRENDING_SERVICE_POOL_LIMIT });
+      setTrendingServices(pickRandomServices(response?.services || []));
     } catch (err) {
       // The store already surfaces the error state.
     }
@@ -306,9 +325,9 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
               <Text style={[styles.linkText, { color: colors.primary }]}>View all</Text>
             </TouchableOpacity>
           </View>
-          {services.length > 0 ? (
+          {trendingServices.length > 0 ? (
             <View style={[styles.marketplaceGrid, numServiceCols > 1 && { flexDirection: 'row', flexWrap: 'wrap', gap: 12 }]}>
-              {services.map((service: any) => (
+              {trendingServices.map((service: any) => (
                 <MarketplaceCard key={service._id} image={service.images?.[0]?.url} images={service.images} title={service.name} subtitle={service.category} rating={service.averageRating || 4.5} reviewCount={service.totalReviews || 0} price={service.pricing?.basePrice || 0} unit={service.unit || 'booking'} category={service.category || service.subCategory} badge={service.availability?.isAvailable === false ? 'Unavailable' : 'Available'} onPress={() => navigation.navigate('ServiceDetail', { serviceId: service._id })} onAddToCart={() => handleAddToCart(service)} style={{ backgroundColor: colors.surface, borderColor: colors.border, ...(numServiceCols > 1 && { width: serviceColW }) }} />
               ))}
             </View>

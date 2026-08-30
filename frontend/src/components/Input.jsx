@@ -20,6 +20,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
  *   inputStyle?: any;
  *   onFocus?: (() => void) | null;
  *   onBlur?: (() => void) | null;
+ *   onSubmitEditing?: (() => void) | null;
+ *   returnKeyType?: any;
+ *   blurOnSubmit?: boolean;
  *   maxLength?: number | null;
  *   helperText?: string | null;
  * }} InputProps
@@ -42,6 +45,9 @@ export const Input = React.memo(({
   inputStyle,
   onFocus = null,
   onBlur = null,
+  onSubmitEditing = null,
+  returnKeyType = 'done',
+  blurOnSubmit,
   maxLength = null,
   helperText = null,
 }) => {
@@ -91,6 +97,9 @@ export const Input = React.memo(({
           style={[styles.input, multiline && styles.multiline, inputStyle]}
           onFocus={handleFocus}
           onBlur={handleBlur}
+          onSubmitEditing={onSubmitEditing || undefined}
+          returnKeyType={returnKeyType}
+          blurOnSubmit={blurOnSubmit ?? !multiline}
         />
 
         {secureTextEntry && (

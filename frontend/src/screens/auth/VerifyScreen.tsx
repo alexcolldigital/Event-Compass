@@ -153,6 +153,9 @@ export default function VerifyScreen({ navigation, route }: Props) {
           onChangeText={(t) => { setOtp(t.replace(/\D/g, '').slice(0, 6)); setOtpError(''); }}
           keyboardType="number-pad"
           maxLength={6}
+          onSubmitEditing={handleVerify}
+          returnKeyType="go"
+          blurOnSubmit
           autoFocus
           caretHidden
           accessibilityLabel="Email verification code"

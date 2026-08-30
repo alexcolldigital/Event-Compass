@@ -28,7 +28,7 @@ import Loading from '../../components/Loading.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
 import Toast, { ToastType } from '../../components/Toast';
 import { adminAPI } from '../../services/api.js';
-import { COLORS, USER_ROLES, SERVICE_PROVIDER_TYPES } from '../../utils/constants.js';
+import { COLORS, USER_ROLES, SERVICE_PROVIDER_TYPES, SERVICE_CATEGORIES } from '../../utils/constants.js';
 import { formatDate } from '../../utils/helpers.js';
 import { goBackToAdminDashboard } from '../../utils/adminNavigation';
 
@@ -102,6 +102,9 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Comedians and Entertainers': '#b45309',
 };
 
+const getSubcategoryOptions = (category: string) =>
+  (SERVICE_CATEGORIES.find((item) => item.name === category)?.subcategories || []) as string[];
+
 // Type definitions
 interface Service {
   _id: string;
@@ -113,7 +116,7 @@ interface Service {
   subCategory?: string;
   pricing: {
     basePrice: number;
-    unit: string;
+    unit?: string;
     currency?: string;
   };
   availability: {
@@ -157,7 +160,6 @@ interface FormData {
   subCategory: string;
   pricing: {
     basePrice: string;
-    unit: string;
   };
   availability: {
     isAvailable: boolean;
@@ -251,7 +253,6 @@ const ManageServicesScreen = () => {
     subCategory: '',
     pricing: {
       basePrice: '',
-      unit: 'fixed',
     },
     availability: {
       isAvailable: true,
@@ -492,7 +493,6 @@ const ManageServicesScreen = () => {
       subCategory: service.subCategory || '',
       pricing: {
         basePrice: service.pricing?.basePrice?.toString() || '',
-        unit: service.pricing?.unit || 'fixed',
       },
       availability: {
         isAvailable: service.availability?.isAvailable !== false,
@@ -528,7 +528,6 @@ const ManageServicesScreen = () => {
       subCategory: '',
       pricing: {
         basePrice: '',
-        unit: 'fixed',
       },
       availability: {
         isAvailable: true,
@@ -556,6 +555,15 @@ const ManageServicesScreen = () => {
     const errors: FormErrors = {};
     if (!formData.name.trim()) errors.name = 'Name is required';
     if (!formData.description.trim()) errors.description = 'Description is required';
+    if (!formData.category.trim()) {
+      errors.category = 'Category is required';
+    } else if (!APP_CATEGORY_ORDER.includes(formData.category.trim())) {
+      errors.category = 'Select a category from the available options';
+    }
+    const subcategoryOptions = getSubcategoryOptions(formData.category);
+    if (formData.subCategory.trim() && !subcategoryOptions.includes(formData.subCategory.trim())) {
+      errors.subCategory = 'Select a valid sub-category for this category';
+    }
     const price = parseFloat(formData.pricing.basePrice);
     if (!formData.pricing.basePrice || isNaN(price) || price < 0) {
       errors.pricing = 'Valid base price is required';
@@ -573,7 +581,7 @@ const ManageServicesScreen = () => {
         ...formData,
         pricing: {
           basePrice: parseFloat(formData.pricing.basePrice),
-          unit: formData.pricing.unit,
+          unit: selectedService?.pricing?.unit || 'fixed',
           currency: 'NGN',
         },
         availability: {
@@ -767,6 +775,84 @@ const ManageServicesScreen = () => {
         )}
         </View>
       </View>
+    );
+  };
+
+  const renderCategorySelectors = () => {
+    const subcategoryOptions = getSubcategoryOptions(formData.category);
+
+    const selectCategory = (category: string) => {
+      setFormData({
+        ...formData,
+        category,
+        subCategory: '',
+        serviceType: category,
+      });
+      setFormErrors((prev) => ({ ...prev, category: undefined, subCategory: undefined }));
+    };
+
+    const selectSubCategory = (subCategory: string) => {
+      setFormData({ ...formData, subCategory });
+      setFormErrors((prev) => ({ ...prev, subCategory: undefined }));
+    };
+
+    return (
+      <>
+        <View style={styles.formField}>
+          <Text style={styles.formLabel}>Category *</Text>
+          <View style={styles.categoryOptions}>
+            {APP_CATEGORY_ORDER.map((category) => {
+              const active = formData.category === category;
+              return (
+                <TouchableOpacity
+                  key={category}
+                  onPress={() => selectCategory(category)}
+                  style={[styles.categoryOption, active ? styles.activeCategoryOption : styles.inactiveCategoryOption]}
+                  activeOpacity={0.85}
+                >
+                  <MaterialCommunityIcons
+                    name={(CATEGORY_ICONS[category] || 'shape-outline') as any}
+                    size={15}
+                    color={active ? '#ffffff' : '#16a34a'}
+                  />
+                  <Text style={[styles.categoryOptionText, active ? styles.activeCategoryText : styles.inactiveCategoryText]}>
+                    {category}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          {formErrors.category ? <Text style={styles.errorText}>{formErrors.category}</Text> : null}
+        </View>
+
+        <View style={styles.formField}>
+          <Text style={styles.formLabel}>Sub-category</Text>
+          {formData.category && subcategoryOptions.length > 0 ? (
+            <View style={styles.categoryOptions}>
+              {subcategoryOptions.map((subCategory) => {
+                const active = formData.subCategory === subCategory;
+                return (
+                  <TouchableOpacity
+                    key={subCategory}
+                    onPress={() => selectSubCategory(subCategory)}
+                    style={[styles.categoryOption, active ? styles.activeCategoryOption : styles.inactiveCategoryOption]}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={[styles.categoryOptionText, active ? styles.activeCategoryText : styles.inactiveCategoryText]}>
+                      {subCategory}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : (
+            <Text style={styles.helperText}>
+              {formData.category ? 'No sub-categories available for this category.' : 'Select a category first.'}
+            </Text>
+          )}
+          {formErrors.subCategory ? <Text style={styles.errorText}>{formErrors.subCategory}</Text> : null}
+        </View>
+      </>
     );
   };
 
@@ -1124,8 +1210,7 @@ const ManageServicesScreen = () => {
               <View style={styles.modalSection}>
                 <Text style={styles.sectionTitle}>Basic Information</Text>
                 {renderFormField({ label: 'Service Name *', name: 'name', type: 'text', placeholder: 'Enter service name' })}
-                {renderFormField({ label: 'Category', name: 'category', type: 'text', placeholder: 'e.g., venue, catering, photography' })}
-                {renderFormField({ label: 'Sub-category', name: 'subCategory', type: 'text', placeholder: 'Optional sub-category' })}
+                {renderCategorySelectors()}
                 {renderFormField({ label: 'Description *', name: 'description', type: 'text', placeholder: 'Describe the service in detail', multiline: true })}
               </View>
 
@@ -1134,19 +1219,6 @@ const ManageServicesScreen = () => {
                 <View style={styles.pricingRow}>
                   <View style={styles.pricingField}>
                     {renderNestedField({ label: 'Base Price (₦) *', parent: 'pricing', child: 'basePrice', type: 'numeric', placeholder: '0.00' })}
-                  </View>
-                  <View style={styles.pricingField}>
-                    <View style={styles.formField}>
-                      <Text style={styles.formLabel}>Unit</Text>
-                      <TextInput
-                        value={formData.pricing.unit}
-                        onChangeText={(value) =>
-                          setFormData({ ...formData, pricing: { ...formData.pricing, unit: value } })
-                        }
-                        style={styles.textInput}
-                        placeholder="fixed"
-                      />
-                    </View>
                   </View>
                 </View>
               </View>
@@ -1277,8 +1349,7 @@ const ManageServicesScreen = () => {
               <View style={styles.modalSection}>
                 <Text style={styles.sectionTitle}>Basic Information</Text>
                 {renderFormField({ label: 'Service Name *', name: 'name', type: 'text', placeholder: 'Enter service name' })}
-                {renderFormField({ label: 'Category', name: 'category', type: 'text', placeholder: 'e.g., venue, catering, photography' })}
-                {renderFormField({ label: 'Sub-category', name: 'subCategory', type: 'text', placeholder: 'Optional sub-category' })}
+                {renderCategorySelectors()}
                 {renderFormField({ label: 'Description *', name: 'description', type: 'text', placeholder: 'Describe the service in detail', multiline: true })}
               </View>
 
@@ -1287,19 +1358,6 @@ const ManageServicesScreen = () => {
                 <View style={styles.pricingRow}>
                   <View style={styles.pricingField}>
                     {renderNestedField({ label: 'Base Price (₦) *', parent: 'pricing', child: 'basePrice', type: 'numeric', placeholder: '0.00' })}
-                  </View>
-                  <View style={styles.pricingField}>
-                    <View style={styles.formField}>
-                      <Text style={styles.formLabel}>Unit</Text>
-                      <TextInput
-                        value={formData.pricing.unit}
-                        onChangeText={(value) =>
-                          setFormData({ ...formData, pricing: { ...formData.pricing, unit: value } })
-                        }
-                        style={styles.textInput}
-                        placeholder="fixed"
-                      />
-                    </View>
                   </View>
                 </View>
               </View>
@@ -1953,6 +2011,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     marginBottom: 4,
+  },
+  helperText: {
+    color: '#6b7280',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  categoryOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  categoryOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 6,
+  },
+  activeCategoryOption: {
+    backgroundColor: '#16a34a',
+    borderColor: '#16a34a',
+  },
+  inactiveCategoryOption: {
+    backgroundColor: '#ffffff',
+    borderColor: '#d1d5db',
+  },
+  categoryOptionText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  activeCategoryText: {
+    color: '#ffffff',
+  },
+  inactiveCategoryText: {
+    color: '#1f2937',
   },
   textInput: {
     borderWidth: 1,

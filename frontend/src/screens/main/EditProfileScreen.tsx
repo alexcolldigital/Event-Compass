@@ -231,6 +231,7 @@ export default function EditProfileScreen() {
                   }}
                   icon="account"
                   error={formErrors.firstName}
+                  returnKeyType="next"
                 />
               </View>
               <View style={styles.nameField}>
@@ -244,6 +245,7 @@ export default function EditProfileScreen() {
                   }}
                   icon="account"
                   error={formErrors.lastName}
+                  returnKeyType="next"
                 />
               </View>
             </View>
@@ -258,6 +260,7 @@ export default function EditProfileScreen() {
               keyboardType="email-address"
               icon="email"
               error={formErrors.email}
+              returnKeyType="next"
             />
             <PhoneCountryInput
               label="Phone Number"
@@ -267,6 +270,8 @@ export default function EditProfileScreen() {
               selectedCountry={selectedCountry}
               onCountryChange={handleCountryChange}
               error={formErrors.phoneNumber}
+              onSubmitEditing={!isServiceProvider ? handleSaveProfile : undefined}
+              returnKeyType={isServiceProvider ? 'next' : 'go'}
             />
           </View>
         </View>
@@ -286,6 +291,7 @@ export default function EditProfileScreen() {
                 }}
                 icon="briefcase"
                 error={formErrors.businessName}
+                returnKeyType="next"
               />
               <Text style={styles.fieldLabel}>Business Description</Text>
               <TextInput
@@ -303,6 +309,8 @@ export default function EditProfileScreen() {
                   styles.textArea,
                   formErrors.businessDescription ? styles.textAreaError : null,
                 ]}
+                returnKeyType="default"
+                blurOnSubmit={false}
               />
               <View style={styles.textAreaFooter}>
                 <Text style={styles.charCount}>{formData.businessDescription.length}/500</Text>

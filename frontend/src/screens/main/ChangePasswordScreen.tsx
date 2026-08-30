@@ -122,6 +122,7 @@ export default function ChangePasswordScreen({ navigation, route }: { navigation
             secureTextEntry
             icon="lock"
             error={errors.currentPassword}
+            returnKeyType="next"
           />
           <Input
             label="New Password"
@@ -131,6 +132,7 @@ export default function ChangePasswordScreen({ navigation, route }: { navigation
             secureTextEntry
             icon="lock-reset"
             error={errors.newPassword}
+            returnKeyType="next"
           />
           {strength && (
             <View style={styles.strengthWrap}>
@@ -151,6 +153,8 @@ export default function ChangePasswordScreen({ navigation, route }: { navigation
             secureTextEntry
             icon="lock-check"
             error={errors.confirmPassword}
+            onSubmitEditing={handleSubmit}
+            returnKeyType="go"
           />
           {form.newPassword && form.confirmPassword ? (
             <View style={[styles.matchRow, { backgroundColor: matches ? '#f0fdf4' : '#fef2f2' }]}>

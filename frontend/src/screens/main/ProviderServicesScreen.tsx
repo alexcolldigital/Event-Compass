@@ -11,16 +11,17 @@ import { useTheme } from '../../context/ThemeContext';
 import Toast, { ToastType } from '../../components/Toast';
 import { fetchLocations, getLgasForState, getTownsForLga } from '../../utils/nigeriaLocations.js';
 import { serviceAPI } from '../../services/api.js';
+import { SERVICE_CATEGORIES } from '../../utils/constants.js';
 
 const appFont = Platform.select({ ios: 'System', android: 'Roboto', default: 'System' });
 
 const serviceTypeOptions = ['Physical Item Rental', 'Professional Service', 'Package (Service + Items)'];
 const pricingTypeOptions = ['Fixed Price', 'Hourly', 'Daily', 'Weekly', 'Monthly', 'Per Guest', 'Per Item', 'Negotiable'];
 const currencyOptions = ['NGN', 'USD', 'EUR', 'GHS'];
-const unitOptions = ['booking', 'hour', 'day', 'week', 'month', 'guest', 'item'];
 const durationOptions = ['1 hour', '2 hours', '4 hours', 'Full day', 'Custom'];
 const availabilityStatusOptions = ['Available', 'Busy', 'Temporarily unavailable'];
 const weekdayOptions = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const fallbackCategories = SERVICE_CATEGORIES;
 
 const initialFormState = {
   name: '',
@@ -30,7 +31,6 @@ const initialFormState = {
   pricingType: 'Fixed Price',
   basePrice: '',
   currency: 'NGN',
-  unit: 'booking',
   duration: '1 hour',
   availabilityStatus: 'Available',
   minBookingAmount: '',
@@ -69,7 +69,6 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
     message: string;
   } | null>(null);
   const [isCurrencyMenuOpen, setIsCurrencyMenuOpen] = useState(false);
-  const [isUnitMenuOpen, setIsUnitMenuOpen] = useState(false);
   const [isDurationMenuOpen, setIsDurationMenuOpen] = useState(false);
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
   const [editingService, setEditingService] = useState<any>(null);
@@ -84,6 +83,8 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
   const [showTownMenu, setShowTownMenu] = useState(false);
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   const [showSubCategoryMenu, setShowSubCategoryMenu] = useState(false);
+  const [showEditCategoryMenu, setShowEditCategoryMenu] = useState(false);
+  const [showEditSubCategoryMenu, setShowEditSubCategoryMenu] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
   const [availableCategories, setAvailableCategories] = useState<any[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
@@ -118,20 +119,22 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
     try {
       setLoadingCategories(true);
       const response = await serviceAPI.getAvailableCategories();
-      const categoryList = response?.categories || [];
+      const categoryList = response?.categories?.length ? response.categories : fallbackCategories;
       setAvailableCategories(categoryList);
       setCategories(categoryList.map((cat: any) => cat.name).filter(Boolean));
     } catch (error) {
       console.log('Failed to fetch categories:', error);
-      setAvailableCategories([]);
-      setCategories([]);
+      setAvailableCategories(fallbackCategories);
+      setCategories(fallbackCategories.map((cat: any) => cat.name).filter(Boolean));
     } finally {
       setLoadingCategories(false);
     }
   };
 
   const selectedCategoryData = availableCategories.find((cat: any) => cat.name === formState.category) || null;
-  const subcategoryOptions = selectedCategoryData?.subcategories?.map((sub: any) => sub.name).filter(Boolean) || [];
+  const subcategoryOptions = selectedCategoryData?.subcategories?.map((sub: any) => typeof sub === 'string' ? sub : sub.name).filter(Boolean) || [];
+  const selectedEditCategoryData = availableCategories.find((cat: any) => cat.name === editFormState?.category) || null;
+  const editSubcategoryOptions = selectedEditCategoryData?.subcategories?.map((sub: any) => typeof sub === 'string' ? sub : sub.name).filter(Boolean) || [];
 
   const handleCategoryChange = (category: string) => {
     updateField('category', category);
@@ -142,6 +145,16 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
   const handleSubCategoryChange = (subcategory: string) => {
     updateField('subCategory', subcategory);
     setShowSubCategoryMenu(false);
+  };
+
+  const handleEditCategoryChange = (category: string) => {
+    setEditFormState((prev: any) => ({ ...prev, category, subCategory: '' }));
+    setShowEditCategoryMenu(false);
+  };
+
+  const handleEditSubCategoryChange = (subcategory: string) => {
+    setEditFormState((prev: any) => ({ ...prev, subCategory: subcategory }));
+    setShowEditSubCategoryMenu(false);
   };
 
   const updateField = (field: string, value: string | boolean) => {
@@ -166,6 +179,12 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
     if (!formState.name.trim()) nextErrors.name = 'Service name is required';
     if (!formState.description.trim()) nextErrors.description = 'Description is required';
     if (!formState.category.trim()) nextErrors.category = 'Category is required';
+    if (formState.category.trim() && !categories.includes(formState.category.trim())) {
+      nextErrors.category = 'Select a category from the available options';
+    }
+    if (formState.subCategory.trim() && !subcategoryOptions.includes(formState.subCategory.trim())) {
+      nextErrors.subCategory = 'Select a valid subcategory for this category';
+    }
     if (!formState.coverImage.trim()) nextErrors.coverImage = 'Cover image URL is required';
     if (!formState.basePrice.trim() || Number.isNaN(Number(formState.basePrice)) || Number(formState.basePrice) <= 0) {
       nextErrors.basePrice = 'Enter a valid price';
@@ -227,7 +246,7 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
         pricing: {
           type: formState.pricingType,
           basePrice: Number(formState.basePrice),
-          unit: formState.unit.trim() || 'booking',
+          unit: 'booking',
           currency: formState.currency,
           minBookingAmount: formState.minBookingAmount ? Number(formState.minBookingAmount) : undefined,
           discount: formState.discount ? Number(formState.discount) : undefined,
@@ -328,7 +347,6 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
       subCategory: service.subCategory || '',
       serviceType: service.serviceType || '',
       basePrice: String(service.pricing?.basePrice || ''),
-      unit: service.pricing?.unit || 'booking',
       currency: service.pricing?.currency || 'NGN',
       availabilityStatus: service.availability?.isAvailable !== false ? 'Available' : 'Unavailable',
     });
@@ -339,6 +357,8 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
     const price = Number(editFormState.basePrice);
     if (!editFormState.name.trim()) { Alert.alert('Validation', 'Service name is required.'); return; }
     if (!editFormState.description.trim()) { Alert.alert('Validation', 'Description is required.'); return; }
+    if (!editFormState.category.trim() || !categories.includes(editFormState.category.trim())) { Alert.alert('Validation', 'Select a category from the available options.'); return; }
+    if (editFormState.subCategory.trim() && !editSubcategoryOptions.includes(editFormState.subCategory.trim())) { Alert.alert('Validation', 'Select a valid subcategory for this category.'); return; }
     if (!Number.isFinite(price) || price <= 0) { Alert.alert('Validation', 'Enter a valid price.'); return; }
 
     try {
@@ -351,7 +371,7 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
         pricing: {
           ...editFullService.pricing,
           basePrice: price,
-          unit: editFormState.unit,
+          unit: editFullService.pricing?.unit || 'booking',
           currency: editFormState.currency,
         },
         availability: {
@@ -493,15 +513,11 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
                   <MaterialCommunityIcons name="chevron-down" size={18} color={colors.text} />
                 </TouchableOpacity>
               ) : (
-                <Input
-                  label=""
-                  placeholder="e.g., Plastic chairs, drone package, bridal package"
-                  value={formState.subCategory}
-                  onChangeText={(text) => updateField('subCategory', text)}
-                  icon="shape-outline"
-                  editable={!!formState.category}
-                />
+                <Text style={styles.mutedText}>
+                  {formState.category ? 'No subcategories available for this category.' : 'Select a category first.'}
+                </Text>
               )}
+              {formErrors.subCategory ? <Text style={styles.errorText}>{formErrors.subCategory}</Text> : null}
             </View>
             <Text style={[styles.sectionLabel, { color: colors.text }]}>2. Media and portfolio</Text>
             <Input
@@ -569,23 +585,6 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
               </View>
             </View>
             <View style={styles.gridRow}>
-              <View style={styles.gridColumn}>
-                <Input
-                  label="Unit"
-                  placeholder="booking"
-                  value={formState.unit}
-                  editable={false}
-                  icon="calendar-blank"
-                />
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={() => setIsUnitMenuOpen(true)}
-                  style={[styles.dropdownTrigger, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
-                >
-                  <Text style={[styles.dropdownValue, { color: colors.text }]}>{formState.unit}</Text>
-                  <MaterialCommunityIcons name="chevron-down" size={20} color={colors.text} />
-                </TouchableOpacity>
-              </View>
               <View style={styles.gridColumn}>
                 <Input
                   label="Duration"
@@ -785,7 +784,6 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
 
         <View style={styles.section}>
           {renderDropdownModal(isCurrencyMenuOpen, () => setIsCurrencyMenuOpen(false), 'Select currency', currencyOptions, formState.currency, (value) => updateField('currency', value), colors)}
-          {renderDropdownModal(isUnitMenuOpen, () => setIsUnitMenuOpen(false), 'Select unit', unitOptions, formState.unit, (value) => updateField('unit', value), colors)}
           {renderDropdownModal(isDurationMenuOpen, () => setIsDurationMenuOpen(false), 'Select duration', durationOptions, formState.duration, (value) => updateField('duration', value), colors)}
           {renderDropdownModal(isStatusMenuOpen, () => setIsStatusMenuOpen(false), 'Select availability status', availabilityStatusOptions, formState.availabilityStatus, (value) => updateField('availabilityStatus', value), colors)}
           {renderDropdownModal(showStateMenu, () => setShowStateMenu(false), 'Select state', locations.map((l: any) => l.state), formState.state, (v) => { updateField('state', v); updateField('lga', ''); updateField('city', ''); }, colors)}
@@ -868,7 +866,7 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
                   <Text style={[styles.label, { color: colors.text }]}>Category *</Text>
                   {categories.length > 0 ? (
                     <TouchableOpacity
-                      onPress={() => setShowCategoryMenu(true)}
+                      onPress={() => setShowEditCategoryMenu(true)}
                       style={[styles.dropdownTrigger, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
                       activeOpacity={0.9}
                     >
@@ -878,14 +876,14 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
                       <MaterialCommunityIcons name="chevron-down" size={18} color={colors.text} />
                     </TouchableOpacity>
                   ) : (
-                    <Input label="Category" value={editFormState.category} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, category: v }))} icon="shape-outline" />
+                    <Text style={styles.errorText}>No categories available. Please contact support.</Text>
                   )}
                 </View>
                 <View style={styles.fieldBlock}>
                   <Text style={[styles.label, { color: colors.text }]}>Subcategory</Text>
-                  {editFormState.category && subcategoryOptions.length > 0 ? (
+                  {editFormState.category && editSubcategoryOptions.length > 0 ? (
                     <TouchableOpacity
-                      onPress={() => setShowSubCategoryMenu(true)}
+                      onPress={() => setShowEditSubCategoryMenu(true)}
                       style={[styles.dropdownTrigger, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
                       activeOpacity={0.9}
                     >
@@ -895,11 +893,12 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
                       <MaterialCommunityIcons name="chevron-down" size={18} color={colors.text} />
                     </TouchableOpacity>
                   ) : (
-                    <Input label="Subcategory" value={editFormState.subCategory} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, subCategory: v }))} icon="shape-plus-outline" placeholder="e.g., Plastic chairs, drone package" />
+                    <Text style={styles.mutedText}>
+                      {editFormState.category ? 'No subcategories available for this category.' : 'Select a category first.'}
+                    </Text>
                   )}
                 </View>
                 <Input label="Base Price (₦) *" value={editFormState.basePrice} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, basePrice: v }))} keyboardType="numeric" icon="cash" />
-                <Input label="Unit" value={editFormState.unit} onChangeText={(v) => setEditFormState((p: any) => ({ ...p, unit: v }))} icon="calendar-blank" />
                 <View style={[styles.toggleRow, { marginTop: 8 }]}>
                   <Text style={[styles.toggleLabel, { color: colors.text }]}>Available for Booking</Text>
                   <TouchableOpacity
@@ -920,6 +919,8 @@ export default function ProviderServicesScreen({ navigation, route }: { navigati
               </>
             )}
           </ScrollView>
+          {renderDropdownModal(showEditCategoryMenu, () => setShowEditCategoryMenu(false), 'Select category', categories, editFormState?.category || '', handleEditCategoryChange, colors)}
+          {renderDropdownModal(showEditSubCategoryMenu, () => setShowEditSubCategoryMenu(false), 'Select subcategory', editSubcategoryOptions, editFormState?.subCategory || '', handleEditSubCategoryChange, colors)}
         </SafeAreaView>
       </Modal>
 
