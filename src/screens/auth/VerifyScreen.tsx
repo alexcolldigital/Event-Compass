@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { NavigationProp, ParamListBase, RouteProp } from '@react-navigation/native';
 import Input from '../../components/Input.jsx';
 import Button from '../../components/Button.jsx';
@@ -99,7 +100,23 @@ export default function VerifyScreen({ navigation, route }: Props) {
               keyboardType="number-pad"
               icon="numeric"
               maxLength={6}
+              contextMenuHidden={false}
             />
+
+            <TouchableOpacity
+              onPress={async () => {
+                try {
+                  const text = await Clipboard.getStringAsync();
+                  const digits = text.replace(/\D/g, '').slice(0, 6);
+                  if (digits.length === 6) { clearError(); setActionError(''); setOtp(digits); }
+                  else setActionError('Clipboard does not contain a valid 6-digit code.');
+                } catch { setActionError('Could not read clipboard.'); }
+              }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}
+            >
+              <MaterialCommunityIcons name="content-paste" size={16} color="#16a34a" />
+              <Text style={{ color: '#16a34a', fontSize: 13, fontWeight: '700' }}>Paste Code</Text>
+            </TouchableOpacity>
 
             <Button
               title={isLoading ? 'Verifying...' : 'Verify Email'}

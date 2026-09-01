@@ -3,11 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Event Compass | Smart Event Planning Marketplace</title>
+    <title>Event Compass | Event Booking App</title>
     <meta
       name="description"
-      content="Event Compass helps event planners, vendors, and clients discover the right services, book faster, and manage events seamlessly from one powerful platform."
+      content="Event Compass is a mobile app for discovering event services, booking vendors, managing bookings, and planning memorable events with secure payments and direct communication."
     />
+    <meta
+      name="keywords"
+      content="Event Compass app, event booking app, venue booking app, event planning app, event services, event vendors, wedding planning, event management"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Event Compass | Event Booking App" />
+    <meta
+      property="og:description"
+      content="Discover event vendors, book venues, manage bookings, and plan memorable events with the Event Compass mobile app."
+    />
+    <meta property="og:image" content="https://eventcompass.com/og-image.jpg" />
+    <meta property="og:site_name" content="Event Compass" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Event Compass | Event Booking App" />
+    <meta
+      name="twitter:description"
+      content="Plan events, book trusted vendors, and manage every step from the Event Compass app."
+    />
+    <link rel="canonical" href="https://eventcompass.com/" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -15,6 +35,26 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Event Compass",
+        "url": "https://eventcompass.com",
+        "logo": "https://eventcompass.com/logo.png",
+        "description": "Event Compass is a cross-platform event booking and management marketplace that connects event planners, vendors, and clients in one secure platform.",
+        "sameAs": [
+          "https://www.instagram.com",
+          "https://www.facebook.com",
+          "https://www.linkedin.com"
+        ],
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "email": "support@eventcompass.com",
+          "contactType": "customer support"
+        }
+      }
+    </script>
   </head>
   <body>
     <header class="site-header">
@@ -29,13 +69,12 @@
           <a href="about.html">About</a>
           <a href="#features">Features</a>
           <a href="#how-it-works">How it works</a>
-          <a href="#testimonials">Reviews</a>
           <a href="contact.html">Contact</a>
         </nav>
 
         <div class="nav-actions">
           <a class="btn btn-ghost" href="contact.html">Talk to sales</a>
-          <a class="btn btn-primary" href="#cta">Get started</a>
+          <a class="btn btn-primary" href="download.html">Download app</a>
         </div>
 
         <button class="menu-toggle" aria-label="Open menu">
@@ -51,13 +90,13 @@
             <span class="eyebrow">Built for unforgettable events</span>
             <h1>Turn ideas into seamless experiences.</h1>
             <p>
-              Event Compass is a complete event marketplace that connects planners,
-              vendors, and clients in one smart platform for booking, discovery,
-              communication, and management.
+              Event Compass is a mobile app for discovering event services,
+              connecting with trusted vendors, managing bookings, and planning
+              memorable events from one simple dashboard.
             </p>
 
             <div class="cta-row">
-              <a href="#cta" class="btn btn-primary">Book a demo</a>
+              <a href="download.html" class="btn btn-primary">Download app</a>
               <a href="about.html" class="btn btn-secondary">Learn more</a>
             </div>
 
@@ -77,62 +116,51 @@
             </div>
           </div>
 
-          <div class="hero-visual" aria-label="Event Compass dashboard preview">
-            <div class="floating-card card-top">
-              <span class="mini-label">Live bookings</span>
-              <strong>248 reservations</strong>
-              <small>+18% this month</small>
-            </div>
+          <div class="hero-visual" aria-label="Event Compass mobile app preview">
+            <div class="phone app-phone-main">
+              <div class="phone-notch"></div>
+              <div class="phone-screen app-preview-screen">
+                <div class="screen-header">
+                  <span>Home</span>
+                  <span class="header-badge">Live</span>
+                </div>
 
-            <div class="dash-window">
-              <div class="window-bar">
-                <span></span><span></span><span></span>
-              </div>
-              <div class="window-content">
-                <div class="stat-row">
-                  <div class="mini-stat">
-                    <label>Revenue</label>
-                    <strong>$32.4K</strong>
-                  </div>
-                  <div class="mini-stat accent">
-                    <label>Bookings</label>
-                    <strong>198</strong>
+                <div class="hero-app-card">
+                  <div class="hero-card-surface"></div>
+                  <div class="hero-card-copy">
+                    <small>Featured venue</small>
+                    <strong>Sunset Garden</strong>
+                    <span>4.9 • Wedding venue</span>
                   </div>
                 </div>
-                <div class="chart-bars" aria-hidden="true">
-                  <span style="height: 38%"></span>
-                  <span style="height: 58%"></span>
-                  <span style="height: 46%"></span>
-                  <span style="height: 72%"></span>
-                  <span style="height: 89%"></span>
-                  <span style="height: 78%"></span>
-                  <span style="height: 100%"></span>
+
+                <div class="mini-row compact-row">
+                  <div class="mini-box">
+                    <span>Bookings</span>
+                    <strong>12</strong>
+                  </div>
+                  <div class="mini-box">
+                    <span>Income</span>
+                    <strong>$4.8K</strong>
+                  </div>
                 </div>
-                <div class="list-preview">
-                  <div class="list-item">
-                    <div class="dot green"></div>
-                    <div>
-                      <strong>Wedding Venue</strong>
-                      <small>Confirmed</small>
-                    </div>
-                    <span>$2,400</span>
+
+                <div class="event-card hero-app-event">
+                  <div class="event-dot"></div>
+                  <div>
+                    <strong>Wedding Setup</strong>
+                    <small>Today • 4:00 PM</small>
                   </div>
-                  <div class="list-item">
-                    <div class="dot purple"></div>
-                    <div>
-                      <strong>Photographer</strong>
-                      <small>Pending</small>
-                    </div>
-                    <span>$1,150</span>
-                  </div>
+                  <span>Active</span>
+                </div>
+
+                <div class="bottom-nav-mini">
+                  <span class="nav-pill active"></span>
+                  <span class="nav-pill"></span>
+                  <span class="nav-pill"></span>
+                  <span class="nav-pill"></span>
                 </div>
               </div>
-            </div>
-
-            <div class="floating-card card-bottom">
-              <span class="mini-label">Top category</span>
-              <strong>Luxury Venues</strong>
-              <small>Based on demand</small>
             </div>
           </div>
         </div>
@@ -193,6 +221,123 @@
         </div>
       </section>
 
+      <section class="section app-showcase-wrap">
+        <div class="container">
+          <div class="section-heading center">
+            <span class="eyebrow">App experience</span>
+            <h2>A mobile-first platform built for everyday planning.</h2>
+          </div>
+
+          <div class="app-showcase">
+            <div class="phone phone-left">
+              <div class="phone-notch"></div>
+              <div class="phone-screen app-screen-1">
+                <div class="screen-header">
+                  <span>Discover</span>
+                  <span class="header-badge">Live</span>
+                </div>
+                <div class="service-card large">
+                  <div class="service-image service-green"></div>
+                  <div class="service-copy">
+                    <strong>Sunset Garden</strong>
+                    <small>Wedding venue • 4.9</small>
+                  </div>
+                  <div class="price-tag">$1,800</div>
+                </div>
+                <div class="mini-row">
+                  <div class="mini-box">
+                    <span>Decor</span>
+                    <strong>24</strong>
+                  </div>
+                  <div class="mini-box">
+                    <span>Vendors</span>
+                    <strong>118</strong>
+                  </div>
+                </div>
+                <div class="list-pill">Available this weekend</div>
+              </div>
+            </div>
+
+            <div class="phone featured-phone">
+              <div class="phone-notch"></div>
+              <div class="phone-screen app-screen-2">
+                <div class="screen-header">
+                  <span>Bookings</span>
+                  <span class="header-badge accent">Today</span>
+                </div>
+                <div class="booking-summary">
+                  <div>
+                    <small>Upcoming</small>
+                    <strong>3 events</strong>
+                  </div>
+                  <div class="progress-ring">86%</div>
+                </div>
+                <div class="event-card active">
+                  <div class="event-dot"></div>
+                  <div>
+                    <strong>Wedding Setup</strong>
+                    <small>12 Oct • 4:00 PM</small>
+                  </div>
+                  <span>Confirmed</span>
+                </div>
+                <div class="event-card">
+                  <div class="event-dot alt"></div>
+                  <div>
+                    <strong>Birthday Party</strong>
+                    <small>14 Oct • 8:00 PM</small>
+                  </div>
+                  <span>Pending</span>
+                </div>
+                <div class="stats-grid">
+                  <div class="stat-cell">
+                    <small>Revenue</small>
+                    <strong>$8.2K</strong>
+                  </div>
+                  <div class="stat-cell">
+                    <small>Clients</small>
+                    <strong>120</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="phone phone-right">
+              <div class="phone-notch"></div>
+              <div class="phone-screen app-screen-3">
+                <div class="screen-header">
+                  <span>Inbox</span>
+                  <span class="header-badge soft">4 new</span>
+                </div>
+                <div class="chat-item">
+                  <div class="avatar avatar-green">A</div>
+                  <div>
+                    <strong>Ada Events</strong>
+                    <small>Can you confirm the decor ...</small>
+                  </div>
+                  <time>2m</time>
+                </div>
+                <div class="chat-item">
+                  <div class="avatar avatar-gold">N</div>
+                  <div>
+                    <strong>North Peak</strong>
+                    <small>Your venue is available ...</small>
+                  </div>
+                  <time>11m</time>
+                </div>
+                <div class="chat-item">
+                  <div class="avatar avatar-olive">C</div>
+                  <div>
+                    <strong>Checcas Co.</strong>
+                    <small>Payment processed successfully</small>
+                  </div>
+                  <time>1h</time>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="section alt-bg" id="how-it-works">
         <div class="container">
           <div class="section-heading">
@@ -229,7 +374,7 @@
               <li>Simple mobile-first experience for browsing and booking</li>
               <li>Powerful tools for service providers to manage listings and bookings</li>
               <li>Cleaner backend controls for admins, commissions, and verification</li>
-              <li>Flexible marketplace model for events of every size</li>
+              <li>Flexible app experience for events of every size</li>
             </ul>
           </div>
 
@@ -244,58 +389,35 @@
             </div>
             <div class="mini-panel accent">
               <small>For admins</small>
-              <strong>Monitor performance and manage the marketplace</strong>
+              <strong>Monitor performance and manage bookings smoothly</strong>
             </div>
           </div>
         </div>
       </section>
 
-      <section id="testimonials" class="section alt-bg">
-        <div class="container">
-          <div class="section-heading center">
-            <span class="eyebrow">Loved by customers</span>
-            <h2>Real people. Better event experiences.</h2>
-          </div>
-
-          <div class="testimonial-grid">
-            <article class="testimonial-card">
-              <div class="stars">★★★★★</div>
-              <p>“Event Compass helped us organize our wedding vendors in one place. The booking and messaging flow is incredibly smooth.”</p>
-              <div class="person">
-                <strong>Amara Okafor</strong>
-                <span>Event Client</span>
-              </div>
-            </article>
-            <article class="testimonial-card">
-              <div class="stars">★★★★★</div>
-              <p>“As a venue manager, I finally have a clean platform to list availability, handle inquiries, and receive bookings faster.”</p>
-              <div class="person">
-                <strong>Daniel Kanu</strong>
-                <span>Venue Owner</span>
-              </div>
-            </article>
-            <article class="testimonial-card">
-              <div class="stars">★★★★★</div>
-              <p>“The dashboard is easy to understand and the marketplace model makes it simple to grow our service catalog.”</p>
-              <div class="person">
-                <strong>Sarah Eze</strong>
-                <span>Business Owner</span>
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
-
       <section class="section pricing-section" id="cta">
-        <div class="container pricing-box">
-          <div>
-            <span class="eyebrow">Launch faster</span>
-            <h2>Ready to showcase your next big event marketplace?</h2>
-            <p>Whether you are launching a new app, scaling a niche platform, or promoting a service marketplace, Event Compass gives you a professional story and strong conversion-ready messaging.</p>
+        <div class="container download-box">
+          <div class="download-copy">
+            <span class="eyebrow">Download the app</span>
+            <h2>Plan better events from your phone.</h2>
+            <p>Explore trusted event services, message vendors, confirm bookings, and manage everything in one simple app built for real event planning.</p>
           </div>
-          <div class="cta-block">
-            <a href="contact.html" class="btn btn-primary">Contact us</a>
-            <a href="about.html" class="btn btn-secondary">Explore story</a>
+
+          <div class="download-actions">
+            <a href="download.html" class="download-btn app-store" aria-label="Open app download page">
+              <span class="store-icon"></span>
+              <span>
+                <small>Download on the</small>
+                <strong>App Store</strong>
+              </span>
+            </a>
+            <a href="download.html" class="download-btn play-store" aria-label="Open app download page">
+              <span class="store-icon">▶</span>
+              <span>
+                <small>Get it on</small>
+                <strong>Google Play</strong>
+              </span>
+            </a>
           </div>
         </div>
       </section>
@@ -308,7 +430,7 @@
             <span class="brand-mark">E</span>
             <span>Event Compass</span>
           </a>
-          <p>Your trusted platform for discovering, booking, and managing event services with ease.</p>
+          <p>Your trusted app for discovering, booking, and managing event services with ease.</p>
         </div>
 
         <div>
@@ -324,7 +446,7 @@
           <h4>Support</h4>
           <ul>
             <li><a href="contact.html">Contact</a></li>
-            <li><a href="#testimonials">Reviews</a></li>
+            <li><a href="download.html">Download app</a></li>
             <li><a href="mailto:support@eventcompass.com">support@eventcompass.com</a></li>
           </ul>
         </div>

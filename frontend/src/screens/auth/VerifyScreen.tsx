@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, SafeAreaView, ScrollView, TouchableOpacity,
-  TextInput, ActivityIndicator, StyleSheet,
+  TextInput, ActivityIndicator, StyleSheet, Platform,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../context/authStore.js';
 import { authAPI } from '../../services/api.js';
@@ -93,6 +94,21 @@ export default function VerifyScreen({ navigation, route }: Props) {
     }
   };
 
+  const handlePaste = async () => {
+    try {
+      const text = await Clipboard.getStringAsync();
+      const digits = text.replace(/\D/g, '').slice(0, 6);
+      if (digits.length === 6) {
+        setOtp(digits);
+        setOtpError('');
+      } else {
+        setOtpError('Clipboard does not contain a valid 6-digit code.');
+      }
+    } catch {
+      setOtpError('Could not read clipboard.');
+    }
+  };
+
   const handleResend = async () => {
     if (resendCooldown > 0) return;
     try {
@@ -162,8 +178,14 @@ export default function VerifyScreen({ navigation, route }: Props) {
           blurOnSubmit
           autoFocus
           caretHidden
+          contextMenuHidden={false}
           accessibilityLabel="Email verification code"
         />
+
+        <TouchableOpacity style={styles.pasteBtn} onPress={handlePaste}>
+          <MaterialCommunityIcons name="content-paste" size={16} color="#16a34a" />
+          <Text style={styles.pasteBtnText}>Paste Code</Text>
+        </TouchableOpacity>
 
         {otpError ? <Text style={styles.errorText}>{otpError}</Text> : null}
 
@@ -229,4 +251,11 @@ export default function VerifyScreen({ navigation, route }: Props) {
     ghostBtn: { width: '100%', paddingVertical: 14, alignItems: 'center', marginTop: 10 },
     ghostBtnText: { color: '#16a34a', fontSize: 14, fontWeight: '800' },
     btnDisabled: { opacity: 0.5 },
+    pasteBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+      paddingVertical: 8, paddingHorizontal: 16, marginTop: 10,
+      borderRadius: 10, borderWidth: 1.5, borderColor: '#16a34a',
+      backgroundColor: dark ? '#14532d22' : '#f0fdf4',
+    },
+    pasteBtnText: { color: '#16a34a', fontSize: 13, fontWeight: '700' },
   });
