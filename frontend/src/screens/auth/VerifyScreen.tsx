@@ -6,7 +6,8 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../context/authStore.js';
 import { authAPI } from '../../services/api.js';
-import authStyles from '../../styles/authStyles.js';
+import { useAuthStyles } from '../../styles/authStyles.js';
+import { useTheme } from '../../context/ThemeContext.jsx';
 
 type Mode = 'email' | 'forgot-password' | 'change-password';
 
@@ -34,6 +35,9 @@ const MODE_CONFIG: Record<Mode, { icon: string; title: string; subtitle: (target
 };
 
 export default function VerifyScreen({ navigation, route }: Props) {
+  const { theme } = useTheme();
+  const dark = theme === 'dark';
+  const authStyles = useAuthStyles();
   const mode: Mode = (route.params?.mode ?? 'email') as Mode;
   const paramEmail = route.params?.email ?? '';
   const paramUserId = route.params?.userId ?? '';
@@ -187,42 +191,42 @@ export default function VerifyScreen({ navigation, route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  center: {
-    flexGrow: 1, alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 28, paddingVertical: 40,
-  },
-  backBtn: { alignSelf: 'flex-start', marginBottom: 24, padding: 4 },
-  iconCircle: {
-    width: 110, height: 110, borderRadius: 999, backgroundColor: '#dcfce7',
-    alignItems: 'center', justifyContent: 'center', marginBottom: 24,
-  },
-  heading: { fontSize: 26, fontWeight: '900', color: '#172017', textAlign: 'center', marginBottom: 12 },
-  subText: {
-    fontSize: 15, color: '#667064', textAlign: 'center',
-    lineHeight: 22, marginBottom: 28, fontWeight: '600',
-  },
-  otpRow: { flexDirection: 'row', gap: 10, marginBottom: 4 },
-  otpBox: {
-    width: 46, height: 56, borderRadius: 12, borderWidth: 2,
-    borderColor: '#d1fae5', backgroundColor: '#fff',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  otpBoxActive: { borderColor: '#16a34a', backgroundColor: '#f0fdf4' },
-  otpBoxFilled: { borderColor: '#16a34a' },
-  otpBoxError: { borderColor: '#dc2626' },
-  otpChar: { fontSize: 24, fontWeight: '900', color: '#172017' },
-  hiddenInput: {
-    position: 'absolute', opacity: 0, width: 1, height: 1,
-  },
-  errorText: { color: '#dc2626', fontSize: 13, fontWeight: '700', marginBottom: 12, marginTop: 8 },
-  statusText: { color: '#15803d', fontSize: 13, fontWeight: '700', marginBottom: 12, marginTop: 8, textAlign: 'center' },
-  primaryBtn: {
-    width: '100%', backgroundColor: '#16a34a', borderRadius: 16,
-    paddingVertical: 16, alignItems: 'center', marginTop: 20,
-  },
-  primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
-  ghostBtn: { width: '100%', paddingVertical: 14, alignItems: 'center', marginTop: 10 },
-  ghostBtnText: { color: '#16a34a', fontSize: 14, fontWeight: '800' },
-  btnDisabled: { opacity: 0.5 },
-});
+  const styles = StyleSheet.create({
+    center: {
+      flexGrow: 1, alignItems: 'center', justifyContent: 'center',
+      paddingHorizontal: 28, paddingVertical: 40,
+    },
+    backBtn: { alignSelf: 'flex-start', marginBottom: 24, padding: 4 },
+    iconCircle: {
+      width: 110, height: 110, borderRadius: 999,
+      backgroundColor: dark ? '#14532d' : '#dcfce7',
+      alignItems: 'center', justifyContent: 'center', marginBottom: 24,
+    },
+    heading: { fontSize: 26, fontWeight: '900', color: dark ? '#e8f5e9' : '#172017', textAlign: 'center', marginBottom: 12 },
+    subText: {
+      fontSize: 15, color: dark ? '#9ab89a' : '#667064', textAlign: 'center',
+      lineHeight: 22, marginBottom: 28, fontWeight: '600',
+    },
+    otpRow: { flexDirection: 'row', gap: 10, marginBottom: 4 },
+    otpBox: {
+      width: 46, height: 56, borderRadius: 12, borderWidth: 2,
+      borderColor: dark ? '#2d4a2d' : '#d1fae5',
+      backgroundColor: dark ? '#1a2e1a' : '#fff',
+      alignItems: 'center', justifyContent: 'center',
+    },
+    otpBoxActive: { borderColor: '#16a34a', backgroundColor: dark ? '#14532d' : '#f0fdf4' },
+    otpBoxFilled: { borderColor: '#16a34a' },
+    otpBoxError: { borderColor: '#dc2626' },
+    otpChar: { fontSize: 24, fontWeight: '900', color: dark ? '#e8f5e9' : '#172017' },
+    hiddenInput: { position: 'absolute', opacity: 0, width: 1, height: 1 },
+    errorText: { color: '#dc2626', fontSize: 13, fontWeight: '700', marginBottom: 12, marginTop: 8 },
+    statusText: { color: '#15803d', fontSize: 13, fontWeight: '700', marginBottom: 12, marginTop: 8, textAlign: 'center' },
+    primaryBtn: {
+      width: '100%', backgroundColor: '#16a34a', borderRadius: 16,
+      paddingVertical: 16, alignItems: 'center', marginTop: 20,
+    },
+    primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+    ghostBtn: { width: '100%', paddingVertical: 14, alignItems: 'center', marginTop: 10 },
+    ghostBtnText: { color: '#16a34a', fontSize: 14, fontWeight: '800' },
+    btnDisabled: { opacity: 0.5 },
+  });

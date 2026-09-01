@@ -6,7 +6,7 @@ import PhoneCountryInput from '../../components/PhoneCountryInput.jsx';
 import Button from '../../components/Button.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { useAuthStore } from '../../context/authStore.js';
-import authStyles, { useLogoStyle } from '../../styles/authStyles.js';
+import { useAuthStyles, useLogoStyle } from '../../styles/authStyles.js';
 import logo from '../../assets/logo';
 import { SERVICE_PROVIDER_TYPE_OPTIONS } from '../../utils/constants.js';
 import { DEFAULT_COUNTRY } from '../../utils/countryPhoneOptions.js';
@@ -31,6 +31,7 @@ type RegisterProviderScreenProps = {
 };
 
 export default function RegisterProviderScreen({ navigation }: RegisterProviderScreenProps) {
+  const authStyles = useAuthStyles();
   const logoStyle = useLogoStyle();
   const [formData, setFormData] = useState<FormData>({
     firstName: '',

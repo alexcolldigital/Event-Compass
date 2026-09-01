@@ -411,6 +411,22 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  // Upload profile image
+  uploadProfileImage: async (formData) => {
+    try {
+      const response = await authAPI.uploadProfileImage(formData);
+      const updatedUser = response.user || { ...get().user, profileImage: response.profileImage };
+      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+      set({ user: updatedUser });
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   // Clear error
   clearError: () => set({ error: null }),
 }));

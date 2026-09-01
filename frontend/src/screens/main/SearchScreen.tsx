@@ -3,8 +3,8 @@
  * Marketplace-style discovery with rich cards and fast filters.
  */
 
-import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Platform, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { ActivityIndicator, View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Platform, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRoute } from '@react-navigation/native';
@@ -48,7 +48,7 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const { services, getAllServices, searchServices, isLoading, error } = useServiceStore();
-  const { addItem } = useCartStore();
+  const { items, addItem } = useCartStore();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const params = (route.params as { initialQuery?: string; initialCategory?: string } | undefined) || {};
@@ -137,6 +137,27 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
   const { hPad, cols, colWidth } = useResponsive();
   const numCols = cols({ base: 1, sm: 2, lg: 3 });
   const cardW = colWidth(numCols, 12);
+  const [cartToast, setCartToast] = useState<{ visible: boolean; name: string }>({ visible: false, name: '' });
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const hideCartToast = () => {
+    Animated.timing(toastOpacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
+      setCartToast({ visible: false, name: '' });
+    });
+  };
+
+  const showCartToast = (name: string) => {
+    if (toastTimer.current) {
+      clearTimeout(toastTimer.current);
+    }
+    setCartToast({ visible: true, name });
+    toastOpacity.setValue(0);
+    Animated.timing(toastOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    toastTimer.current = setTimeout(() => {
+      hideCartToast();
+    }, 5000);
+  };
 
   const handleAddToCart = (service: any) => {
     const cartItem = normalizeCartItem(service, 1);
@@ -145,14 +166,20 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
     }
 
     addItem(cartItem);
-    Alert.alert('Added to cart', `${service.name} was added to your cart.`);
+    showCartToast(service.name);
   };
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingHorizontal: hPad }]}>
         <View style={[styles.hero, { backgroundColor: colors.primary }]}> 
-          <Text style={styles.heroTitle}>Discover services</Text>
+          <View style={styles.heroTopRow}>
+            <Text style={styles.heroTitle}>Discover services</Text>
+            <TouchableOpacity style={styles.cartButton} onPress={() => navigation.navigate('EventDetails' as never)}>
+              <MaterialCommunityIcons name="cart-outline" size={22} color="#fff" />
+              {items.length > 0 ? <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{items.length}</Text></View> : null}
+            </TouchableOpacity>
+          </View>
           <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
             <MaterialCommunityIcons name="magnify" size={22} color={colors.primary} />
             <TextInput
@@ -257,6 +284,27 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
           )}
         </View>
       </ScrollView>
+
+      {cartToast.visible && (
+        <Animated.View style={[styles.toast, { opacity: toastOpacity }]}>
+          <Text style={styles.toastText} numberOfLines={1}>✓ Added: {cartToast.name}</Text>
+          <View style={styles.toastActions}>
+            <TouchableOpacity style={[styles.toastBtn, styles.toastBtnOutline]} onPress={hideCartToast}>
+              <Text style={styles.toastBtnOutlineText}>Continue</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.toastBtn, styles.toastBtnFill]}
+              onPress={() => {
+                hideCartToast();
+                navigation.navigate('EventDetails' as never);
+              }}
+            >
+              <MaterialCommunityIcons name="cart" size={14} color="#fff" />
+              <Text style={styles.toastBtnFillText}>View Cart</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      )}
     </SafeAreaView>
   );
 }
@@ -265,7 +313,32 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { paddingBottom: 96 },
   hero: { borderRadius: 28, padding: 18, marginTop: 8, marginBottom: 16 },
-  heroTitle: { color: '#fff', fontSize: 24, fontWeight: '800', marginBottom: 12, fontFamily: appFont },
+  heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  heroTitle: { color: '#fff', fontSize: 24, fontWeight: '800', marginBottom: 0, fontFamily: appFont, flex: 1 },
+  cartButton: {
+    position: 'relative',
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  cartBadge: {
+    position: 'absolute',
+    right: -4,
+    top: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#facc15',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  cartBadgeText: { color: '#0f172a', fontSize: 10, fontWeight: '800', fontFamily: appFont },
   searchBar: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 12, flexDirection: 'row', alignItems: 'center' },
   input: { flex: 1, marginLeft: 8, fontSize: 14, fontWeight: '600', fontFamily: appFont },
   section: { marginBottom: 18 },
@@ -283,4 +356,27 @@ const styles = StyleSheet.create({
   subChipsRow: { marginTop: 8 },
   subChip: { borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6 },
   subChipText: { fontSize: 12, fontWeight: '600', fontFamily: appFont },
+  toast: {
+    position: 'absolute',
+    left: 18,
+    right: 18,
+    bottom: 26,
+    backgroundColor: 'rgba(15, 23, 42, 0.94)',
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 22,
+    elevation: 8,
+  },
+  toastText: { color: '#fff', fontSize: 15, fontWeight: '700', fontFamily: appFont },
+  toastActions: { marginTop: 12, flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
+  toastBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9, minWidth: 110 },
+  toastBtnOutline: { backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
+  toastBtnFill: { backgroundColor: '#1f7a4d', flexDirection: 'row', gap: 6 },
+  toastBtnOutlineText: { color: '#fff', fontWeight: '700', fontSize: 12, fontFamily: appFont },
+  toastBtnFillText: { color: '#fff', fontWeight: '700', fontSize: 12, fontFamily: appFont },
 });

@@ -26,6 +26,7 @@ const ProfileScreen = lazy(() => import('../screens/main/ProfileScreen'));
 // Lazy-loaded detail screens
 const ServiceDetailScreen = lazy(() => import('../screens/main/ServiceDetailScreen'));
 const BookingDetailScreen = lazy(() => import('../screens/main/BookingDetailScreen'));
+const RefundRequestScreen = lazy(() => import('../screens/main/RefundRequestScreen'));
 const ProviderServicesScreen = lazy(() => import('../screens/main/ProviderServicesScreen'));
 const PaymentResultScreen = lazy(() => import('../screens/main/PaymentResultScreen'));
 const WebCheckoutScreen = lazy(() => import('../screens/main/WebCheckoutScreen'));
@@ -90,6 +91,7 @@ function HomeStack() {
       <Stack.Screen name="Checkout" options={{ animation: 'slide_from_right' }}>{({ navigation, route }) => <LazyScreen><CheckoutScreen navigation={navigation} route={route} /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="WebCheckout" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><WebCheckoutScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="BookingDetail" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><BookingDetailScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="RefundRequest" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><RefundRequestScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="PaymentResult" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><PaymentResultScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="Chat" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ChatScreen /></LazyScreen>}</Stack.Screen>
     </Stack.Navigator>
@@ -105,6 +107,7 @@ function SearchStack() {
       <Stack.Screen name="Checkout" options={{ animation: 'slide_from_right' }}>{({ navigation, route }) => <LazyScreen><CheckoutScreen navigation={navigation} route={route} /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="WebCheckout" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><WebCheckoutScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="BookingDetail" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><BookingDetailScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="RefundRequest" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><RefundRequestScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="PaymentResult" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><PaymentResultScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="Chat" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><ChatScreen /></LazyScreen>}</Stack.Screen>
     </Stack.Navigator>
@@ -116,6 +119,7 @@ function BookingsStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="BookingsScreen">{({ navigation }) => <LazyScreen><BookingsScreen navigation={navigation} /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="BookingDetail" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><BookingDetailScreen /></LazyScreen>}</Stack.Screen>
+      <Stack.Screen name="RefundRequest" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><RefundRequestScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="WebCheckout" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><WebCheckoutScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="PaymentResult" options={{ animation: 'slide_from_right' }}>{() => <LazyScreen><PaymentResultScreen /></LazyScreen>}</Stack.Screen>
       <Stack.Screen name="Checkout" options={{ animation: 'slide_from_right' }}>{({ navigation, route }) => <LazyScreen><CheckoutScreen navigation={navigation} route={route} /></LazyScreen>}</Stack.Screen>

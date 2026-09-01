@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contact Event Compass</title>
+    <meta
+      name="description"
+      content="Contact Event Compass to learn more about our event marketplace, get a product demo, or discuss partnership opportunities."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container nav-wrap">
+        <a href="index.html" class="brand" aria-label="Event Compass home">
+          <span class="brand-mark">E</span>
+          <span>Event Compass</span>
+        </a>
+
+        <nav class="main-nav" aria-label="Main navigation">
+          <a href="index.html">Home</a>
+          <a href="about.html">About</a>
+          <a href="index.html#features">Features</a>
+          <a href="index.html#how-it-works">How it works</a>
+          <a href="index.html#testimonials">Reviews</a>
+          <a href="contact.html" class="active">Contact</a>
+        </nav>
+
+        <div class="nav-actions">
+          <a class="btn btn-ghost" href="contact.html">Talk to sales</a>
+          <a class="btn btn-primary" href="index.html#cta">Get started</a>
+        </div>
+
+        <button class="menu-toggle" aria-label="Open menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="page-hero small-hero">
+        <div class="container narrow">
+          <span class="eyebrow">Contact</span>
+          <h1>Let’s build the next unforgettable event experience together.</h1>
+          <p>Reach out to discuss your project, ask about partnership opportunities, or request a product demo.</p>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container contact-grid">
+          <div class="contact-card form-card">
+            <h2>Send a message</h2>
+            <form id="contactForm" class="contact-form">
+              <div class="input-row">
+                <label>
+                  Full name
+                  <input type="text" name="name" placeholder="Your name" required />
+                </label>
+              </div>
+
+              <div class="input-row two-col">
+                <label>
+                  Email
+                  <input type="email" name="email" placeholder="you@example.com" required />
+                </label>
+                <label>
+                  Company
+                  <input type="text" name="company" placeholder="Your company" />
+                </label>
+              </div>
+
+              <div class="input-row">
+                <label>
+                  Subject
+                  <input type="text" name="subject" placeholder="How can we help?" required />
+                </label>
+              </div>
+
+              <div class="input-row">
+                <label>
+                  Message
+                  <textarea name="message" rows="6" placeholder="Tell us about your event business, launch plan, or ideas..." required></textarea>
+                </label>
+              </div>
+
+              <button type="submit" class="btn btn-primary">Send message</button>
+              <p id="formStatus" class="form-status" aria-live="polite"></p>
+            </form>
+          </div>
+
+          <div class="contact-card info-card">
+            <h2>Get in touch</h2>
+            <ul class="contact-list">
+              <li>
+                <span>Email</span>
+                <a href="mailto:support@eventcompass.com">support@eventcompass.com</a>
+              </li>
+              <li>
+                <span>Phone</span>
+                <a href="tel:+2348000000000">+234 800 000 0000</a>
+              </li>
+              <li>
+                <span>Office</span>
+                <p>123 Event Plaza, Lagos, Nigeria</p>
+              </li>
+              <li>
+                <span>Business hours</span>
+                <p>Mon - Fri, 9:00 AM - 6:00 PM</p>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div>
+          <a href="index.html" class="brand footer-brand">
+            <span class="brand-mark">E</span>
+            <span>Event Compass</span>
+          </a>
+          <p>Your trusted platform for discovering, booking, and managing event services with ease.</p>
+        </div>
+
+        <div>
+          <h4>Company</h4>
+          <ul>
+            <li><a href="about.html">About</a></li>
+            <li><a href="index.html#features">Features</a></li>
+            <li><a href="index.html#how-it-works">How it works</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4>Support</h4>
+          <ul>
+            <li><a href="contact.html">Contact</a></li>
+            <li><a href="mailto:support@eventcompass.com">support@eventcompass.com</a></li>
+            <li><a href="tel:+2348000000000">+234 800 000 0000</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4>Follow</h4>
+          <ul>
+            <li><a href="https://instagram.com" target="_blank" rel="noreferrer">Instagram</a></li>
+            <li><a href="https://facebook.com" target="_blank" rel="noreferrer">Facebook</a></li>
+            <li><a href="https://linkedin.com" target="_blank" rel="noreferrer">LinkedIn</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div class="container">
+          <p>© <span id="year"></span> Event Compass. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>

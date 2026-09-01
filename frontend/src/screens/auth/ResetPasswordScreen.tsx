@@ -4,8 +4,11 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Input from '../../components/Input.jsx';
 import Button from '../../components/Button.jsx';
 import { useAuthStore } from '../../context/authStore.js';
+import { useTheme } from '../../context/ThemeContext.jsx';
 
 export default function ResetPasswordScreen({ navigation, route }: { navigation: any; route: any }) {
+  const { theme } = useTheme();
+  const dark = theme === 'dark';
   const { resetToken } = route.params;
   const { resetPasswordWithToken, isLoading } = useAuthStore() as any;
 
@@ -90,15 +93,16 @@ export default function ResetPasswordScreen({ navigation, route }: { navigation:
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#f5f7f2' },
-  content: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 40 },
-  backBtn: { alignSelf: 'flex-start', marginBottom: 24, padding: 4 },
-  iconCircle: {
-    width: 110, height: 110, borderRadius: 999, backgroundColor: '#dcfce7',
-    alignItems: 'center', justifyContent: 'center', marginBottom: 24,
-  },
-  heading: { fontSize: 26, fontWeight: '900', color: '#172017', textAlign: 'center', marginBottom: 12 },
-  subText: { fontSize: 15, color: '#667064', textAlign: 'center', lineHeight: 22, marginBottom: 28, fontWeight: '600' },
-  card: { width: '100%', backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(15,23,42,0.08)' },
-});
+  const styles = StyleSheet.create({
+    screen: { flex: 1, backgroundColor: dark ? '#0f1a0f' : '#f5f7f2' },
+    content: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 40 },
+    backBtn: { alignSelf: 'flex-start', marginBottom: 24, padding: 4 },
+    iconCircle: {
+      width: 110, height: 110, borderRadius: 999,
+      backgroundColor: dark ? '#14532d' : '#dcfce7',
+      alignItems: 'center', justifyContent: 'center', marginBottom: 24,
+    },
+    heading: { fontSize: 26, fontWeight: '900', color: dark ? '#e8f5e9' : '#172017', textAlign: 'center', marginBottom: 12 },
+    subText: { fontSize: 15, color: dark ? '#9ab89a' : '#667064', textAlign: 'center', lineHeight: 22, marginBottom: 28, fontWeight: '600' },
+    card: { width: '100%', backgroundColor: dark ? '#1a2e1a' : '#fff', borderRadius: 20, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: dark ? '#2d4a2d' : 'rgba(15,23,42,0.08)' },
+  });

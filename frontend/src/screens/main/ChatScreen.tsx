@@ -241,6 +241,7 @@ const ChatScreen = () => {
   const [dormancyInfo, setDormancyInfo] = useState<any>(null);
   const [chatSessionStatus, setChatSessionStatus] = useState<any>(null);
   const [dismissedDormancyBanner, setDismissedDormancyBanner] = useState(false);
+  const [isConfirmingEnd, setIsConfirmingEnd] = useState(false);
 
   const flatListRef = useRef<FlatList>(null);
   const socketRef = useRef<Socket | null>(null);
@@ -347,12 +348,22 @@ const ChatScreen = () => {
 
       socket.on('chat_session_ended', ({ conversationId: endedId, reason }: any) => {
         if (endedId === conversationId) {
-          setChatSessionStatus((prev) => ({
+          setChatSessionStatus((prev: any) => ({
             ...prev,
             isActive: false,
             endReason: reason,
           }));
           setDormancyInfo(null);
+        }
+      });
+
+      socket.on('chat_end_confirmed', ({ conversationId: cId, bothConfirmed, scheduledDeleteAt }: any) => {
+        if (cId === conversationId) {
+          setChatSessionStatus((prev: any) => ({
+            ...prev,
+            scheduledDeleteAt: scheduledDeleteAt || prev?.scheduledDeleteAt,
+            endConfirmedBy: bothConfirmed ? 'both' : prev?.endConfirmedBy,
+          }));
         }
       });
     };
@@ -527,6 +538,39 @@ const ChatScreen = () => {
     }
   };
 
+  // ── Client confirms end of chat session ──────────────────────────────────
+
+  const handleConfirmEndSession = async () => {
+    if (!conversationId || isConfirmingEnd) return;
+    Alert.alert(
+      'Confirm End Session',
+      'Do you confirm there are no more questions? Messages will be permanently deleted in 24 hours.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm',
+          style: 'destructive',
+          onPress: async () => {
+            setIsConfirmingEnd(true);
+            try {
+              const res: any = await messageAPI.confirmEndChatSession(conversationId);
+              if (res?.bothConfirmed) {
+                Alert.alert('Confirmed', 'Both parties confirmed. Messages will be deleted in 24 hours.');
+              } else {
+                Alert.alert('Confirmed', 'Your confirmation has been recorded.');
+              }
+              await loadChatSessionStatus();
+            } catch (err: any) {
+              Alert.alert('Error', err?.message || 'Failed to confirm');
+            } finally {
+              setIsConfirmingEnd(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleClearConversation = () => {
     if (!conversationId || !user || (user.role !== 'admin' && user.role !== 'service_provider')) return;
 
@@ -637,6 +681,39 @@ const ChatScreen = () => {
             colors={colors}
             onDismiss={() => setDismissedDormancyBanner(true)}
           />
+        )}
+
+        {/* Client confirmation banner: shown when session ended but client hasn't confirmed yet */}
+        {!chatSessionStatus?.isActive &&
+          chatSessionStatus?.endReason &&
+          !chatSessionStatus?.scheduledDeleteAt &&
+          user?.role === 'client' && (
+          <View style={[styles.confirmBanner, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
+            <MaterialCommunityIcons name="information" size={18} color={colors.primary} />
+            <Text style={[styles.confirmBannerText, { color: colors.text }]}>
+              This chat session has been ended. Please confirm if you have no more questions.
+            </Text>
+            <TouchableOpacity
+              onPress={handleConfirmEndSession}
+              disabled={isConfirmingEnd}
+              style={[styles.confirmBannerBtn, { backgroundColor: colors.primary }]}
+            >
+              <Text style={styles.confirmBannerBtnText}>
+                {isConfirmingEnd ? '...' : 'Confirm'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Scheduled deletion notice: shown after both parties confirmed */}
+        {chatSessionStatus?.scheduledDeleteAt && (
+          <View style={[styles.confirmBanner, { backgroundColor: '#fef3c7', borderColor: '#f59e0b' }]}>
+            <MaterialCommunityIcons name="clock-alert-outline" size={18} color="#b45309" />
+            <Text style={[styles.confirmBannerText, { color: '#92400e' }]}>
+              Messages will be permanently deleted on{' '}
+              {new Date(chatSessionStatus.scheduledDeleteAt).toLocaleString()}.
+            </Text>
+          </View>
         )}
 
         <View style={styles.messageArea}>
@@ -771,6 +848,17 @@ const styles = StyleSheet.create({
   clearButtonText: { fontSize: 11, fontWeight: '800', fontFamily: appFont },
   bookingBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1 },
   bookingBannerText: { fontSize: 12, fontWeight: '600', fontFamily: appFont },
+  confirmBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  confirmBannerText: { flex: 1, fontSize: 12, fontFamily: appFont, lineHeight: 16 },
+  confirmBannerBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
+  confirmBannerBtnText: { fontSize: 12, fontWeight: '700', color: '#fff', fontFamily: appFont },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   messageList: { paddingHorizontal: 12, paddingVertical: 16, flexGrow: 1, paddingBottom: 20 },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },

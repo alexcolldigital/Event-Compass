@@ -5,11 +5,12 @@ import Input from '../../components/Input.jsx';
 import Button from '../../components/Button.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { useAuthStore } from '../../context/authStore.js';
-import authStyles from '../../styles/authStyles.js';
+import { useAuthStyles } from '../../styles/authStyles.js';
 import { useNavigation } from '@react-navigation/native';
 import { AuthNavigationProp } from '../../navigation/types';
 
 export default function ForgotPasswordScreen() {
+  const authStyles = useAuthStyles();
   const navigation = useNavigation<AuthNavigationProp>();
   const [identifier, setIdentifier] = useState('');
   const [errors, setErrors] = useState<{ identifier?: string }>({});

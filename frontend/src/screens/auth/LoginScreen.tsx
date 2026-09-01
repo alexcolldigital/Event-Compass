@@ -5,7 +5,7 @@ import Input from '../../components/Input.jsx';
 import Button from '../../components/Button.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
 import { useAuthStore } from '../../context/authStore.js';
-import authStyles, { useLogoStyle } from '../../styles/authStyles.js';
+import { useAuthStyles, useLogoStyle } from '../../styles/authStyles.js';
 import logo from '../../assets/logo';
 
 interface LoginErrors {
@@ -18,6 +18,7 @@ interface LoginScreenProps {
 }
 
 export default function LoginScreen({ navigation }: LoginScreenProps) {
+  const authStyles = useAuthStyles();
   const logoStyle = useLogoStyle();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');

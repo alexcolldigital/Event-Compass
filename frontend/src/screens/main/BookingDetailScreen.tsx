@@ -145,6 +145,10 @@ const BookingDetailScreen = () => {
     ]);
   };
 
+  const handleRequestRefund = () => {
+    (navigation as any).navigate('RefundRequest', { booking: currentBooking });
+  };
+
   const handlePayNow = async (paymentType: 'deposit' | 'balance' | 'full' = 'full', gateway?: string) => {
     try {
       setIsPaymentLoading(true);
@@ -210,7 +214,8 @@ const BookingDetailScreen = () => {
       });
       return;
     }
-    const contactValue = type === 'call' ? (isProvider ? client.phoneNumber : provider.phoneNumber) || '' : '';
+    // Call button always calls the service provider
+    const contactValue = type === 'call' ? (provider.phoneNumber || '') : '';
     if (!contactValue) {
       Alert.alert('Unavailable', 'Contact details are not available for this booking yet.');
       return;
@@ -702,6 +707,12 @@ const BookingDetailScreen = () => {
               {paymentStatus === 'completed' && currentBooking.balancePaid && (
                 <Button title="Payment Completed" variant="outline" fullWidth />
               )}
+              
+              {/* Refund Request Button - Show for completed or paid bookings */}
+              {(isClient && !currentBooking.refundRequest?.requestedAt && (currentBooking.status === BOOKING_STATUS.COMPLETED || currentBooking.paymentPlan === 'full')) && (
+                <Button title="Request Refund" onPress={handleRequestRefund} variant="outline" fullWidth />
+              )}
+              
               <Button title="Cancel Booking" onPress={() => setShowCancelForm(true)} variant="danger" fullWidth />
             </View>
           )}

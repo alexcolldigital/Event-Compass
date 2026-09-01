@@ -179,6 +179,8 @@ export const bookingAPI = {
   completeBooking: (id) => apiClient.patch(`/bookings/${id}/complete`),
   releaseEscrow: (id) => apiClient.patch(`/bookings/${id}/release-escrow`),
   disputeEscrow: (id, data) => apiClient.patch(`/bookings/${id}/dispute-escrow`, data),
+  requestRefund: (id, data) => apiClient.patch(`/bookings/${id}/refund`, data),
+  respondRefund: (id, data) => apiClient.patch(`/bookings/${id}/refund/respond`, data),
 };
 
 // Admin API calls
@@ -301,6 +303,8 @@ export const messageAPI = {
   clearConversation: (conversationId) => apiClient.delete(`/messages/conversation/${conversationId}`),
   endChatSession: (conversationId, data) =>
     apiClient.post(`/messages/conversation/${conversationId}/end`, data),
+  confirmEndChatSession: (conversationId) =>
+    apiClient.post(`/messages/conversation/${conversationId}/confirm-end`),
   getChatSessionStatus: (conversationId) =>
     apiClient.get(`/messages/conversation/${conversationId}/status`),
   getAdminContacts: () => apiClient.get('/auth/admin-contacts'),

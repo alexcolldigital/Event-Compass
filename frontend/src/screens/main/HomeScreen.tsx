@@ -135,33 +135,17 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
   };
 
   const handleTabNavigate = (routeName: string, params?: Record<string, unknown>) => {
-    const parent = navigation.getParent?.();
-    const topNav = parent?.getParent?.() || parent;
+    const tabNav = navigation.getParent?.();
 
-    if (topNav?.navigate) {
-      if (routeName === 'Search') {
-        topNav.navigate(routeName, {
-          screen: 'SearchScreen',
-          params,
-        });
-      } else if (routeName === 'ProviderServices') {
-        topNav.navigate('Profile', {
-          screen: 'ProviderServices',
-          params,
-        });
-      } else {
-        topNav.navigate(routeName as any);
-      }
+    if (routeName === 'ProviderServices') {
+      (tabNav || navigation).navigate('Profile' as any, { screen: 'ProviderServices', params });
       return;
     }
-
     if (routeName === 'Search') {
-      navigation.navigate('SearchScreen', params);
-    } else if (routeName === 'ProviderServices') {
-      navigation.navigate(routeName as any, params);
-    } else {
-      navigation.navigate(routeName as any);
+      (tabNav || navigation).navigate('Search' as any, { screen: 'SearchScreen', params });
+      return;
     }
+    (tabNav || navigation).navigate(routeName as any);
   };
 
   const handleSearch = () => {

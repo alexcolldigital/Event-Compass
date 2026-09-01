@@ -4,9 +4,10 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, Modal, StyleSheet, ActivityIndicator, TextInput, Alert, Platform, Linking } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, Modal, StyleSheet, ActivityIndicator, Alert, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuthStore } from '../../context/authStore.js';
 import Button from '../../components/Button.jsx';
 import { useTheme } from '../../context/ThemeContext';
@@ -30,9 +31,42 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const { user, logout, isLoading } = useAuthStore();
+  const { user, logout, uploadProfileImage } = useAuthStore();
   const [contactingSupport, setContactingSupport] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const handlePickAvatar = async () => {
+    if (uploadingAvatar) return;
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission required', 'Please allow access to your photo library.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets?.length) return;
+    const asset = result.assets[0];
+    const uri = asset.uri;
+    const fileName = uri.split('/').pop() || `profile-${Date.now()}.jpg`;
+    const match = /\.(\w+)$/.exec(fileName);
+    const type = match ? `image/${match[1].toLowerCase()}` : 'image/jpeg';
+    const imageForm = new FormData();
+    imageForm.append('profileImage', { uri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri, name: fileName, type } as any);
+    setUploadingAvatar(true);
+    try {
+      await uploadProfileImage(imageForm);
+      Alert.alert('Success', 'Profile photo updated!');
+    } catch (err: any) {
+      Alert.alert('Upload Failed', err.message || 'Unable to upload profile photo.');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const handleContactSupport = async () => {
     setContactingSupport(true);
@@ -109,12 +143,19 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   ];
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}> 
+    <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingHorizontal: hPad }]}>
-        <View style={[styles.hero, { backgroundColor: colors.primary }]}> 
-          <View style={styles.avatarWrap}>
-            {user?.profileImage?.url ? <Image source={{ uri: user.profileImage.url }} style={styles.avatar} /> : <MaterialCommunityIcons name="account" size={70} color="#1f7a4d" />}
-          </View>
+        <View style={[styles.hero, { backgroundColor: colors.primary }]}>
+          <TouchableOpacity onPress={handlePickAvatar} disabled={uploadingAvatar} style={styles.avatarWrap} activeOpacity={0.8}>
+            {user?.profileImage?.url
+              ? <Image source={{ uri: user.profileImage.url }} style={styles.avatar} />
+              : <MaterialCommunityIcons name="account" size={70} color="#1f7a4d" />}
+            <View style={styles.avatarCameraOverlay}>
+              {uploadingAvatar
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <MaterialCommunityIcons name="camera" size={16} color="#fff" />}
+            </View>
+          </TouchableOpacity>
           <Text style={styles.heroName}>{user?.firstName || 'Guest'} {user?.lastName || ''}</Text>
           <Text style={styles.heroRole}>{user?.role === 'service_provider' ? 'Service Provider' : 'Client'}</Text>
           {user?.businessName ? <Text style={styles.heroBusiness}>{user.businessName}</Text> : null}
@@ -123,7 +164,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         {user?.role === 'service_provider' ? (
           <View style={[styles.statsRow, { flexWrap: 'wrap' }]}>
             {[{ label: 'Total Bookings', value: user.totalBookings || 0, icon: 'briefcase' }, { label: 'Rating', value: user.averageRating?.toFixed(1) || '0', icon: 'star' }, { label: 'Completed', value: user.completedBookings || 0, icon: 'check-circle' }].map((item) => (
-              <View key={item.label} style={[styles.statTile, { backgroundColor: colors.surface, borderColor: colors.border, width: statW }]}> 
+              <View key={item.label} style={[styles.statTile, { backgroundColor: colors.surface, borderColor: colors.border, width: statW }]}>
                 <MaterialCommunityIcons name={item.icon as React.ComponentProps<typeof MaterialCommunityIcons>['name']} size={22} color={colors.primary} />
                 <Text style={[styles.statValue, { color: colors.text }]}>{item.value}</Text>
                 <Text style={[styles.statLabel, { color: colors.muted }]}>{item.label}</Text>
@@ -144,8 +185,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           </TouchableOpacity>
 
           {menuItems.map((item) => (
-            <TouchableOpacity key={item.label} onPress={item.onPress} style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
-              <View style={[styles.menuIcon, { backgroundColor: `${item.color}15` }]}> 
+            <TouchableOpacity key={item.label} onPress={item.onPress} style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={[styles.menuIcon, { backgroundColor: `${item.color}15` }]}>
                 <MaterialCommunityIcons
                   name={item.icon as React.ComponentProps<typeof MaterialCommunityIcons>['name']}
                   size={22}
@@ -198,6 +239,7 @@ const styles = StyleSheet.create({
   hero: { borderRadius: 28, padding: 24, alignItems: 'center', marginTop: 8, marginBottom: 16 },
   avatarWrap: { width: 100, height: 100, borderRadius: 999, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   avatar: { width: 100, height: 100, borderRadius: 999 },
+  avatarCameraOverlay: { position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: 14, backgroundColor: '#1f7a4d', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' },
   heroName: { color: '#fff', fontSize: 24, fontWeight: '800' },
   heroRole: { color: 'rgba(255,255,255,0.88)', fontSize: 13, fontWeight: '700', marginTop: 6 },
   heroBusiness: { color: 'rgba(255,255,255,0.9)', fontSize: 13, marginTop: 4 },
